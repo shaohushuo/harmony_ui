@@ -2,136 +2,183 @@ import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
 import 'package:ohos_ui_kit/ohos_ui_kit.dart';
 
-import 'pages/about_page.dart';
-import 'pages/feedback_page.dart';
-import 'pages/form_page.dart';
-import 'pages/widgets_page.dart';
+import 'pages/action_page.dart';
+import 'pages/container_page.dart';
+import 'pages/display_page.dart';
+import 'pages/input_page.dart';
+import 'pages/navigation_page.dart';
+import 'pages/selection_page.dart';
 
 void main() {
   runApp(const OhosUiGalleryApp());
 }
 
-class OhosUiGalleryApp extends StatefulWidget {
+class OhosUiGalleryApp extends StatelessWidget {
   const OhosUiGalleryApp({super.key});
-
-  @override
-  State<OhosUiGalleryApp> createState() => _OhosUiGalleryAppState();
-}
-
-class _OhosUiGalleryAppState extends State<OhosUiGalleryApp> {
-  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'ohos_ui gallery',
-      theme: ThemeData(
-        fontFamily: 'HarmonyOS Sans',
-        colorScheme: ColorScheme.fromSeed(seedColor: OhosColors.highlight),
-      ),
+      title: 'ohos_ui_kit gallery',
       home: OhosTheme(
         data: OhosThemeData.light(fontFamily: 'HarmonyOS Sans'),
-        child: _Home(
-          tab: _tab,
-          onTabChanged: (int i) => setState(() => _tab = i),
-        ),
+        child: const HomePage(),
       ),
     );
   }
 }
 
-class _Home extends StatefulWidget {
-  const _Home({required this.tab, required this.onTabChanged});
+/// Category model of the gallery home.
+class GalleryCategory {
+  const GalleryCategory({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.builder,
+  });
 
-  final int tab;
-  final ValueChanged<int> onTabChanged;
-
-  @override
-  State<_Home> createState() => _HomeState();
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final WidgetBuilder builder;
 }
 
-class _HomeState extends State<_Home> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _tabController.index = widget.tab;
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        widget.onTabChanged(_tabController.index);
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(_Home oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.tab != _tabController.index) {
-      _tabController.index = widget.tab;
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  static final List<GalleryCategory> categories = <GalleryCategory>[
+    GalleryCategory(
+      title: '导航类',
+      subtitle: '标题栏 · 子页签 · 底部页签 · 导航点',
+      icon: OhosIcons.arrow_right,
+      builder: (BuildContext context) => NavigationPage(),
+    ),
+    GalleryCategory(
+      title: '展示类',
+      subtitle: '文本 · 进度 · 徽标 · 反馈 · 二维码等',
+      icon: OhosIcons.doc_text_fill,
+      builder: (BuildContext context) => DisplayPage(),
+    ),
+    GalleryCategory(
+      title: '操作类',
+      subtitle: '按钮 · 下拉 · 状态按钮 · 工具栏 · 菜单',
+      icon: OhosIcons.checkmark_circle_fill,
+      builder: (BuildContext context) => ActionPage(),
+    ),
+    GalleryCategory(
+      title: '输入类',
+      subtitle: '文本框 · 搜索框 · 数字加减 · 图案锁',
+      icon: OhosIcons.square_and_pencil,
+      builder: (BuildContext context) => InputPage(),
+    ),
+    GalleryCategory(
+      title: '选择类',
+      subtitle: '勾选 · 开关 · 评分 · 滑动条 · 选择器',
+      icon: OhosIcons.star_fill,
+      builder: (BuildContext context) => SelectionPage(),
+    ),
+    GalleryCategory(
+      title: '容器类',
+      subtitle: '列表 · 弹出框 · 半模态面板',
+      icon: OhosIcons.folder_fill,
+      builder: (BuildContext context) => ContainerPage(),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     return OhosScaffold(
       appBar: OhosAppBar(
-        leading: Icon(
-          OhosIcons.house_fill,
-          color: theme.highlightColor,
-          size: 24,
-        ),
-        title: const Text('ohos_ui 组件画廊'),
-        actions: <Widget>[
-          OhosBadge(
-            count: 3,
-            child: const OhosIconButton(icon: Icon(OhosIcons.message_fill)),
-          ),
-        ],
+        leading: Icon(OhosIcons.house_fill, color: theme.highlightColor),
+        title: const Text('ohos_ui_kit 组件画廊'),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const <Widget>[
-          WidgetsPage(),
-          FormPage(),
-          FeedbackPage(),
-          AboutPage(),
-        ],
-      ),
-      bottomNavigationBar: OhosNavigationBar(
-        currentIndex: widget.tab,
-        onDestinationSelected: widget.onTabChanged,
-        destinations: const <OhosNavigationDestination>[
-          OhosNavigationDestination(
-            icon: Icon(OhosIcons.square_grid_2x2),
-            label: '组件',
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: <Widget>[
+          OhosCard(
+            child: Row(
+              children: <Widget>[
+                Icon(OhosIcons.share, size: 28, color: theme.highlightColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'HarmonyOS 设计控件全覆盖',
+                        style: theme.typography.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '参考华为设计文档「控件概览」6 大类 42 个控件，点击分类查看演示。',
+                        style: theme.typography.bodySmall?.copyWith(
+                          color: theme.textSecondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          OhosNavigationDestination(
-            icon: Icon(OhosIcons.square_and_pencil),
-            label: '表单',
-          ),
-          OhosNavigationDestination(
-            icon: Icon(OhosIcons.exclamationmark_circle_fill),
-            label: '反馈',
-          ),
-          OhosNavigationDestination(
-            icon: Icon(OhosIcons.info_circle_fill),
-            label: '关于',
-          ),
-          OhosNavigationDestination(
-            icon: Icon(OhosIcons.ellipsis_circle),
-            label: '更多',
-            badge: OhosBadge(isDot: true),
-          ),
+          const SizedBox(height: 16),
+          for (final GalleryCategory category in categories)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: OhosCard(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(builder: category.builder),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: theme.highlightColor.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        category.icon,
+                        size: 22,
+                        color: theme.highlightColor,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            category.title,
+                            style: theme.typography.titleSmall,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            category.subtitle,
+                            style: theme.typography.bodySmall?.copyWith(
+                              color: theme.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      OhosIcons.chevron_right,
+                      size: 20,
+                      color: theme.textTertiaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
