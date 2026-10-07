@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ohos_ui_kit:
+  harmony_ui:
     path: ../
   ohos_icons: ^0.1.0
 

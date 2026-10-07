@@ -1,4 +1,4 @@
-name: ohos_ui_kit
+name: harmony_ui
 description: "Material/Cupertino-style widget library that implements the HarmonyOS design language for Flutter."
 version: 0.1.0
 repository: https://github.com/shaohushuo/ohos_ui
