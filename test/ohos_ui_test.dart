@@ -166,4 +166,113 @@ void main() {
       expect(result, isTrue);
     });
   });
+
+  group('OhosChipGroup', () {
+    testWidgets('single-select mode reports tapped index', (
+      WidgetTester tester,
+    ) async {
+      int? selected;
+      await tester.pumpWidget(
+        wrap(
+          OhosChipGroup(
+            items: const <OhosChipItem>[
+              OhosChipItem(label: Text('推荐')),
+              OhosChipItem(label: Text('关注')),
+              OhosChipItem(label: Text('热榜')),
+            ],
+            selectedIndex: 0,
+            onSelected: (int i) => selected = i,
+          ),
+        ),
+      );
+      await tester.tap(find.text('关注'));
+      expect(selected, 1);
+    });
+
+    testWidgets('multiple-select mode toggles a set', (
+      WidgetTester tester,
+    ) async {
+      Set<int>? result;
+      await tester.pumpWidget(
+        wrap(
+          OhosChipGroup(
+            multiple: true,
+            selectedIndexes: const <int>{0},
+            onSelectionChanged: (Set<int> s) => result = s,
+            items: const <OhosChipItem>[
+              OhosChipItem(label: Text('A')),
+              OhosChipItem(label: Text('B')),
+            ],
+          ),
+        ),
+      );
+      await tester.tap(find.text('A'));
+      expect(result, <int>{});
+      await tester.tap(find.text('B'));
+      expect(result, <int>{0, 1});
+    });
+
+    testWidgets('capsule tab bar switches pages', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          DefaultTabController(
+            length: 2,
+            child: Column(
+              children: const <Widget>[
+                OhosTabBar(
+                  type: OhosTabBarType.capsule,
+                  tabs: <Widget>[
+                    Tab(text: '一'),
+                    Tab(text: '二'),
+                  ],
+                ),
+                SizedBox(
+                  height: 80,
+                  child: TabBarView(
+                    children: <Widget>[Text('页面一'), Text('页面二')],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('二'));
+      await tester.pumpAndSettle();
+      expect(find.text('页面二'), findsOneWidget);
+    });
+  });
+
+  group('OhosResponsiveBuilder', () {
+    testWidgets('resolves breakpoints from window width', (
+      WidgetTester tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      OhosWindowSize? size;
+      await tester.pumpWidget(
+        wrap(
+          OhosResponsiveBuilder(
+            builder: (BuildContext context, OhosWindowSize s) {
+              size = s;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      expect(size!.type, OhosWindowSizeType.compact);
+      expect(size!.columns, 4);
+      expect(size!.margin, 16);
+      expect(size!.gutter, 8);
+    });
+
+    test('fromWidth maps official breakpoints', () {
+      expect(OhosWindowSize.fromWidth(300).type, OhosWindowSizeType.compact);
+      expect(OhosWindowSize.fromWidth(600).columns, 8);
+      expect(OhosWindowSize.fromWidth(600).margin, 24);
+      expect(OhosWindowSize.fromWidth(840).type, OhosWindowSizeType.large);
+      expect(OhosWindowSize.fromWidth(840).columns, 12);
+      expect(OhosWindowSize.fromWidth(840).margin, 32);
+    });
+  });
 }

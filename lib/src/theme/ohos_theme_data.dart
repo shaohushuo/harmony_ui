@@ -7,7 +7,9 @@ import 'ohos_typography.dart';
 /// Immutable set of HarmonyOS design tokens, the `ohos_ui` counterpart of
 /// Flutter's [ThemeData] / `CupertinoThemeData`.
 ///
-/// Obtain the current data with [OhosTheme.of].
+/// Obtain the current data with [OhosTheme.of]. The color fields mirror the
+/// official token tables (基础/通用语义 Token)：background layers, component
+/// surfaces, emphasize levels, interactive states and text levels.
 @immutable
 class OhosThemeData with Diagnosticable {
   const OhosThemeData({
@@ -28,6 +30,17 @@ class OhosThemeData with Diagnosticable {
     required this.dividerColor,
     required this.scrimColor,
     required this.typography,
+    this.backgroundSecondaryColor,
+    this.backgroundTertiaryColor,
+    this.compBackgroundPrimaryColor,
+    this.compBackgroundGrayColor,
+    this.emphasizeSecondaryColor,
+    this.emphasizeTertiaryColor,
+    this.interactiveHoverColor,
+    this.interactivePressedColor,
+    this.interactiveFocusColor,
+    this.interactiveSelectColor,
+    this.textFourthColor,
   });
 
   /// Whether this theme targets a light or dark interface.
@@ -42,16 +55,28 @@ class OhosThemeData with Diagnosticable {
   /// Highlighted text color (dark mode uses a lighter blue).
   final Color highlightTextColor;
 
-  /// Page background color.
+  /// Page background color (`background_secondary` in light mode).
   final Color backgroundColor;
+
+  /// Secondary page background (`background_primary` related layer).
+  final Color? backgroundSecondaryColor;
+
+  /// Tertiary page background (`background_tertiary`).
+  final Color? backgroundTertiaryColor;
 
   /// Card and list-item surface color.
   final Color cardColor;
 
+  /// Component primary background (`comp_background_primary`).
+  final Color? compBackgroundPrimaryColor;
+
+  /// Component gray background (`comp_background_gray`).
+  final Color? compBackgroundGrayColor;
+
   /// Popup / dialog / menu surface color.
   final Color popupColor;
 
-  /// Primary text color (90% opacity in light mode).
+  /// Primary text color (90% opacity).
   final Color textPrimaryColor;
 
   /// Secondary text color (60% opacity).
@@ -59,6 +84,9 @@ class OhosThemeData with Diagnosticable {
 
   /// Tertiary text color (40% opacity).
   final Color textTertiaryColor;
+
+  /// Fourth-level text color (20% opacity, `font_fourth`).
+  final Color? textFourthColor;
 
   /// The 11-color HarmonyOS multi-color system.
   final List<Color> multiColors;
@@ -72,7 +100,26 @@ class OhosThemeData with Diagnosticable {
   /// Danger functional color.
   final Color dangerColor;
 
-  /// Hairline color separating list items.
+  /// 20% brand highlight background (`comp_emphasize_secondary`), used by
+  /// selected / emphasized control states.
+  final Color? emphasizeSecondaryColor;
+
+  /// 10% brand highlight background (`comp_emphasize_tertiary`).
+  final Color? emphasizeTertiaryColor;
+
+  /// Hover interaction color (`interactive_hover`).
+  final Color? interactiveHoverColor;
+
+  /// Pressed interaction color (`interactive_pressed`).
+  final Color? interactivePressedColor;
+
+  /// Focus interaction color (`interactive_focus`).
+  final Color? interactiveFocusColor;
+
+  /// Selected interaction color (`interactive_select`).
+  final Color? interactiveSelectColor;
+
+  /// Hairline color separating list items (`comp_divider`).
   final Color dividerColor;
 
   /// Scrim color behind dialogs / popups.
@@ -92,16 +139,27 @@ class OhosThemeData with Diagnosticable {
       onHighlightColor: Colors.white,
       highlightTextColor: OhosColors.highlight,
       backgroundColor: OhosColors.background,
+      backgroundSecondaryColor: OhosColors.background,
+      backgroundTertiaryColor: OhosColors.backgroundTertiary,
       cardColor: OhosColors.card,
+      compBackgroundPrimaryColor: OhosColors.compBackgroundPrimary,
+      compBackgroundGrayColor: OhosColors.compBackgroundGray,
       popupColor: OhosColors.popup,
       textPrimaryColor: OhosColors.textPrimaryLight,
       textSecondaryColor: OhosColors.textSecondaryLight,
       textTertiaryColor: OhosColors.textTertiaryLight,
+      textFourthColor: OhosColors.textFourthLight,
       multiColors: OhosColors.multiLight,
       successColor: OhosColors.success,
       warningColor: OhosColors.warning,
       dangerColor: OhosColors.danger,
-      dividerColor: const Color(0x14000000),
+      emphasizeSecondaryColor: OhosColors.emphasizeSecondary,
+      emphasizeTertiaryColor: OhosColors.emphasizeTertiary,
+      interactiveHoverColor: OhosColors.interactiveHover,
+      interactivePressedColor: OhosColors.interactivePressed,
+      interactiveFocusColor: OhosColors.interactiveFocus,
+      interactiveSelectColor: OhosColors.interactiveSelect,
+      dividerColor: OhosColors.interactivePressed,
       scrimColor: OhosColors.scrim,
       typography: OhosTypography.light(fontFamily: fontFamily),
     );
@@ -115,16 +173,27 @@ class OhosThemeData with Diagnosticable {
       onHighlightColor: Colors.white,
       highlightTextColor: OhosColors.highlightTextDark,
       backgroundColor: OhosColors.backgroundDark,
-      cardColor: OhosColors.cardDark,
-      popupColor: OhosColors.popupDark,
+      backgroundSecondaryColor: OhosColors.backgroundDark,
+      backgroundTertiaryColor: OhosColors.backgroundTertiaryDark,
+      cardColor: OhosColors.compBackgroundPrimaryDark,
+      compBackgroundPrimaryColor: OhosColors.compBackgroundPrimaryDark,
+      compBackgroundGrayColor: OhosColors.compBackgroundGrayDark,
+      popupColor: OhosColors.compBackgroundPrimaryDark,
       textPrimaryColor: OhosColors.textPrimaryDark,
       textSecondaryColor: OhosColors.textSecondaryDark,
       textTertiaryColor: OhosColors.textTertiaryDark,
+      textFourthColor: OhosColors.textFourthDark,
       multiColors: OhosColors.multiDark,
       successColor: OhosColors.successDark,
       warningColor: OhosColors.warningDark,
       dangerColor: OhosColors.dangerDark,
-      dividerColor: const Color(0x29FFFFFF),
+      emphasizeSecondaryColor: OhosColors.emphasizeSecondaryDark,
+      emphasizeTertiaryColor: OhosColors.emphasizeTertiaryDark,
+      interactiveHoverColor: OhosColors.interactiveHoverDark,
+      interactivePressedColor: OhosColors.interactivePressedDark,
+      interactiveFocusColor: OhosColors.interactiveFocusDark,
+      interactiveSelectColor: OhosColors.interactiveSelectDark,
+      dividerColor: OhosColors.interactivePressedDark,
       scrimColor: OhosColors.scrim,
       typography: OhosTypography.dark(fontFamily: fontFamily),
     );
@@ -137,15 +206,26 @@ class OhosThemeData with Diagnosticable {
     Color? onHighlightColor,
     Color? highlightTextColor,
     Color? backgroundColor,
+    Color? backgroundSecondaryColor,
+    Color? backgroundTertiaryColor,
     Color? cardColor,
+    Color? compBackgroundPrimaryColor,
+    Color? compBackgroundGrayColor,
     Color? popupColor,
     Color? textPrimaryColor,
     Color? textSecondaryColor,
     Color? textTertiaryColor,
+    Color? textFourthColor,
     List<Color>? multiColors,
     Color? successColor,
     Color? warningColor,
     Color? dangerColor,
+    Color? emphasizeSecondaryColor,
+    Color? emphasizeTertiaryColor,
+    Color? interactiveHoverColor,
+    Color? interactivePressedColor,
+    Color? interactiveFocusColor,
+    Color? interactiveSelectColor,
     Color? dividerColor,
     Color? scrimColor,
     OhosTypography? typography,
@@ -156,15 +236,36 @@ class OhosThemeData with Diagnosticable {
       onHighlightColor: onHighlightColor ?? this.onHighlightColor,
       highlightTextColor: highlightTextColor ?? this.highlightTextColor,
       backgroundColor: backgroundColor ?? this.backgroundColor,
+      backgroundSecondaryColor:
+          backgroundSecondaryColor ?? this.backgroundSecondaryColor,
+      backgroundTertiaryColor:
+          backgroundTertiaryColor ?? this.backgroundTertiaryColor,
       cardColor: cardColor ?? this.cardColor,
+      compBackgroundPrimaryColor:
+          compBackgroundPrimaryColor ?? this.compBackgroundPrimaryColor,
+      compBackgroundGrayColor:
+          compBackgroundGrayColor ?? this.compBackgroundGrayColor,
       popupColor: popupColor ?? this.popupColor,
       textPrimaryColor: textPrimaryColor ?? this.textPrimaryColor,
       textSecondaryColor: textSecondaryColor ?? this.textSecondaryColor,
       textTertiaryColor: textTertiaryColor ?? this.textTertiaryColor,
+      textFourthColor: textFourthColor ?? this.textFourthColor,
       multiColors: multiColors ?? this.multiColors,
       successColor: successColor ?? this.successColor,
       warningColor: warningColor ?? this.warningColor,
       dangerColor: dangerColor ?? this.dangerColor,
+      emphasizeSecondaryColor:
+          emphasizeSecondaryColor ?? this.emphasizeSecondaryColor,
+      emphasizeTertiaryColor:
+          emphasizeTertiaryColor ?? this.emphasizeTertiaryColor,
+      interactiveHoverColor:
+          interactiveHoverColor ?? this.interactiveHoverColor,
+      interactivePressedColor:
+          interactivePressedColor ?? this.interactivePressedColor,
+      interactiveFocusColor:
+          interactiveFocusColor ?? this.interactiveFocusColor,
+      interactiveSelectColor:
+          interactiveSelectColor ?? this.interactiveSelectColor,
       dividerColor: dividerColor ?? this.dividerColor,
       scrimColor: scrimColor ?? this.scrimColor,
       typography: typography ?? this.typography,
