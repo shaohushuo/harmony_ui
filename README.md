@@ -1,4 +1,4 @@
-# ohos_ui_kit
+# harmony_ui
 
 <p align="center">
   <img src="doc/screenshots/gallery_home.png" alt="ohos_ui gallery 主页" width="230"/>
@@ -13,11 +13,11 @@
 [![GitHub CI](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库名 `ohos_ui`，包名 `ohos_ui_kit`）。
+> 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库名 `ohos_ui`，包名 `harmony_ui`）。
 
 Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范），并完整覆盖官方「控件概览」文档中的 **6 大类 42 个控件**。组件命名与 API 尽可能对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，方便迁移：
 
-| Material / Cupertino | ohos_ui_kit |
+| Material / Cupertino | harmony_ui |
 | --- | --- |
 | `Theme` / `ThemeData` | `OhosTheme` / `OhosThemeData` |
 | `Scaffold` / `AppBar` | `OhosScaffold` / `OhosAppBar` |
@@ -53,18 +53,18 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 ### 通过 pub.dev（发布后）
 
 ```bash
-fvm flutter pub add ohos_ui_kit
+fvm flutter pub add harmony_ui
 ```
 
 ### 通过 Git（当前推荐）
 
 ```bash
-fvm flutter pub add ohos_ui_kit \
+fvm flutter pub add harmony_ui \
   --git-url git@github.com:shaohushuo/ohos_ui.git
 
 # 或直接在 pubspec.yaml 中声明
 # dependencies:
-#   ohos_ui_kit:
+#   harmony_ui:
 #     git:
 #       url: https://github.com/shaohushuo/ohos_ui.git
 #       ref: main
@@ -74,7 +74,7 @@ fvm flutter pub add ohos_ui_kit \
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:ohos_ui_kit/ohos_ui_kit.dart';
+import 'package:harmony_ui/harmony_ui.dart';
 
 void main() => runApp(const MyApp());
 
@@ -523,7 +523,7 @@ hdc shell snapshot_display -f /data/local/tmp/home.jpeg
 hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 ```
 
-> 字体：鸿蒙设备自带 `HarmonyOS Sans`，ohos_ui_kit 会自动使用；其他平台自动回退系统字体。
+> 字体：鸿蒙设备自带 `HarmonyOS Sans`，harmony_ui 会自动使用；其他平台自动回退系统字体。
 
 ## 截图
 
@@ -568,7 +568,7 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 - **构建时报 `npm not found`？** 需要把 DevEco Studio 内置工具加入 PATH（node / ohpm / hvigor），参见上方「准备环境」。
 - **`flutter build hap` 签名报错？** 使用 `--no-codesign` 构建后 `hdc install`，模拟器免签名运行。
 - **首页顶部内容被标题栏遮挡？** 已修复：`OhosScaffold` 将 `OhosAppBar` 与 `body` 按 Column 布局（v0.1.0 之前为 Stack 叠加）。
-- **pub.dev 还没发布？** 是的，当前以 GitHub 代码为主；发布后 `fvm flutter pub add ohos_ui_kit` 即可。
+- **pub.dev 还没发布？** 是的，当前以 GitHub 代码为主；发布后 `fvm flutter pub add harmony_ui` 即可。
 
 ## License
 

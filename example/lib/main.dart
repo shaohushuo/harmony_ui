@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
-import 'package:ohos_ui_kit/ohos_ui_kit.dart';
+import 'package:harmony_ui/harmony_ui.dart';
 
 import 'pages/action_page.dart';
 import 'pages/container_page.dart';
@@ -21,7 +21,7 @@ class OhosUiGalleryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'ohos_ui_kit gallery',
+      title: 'harmony_ui gallery',
       home: OhosTheme(
         data: OhosThemeData.light(fontFamily: 'HarmonyOS Sans'),
         child: const HomePage(),
@@ -99,7 +99,7 @@ class HomePage extends StatelessWidget {
     return OhosScaffold(
       appBar: OhosAppBar(
         leading: Icon(OhosIcons.house_fill, color: theme.highlightColor),
-        title: const Text('ohos_ui_kit 组件画廊'),
+        title: const Text('harmony_ui 组件画廊'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

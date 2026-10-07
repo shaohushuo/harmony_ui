@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
-import 'package:ohos_ui_kit/ohos_ui_kit.dart';
+import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
 
