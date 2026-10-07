@@ -30,4 +30,4 @@ hdc shell aa start -a EntryAbility -b com.example.ohos_ui_example
 fvm flutter run -d macos   # 或 -d chrome 等
 ```
 
-> 示例同时依赖 `ohos_icons`（HarmonyOS Symbol 图标）与 `ohos_ui`。
+> 示例同时依赖 `ohos_icons`（HarmonyOS Symbol 图标，来自 pub.dev）与 `ohos_ui`。

@@ -12,8 +12,7 @@ dependencies:
     sdk: flutter
   ohos_ui_kit:
     path: ../
-  ohos_icons:
-    path: ../../ohos-icons
+  ohos_icons: ^0.1.0
 
 dev_dependencies:
   flutter_test:

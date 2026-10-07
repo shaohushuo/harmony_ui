@@ -12,12 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ohos_ui 的 example 同时依赖 ohos_icons(../../ohos-icons)，clone 到工作区上一级
-      - uses: actions/checkout@v4
-        with:
-          repository: shaohushuo/ohos_icons
-          path: ../ohos-icons
-
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
