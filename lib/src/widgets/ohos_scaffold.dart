@@ -1,0 +1,74 @@
+import 'package:flutter/material.dart';
+
+import '../theme/ohos_theme.dart';
+import 'ohos_app_bar.dart';
+
+/// The page-level layout container of `ohos_ui`, the counterpart of Flutter's
+/// [Scaffold].
+///
+/// Paints the theme background color and lays out an optional [appBar], the
+/// [body], a [bottomNavigationBar] and a [floatingActionButton].
+class OhosScaffold extends StatelessWidget {
+  const OhosScaffold({
+    super.key,
+    this.appBar,
+    this.body,
+    this.bottomNavigationBar,
+    this.floatingActionButton,
+    this.backgroundColor,
+    this.drawer,
+    this.endDrawer,
+  });
+
+  /// Optional top application bar.
+  final OhosAppBar? appBar;
+
+  /// The primary content of the page.
+  final Widget? body;
+
+  /// Optional bottom navigation bar.
+  final Widget? bottomNavigationBar;
+
+  /// Optional floating action button (usually an [OhosIconButton]).
+  final Widget? floatingActionButton;
+
+  /// Overrides the page background color.
+  final Color? backgroundColor;
+
+  /// Optional drawer shown from the leading edge.
+  final Widget? drawer;
+
+  /// Optional drawer shown from the trailing edge.
+  final Widget? endDrawer;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final Color background = backgroundColor ?? theme.backgroundColor;
+    return Material(
+      color: background,
+      child: SafeArea(
+        child: Stack(
+          children: <Widget>[
+            if (body != null) body!,
+            if (appBar != null)
+              Align(alignment: Alignment.topCenter, child: appBar!),
+            if (bottomNavigationBar != null)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: bottomNavigationBar,
+              ),
+            if (floatingActionButton != null)
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: floatingActionButton,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

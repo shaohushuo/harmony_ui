@@ -1,0 +1,23 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+
+# example / ohos build artifacts
+example/build/
+example/ohos/.hvigor/
+example/ohos/oh_modules/
+example/ohos/entry/oh_modules/
+example/ohos/node_modules/
+example/ohos/entry/build/
+example/ohos/local.properties
