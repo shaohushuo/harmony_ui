@@ -1,51 +1,70 @@
 # ohos_ui_kit
 
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_home.png" alt="ohos_ui gallery home" width="260"/>
-  <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_form.png" alt="ohos_ui gallery form" width="260"/>
-  <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_about.png" alt="ohos_ui gallery about" width="260"/>
+  <img src="doc/screenshots/gallery_home.png" alt="ohos_ui gallery 主页" width="230"/>
+  <img src="doc/screenshots/gallery_navigation.png" alt="导航类" width="230"/>
+  <img src="doc/screenshots/gallery_display.png" alt="展示类" width="230"/>
+  <img src="doc/screenshots/gallery_action.png" alt="操作类" width="230"/>
+  <img src="doc/screenshots/gallery_input.png" alt="输入类" width="230"/>
+  <img src="doc/screenshots/gallery_selection.png" alt="选择类" width="230"/>
+  <img src="doc/screenshots/gallery_container.png" alt="容器类" width="230"/>
 </p>
 
-[![pub package](https://img.shields.io/pub/v/ohos_ui_kit.svg)](https://pub.dev/packages/ohos_ui_kit)
+[![GitHub CI](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml)
 
-Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范）。组件命名与 API 尽可能对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，方便迁移：
+> 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库名 `ohos_ui`，包名 `ohos_ui_kit`）。
 
-| Material / Cupertino | ohos_ui |
+Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范），并完整覆盖官方「控件概览」文档中的 **6 大类 42 个控件**。组件命名与 API 尽可能对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，方便迁移：
+
+| Material / Cupertino | ohos_ui_kit |
 | --- | --- |
 | `Theme` / `ThemeData` | `OhosTheme` / `OhosThemeData` |
 | `Scaffold` / `AppBar` | `OhosScaffold` / `OhosAppBar` |
-| `ElevatedButton` / `CupertinoButton` | `OhosButton` |
-| `ListTile` / `CupertinoListTile` | `OhosListTile` |
+| `ElevatedButton` / `CupertinoButton` | `OhosButton`（5 种样式 × 3 种形状） |
+| `ListTile` / `CupertinoListTile` | `OhosListTile` / `OhosList` |
 | `Card` | `OhosCard` |
 | `Switch` / `Checkbox` / `Radio` | `OhosSwitch` / `OhosCheckbox` / `OhosRadio` |
 | `TextField` / `SearchBar` | `OhosTextField` / `OhosSearchBar` |
-| `NavigationBar` | `OhosNavigationBar` |
-| `TabBar` | `OhosTabBar` |
-| `CircularProgressIndicator` / `LinearProgressIndicator` | `OhosProgressIndicator` |
+| `NavigationBar` / `TabBar` | `OhosNavigationBar` / `OhosTabBar` |
+| `Slider` / `RatingBar` | `OhosSlider` / `OhosRatingBar` |
 | `AlertDialog` / `showDialog` | `OhosAlertDialog` / `showOhosDialog` |
+| `SnackBar` / `showMenu` | `OhosSnackBar` / `showOhosMenu` |
 | `Badge` | `OhosBadge` |
-| `FilterChip` / `ActionChip` | `OhosChip` |
-| `Divider` | `OhosDivider` |
-| `IconButton` | `OhosIconButton` |
+| `FilterChip` | `OhosChip` |
+| `Divider` / `IconButton` | `OhosDivider` / `OhosIconButton` |
 
-配套图标包：[ohos_icons](https://pub.dev/packages/ohos_icons)（HarmonyOS Symbol 字体图标）。
+配套图标包：[ohos_icons](https://pub.dev/packages/ohos_icons)（HarmonyOS Symbol 字体图标，已发布）。
 
 ## 特性
 
 - **HarmonyOS 设计令牌**：主题色 `#0A59F7` / `#317AF7`、11 色多彩色板、功能色（成功/警告/危险）、文字三级透明度、24vp 卡片圆角、胶囊按钮、弹性按压曲线，全部来自鸿蒙官方设计规范。
-- **明暗双主题**：`OhosThemeData.light()` / `OhosThemeData.dark()` 开箱即用。
+- **明暗双主题**：`OhosThemeData.light()` / `OhosThemeData.dark()` 开箱即用，支持 `copyWith` 定制。
 - **API 对齐 Flutter**：使用方式与 Material/Cupertino 组件一致，学习成本低。
 - **原生字体**：默认使用 HarmonyOS 系统字体 `HarmonyOS Sans`（非鸿蒙平台自动回退系统字体）。
-- **零额外依赖**：只依赖 Flutter SDK。
+- **零平台依赖**：纯 Dart / Flutter 实现，唯一第三方依赖为二维码生成 `qr` 包。
+- **完整控件覆盖**：官方「控件概览」6 大类 42 个控件全部实现，见下方清单。
 
 ## 安装
 
+### 通过 pub.dev（发布后）
+
 ```bash
 fvm flutter pub add ohos_ui_kit
-# 或直接运行
-flutter pub add ohos_ui_kit
+```
+
+### 通过 Git（当前推荐）
+
+```bash
+fvm flutter pub add ohos_ui_kit \
+  --git-url git@github.com:shaohushuo/ohos_ui.git
+
+# 或直接在 pubspec.yaml 中声明
+# dependencies:
+#   ohos_ui_kit:
+#     git:
+#       url: https://github.com/shaohushuo/ohos_ui.git
+#       ref: main
 ```
 
 ## 快速开始
@@ -76,8 +95,14 @@ class MyApp extends StatelessWidget {
             currentIndex: 0,
             onDestinationSelected: (int index) {},
             destinations: const [
-              OhosNavigationDestination(icon: Icon(Icons.home), label: '首页'),
-              OhosNavigationDestination(icon: Icon(Icons.person), label: '我的'),
+              OhosNavigationDestination(
+                icon: Icon(Icons.home_filled),
+                label: '首页',
+              ),
+              OhosNavigationDestination(
+                icon: Icon(Icons.person_filled),
+                label: '我的',
+              ),
             ],
           ),
         ),
@@ -87,20 +112,90 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-## 组件速览
+## 控件覆盖（对应官方「控件概览」42 控件）
+
+### 导航类
+
+| 控件 | 实现 |
+| --- | --- |
+| 标题栏 | `OhosAppBar` |
+| 子页签 | `OhosTabBar` |
+| 底部页签 | `OhosNavigationBar` |
+| 导航点 | `OhosPageIndicator`（见 `ohos_swiper.dart`）|
+| 轮播 | `OhosSwiper` |
+
+### 展示类
+
+| 控件 | 实现 |
+| --- | --- |
+| 文本 / 子标题 | `OhosText`（`OhosTextLevel` 全字阶）/ `OhosSubheader` |
+| 图片 | `OhosImage`（支持选中描边）|
+| 分隔器 | `OhosDivider` |
+| 进度条 | `OhosProgressIndicator`（圆形 / 线性）|
+| 新事件标记 | `OhosBadge`（数字 / 红点）|
+| 索引条 | `OhosAlphabetIndexer` |
+| 滚动条 | `OhosScrollbar` |
+| 即时反馈 / 即时操作 | `showOhosToast` / `showOhosSnackBar` |
+| 气泡提示 | `showOhosPopup` |
+| 数据可视化 | `OhosDataPanel` |
+| 二维码 | `OhosQrCode` |
+| 空白 | `OhosBlank` |
+| 文本时钟 | `OhosTextClock` |
+
+### 操作类
+
+| 控件 | 实现 |
+| --- | --- |
+| 按钮 | `OhosButton`（filled / tonal / outlined / text / plain × 胶囊 / 圆角 / 圆形）|
+| 下拉按钮 | `OhosSelect` |
+| 状态按钮 | `OhosToggleButton` |
+| 操作块 | `OhosChip` |
+| 工具栏 | `OhosToolbar` |
+| 核心操作栏 | `OhosActionBar` |
+| 菜单 | `showOhosMenu`（列表 / 宫格）|
+
+### 输入类
+
+| 控件 | 实现 |
+| --- | --- |
+| 文本输入 | `OhosTextField`（正常 / 聚焦 / 错误态）|
+| 搜索框 | `OhosSearchBar` |
+| 数字加减 | `OhosCounter` |
+| 图案锁 | `OhosPatternLock` |
+
+### 选择类
+
+| 控件 | 实现 |
+| --- | --- |
+| 勾选框 / 单选按钮 / 开关 | `OhosCheckbox` / `OhosRadio` / `OhosSwitch` |
+| 评分条 | `OhosRatingBar`（支持半星）|
+| 滑动条 | `OhosSlider`（刻度 / 气泡数值）|
+| 选择器 | `showOhosPicker` |
+| 颜色选择器 | `OhosColorPicker` |
+| 分段按钮 | `OhosSegmentedButton` |
+
+### 容器类
+
+| 控件 | 实现 |
+| --- | --- |
+| 列表 / 列表项 | `OhosList` / `OhosListTile` |
+| 卡片 | `OhosCard` |
+| 弹出框 | `OhosAlertDialog` / `showOhosDialog` |
+| 气泡提示 | `showOhosPopup` |
+| 半模态面板 | `showOhosBottomSheet` |
+
+## 使用示例
 
 ### 主题
 
 ```dart
 final OhosThemeData theme = OhosTheme.of(context); // 任意组件内获取
-theme.highlightColor;   // 品牌色
-theme.backgroundColor;  // 页面背景
-theme.cardColor;        // 卡片背景
-theme.multiColors;      // 11 色多彩色板
-theme.typography.bodyLarge; // 文字样式
+theme.highlightColor;        // 品牌色 #0A59F7
+theme.backgroundColor;       // 页面背景
+theme.cardColor;             // 卡片背景
+theme.multiColors;           // 11 色多彩色板
+theme.typography.bodyLarge;  // 文字样式
 ```
-
-自定义主题：
 
 ```dart
 OhosTheme(
@@ -115,7 +210,7 @@ OhosTheme(
 ### 按钮
 
 ```dart
-OhosButton(onPressed: _save, child: const Text('保存'));              // 填充（强调）
+OhosButton(onPressed: _save, child: const Text('保存'));               // 填充
 OhosButton(
   onPressed: _save,
   style: OhosButtonStyle.tonal,   // 次级
@@ -129,20 +224,23 @@ OhosButton(
 );
 OhosButton(
   onPressed: _refresh,
-  loading: true,                  // 加载态
+  loading: true,                   // 加载态
   icon: const Icon(Icons.refresh),
   child: const Text('刷新'),
 );
 ```
 
-### 底部导航
+### 底部导航与角标
 
 ```dart
 OhosNavigationBar(
   currentIndex: _index,
   onDestinationSelected: (int i) => setState(() => _index = i),
   destinations: const [
-    OhosNavigationDestination(icon: Icon(OhosIcons.square_grid_2x2), label: '组件'),
+    OhosNavigationDestination(
+      icon: Icon(OhosIcons.square_grid_2x2),
+      label: '组件',
+    ),
     OhosNavigationDestination(
       icon: Icon(OhosIcons.person),
       label: '我的',
@@ -152,30 +250,30 @@ OhosNavigationBar(
 )
 ```
 
-### 列表
+### 列表与卡片
 
 ```dart
-OhosCard(
-  padding: EdgeInsets.zero,
-  child: Column(children: const [
+OhosList(
+  header: const OhosSubheader(title: '设置'),
+  children: [
     OhosListTile(
-      leading: Icon(OhosIcons.wifi),
-      title: Text('无线网络'),
-      subtitle: Text('已连接'),
-      trailing: Icon(OhosIcons.chevron_right),
+      leading: const Icon(OhosIcons.wifi),
+      title: const Text('无线网络'),
+      subtitle: const Text('已连接'),
+      trailing: const Icon(OhosIcons.chevron_right),
       onTap: _openWifi,
     ),
     OhosListTile(
-      leading: Icon(OhosIcons.moon_fill),
-      title: Text('深色模式'),
+      leading: const Icon(OhosIcons.moon_fill),
+      title: const Text('深色模式'),
       selected: true, // 选中态品牌色高亮
       trailing: OhosSwitch(value: true, onChanged: _onDarkMode),
     ),
-  ]),
+  ],
 )
 ```
 
-### 表单
+### 表单输入
 
 ```dart
 OhosSearchBar(
@@ -195,13 +293,44 @@ OhosTextField(
   obscureText: true,
   errorText: '密码至少 8 位', // 错误态
 );
-
-OhosSwitch(value: _wifi, onChanged: (bool v) {});
-OhosCheckbox(value: _agree, onChanged: (bool v) {});
-OhosRadio(value: _sex == 0, onChanged: (bool v) {});
 ```
 
-### 对话框
+### 评分 / 滑动 / 选择
+
+```dart
+OhosRatingBar(value: 3, onChanged: (int v) {}, starSize: 32);
+
+OhosSlider(
+  value: _volume,
+  onChanged: (double v) {},
+  min: 0,
+  max: 100,
+  divisions: 20,
+  showValueBubble: true, // 拖动时气泡数值
+);
+
+OhosSegmentedButton<String>(
+  segments: const [
+    OhosSegment(label: '日', value: 'day'),
+    OhosSegment(label: '周', value: 'week'),
+  ],
+  selected: _view,
+  onSelected: (String v) {},
+);
+
+// 底部弹窗选择器
+final String? city = await showOhosPicker<String>(
+  context: context,
+  title: '选择城市',
+  initialValue: _city,
+  items: const [
+    OhosPickerItem(label: '北京', value: 'beijing'),
+    OhosPickerItem(label: '上海', value: 'shanghai'),
+  ],
+);
+```
+
+### 对话框 / 半模态面板 / 菜单 / 气泡
 
 ```dart
 final bool? ok = await showOhosDialog<bool>(
@@ -209,81 +338,142 @@ final bool? ok = await showOhosDialog<bool>(
   title: '删除文件？',
   content: '删除后无法恢复，请确认是否继续。',
   actions: [
-    OhosDialogAction(label: '取消', onPressed: () => Navigator.pop(context, false)),
-    OhosDialogAction(label: '删除', danger: true, onPressed: () => Navigator.pop(context, true)),
+    OhosDialogAction(
+      label: '取消',
+      onPressed: () => Navigator.pop(context, false),
+    ),
+    OhosDialogAction(
+      label: '删除',
+      danger: true,
+      onPressed: () => Navigator.pop(context, true),
+    ),
   ],
 );
-```
 
-### 进度 / 反馈
+await showOhosBottomSheet(
+  context: context,
+  title: '分享到',
+  content: SizedBox(
+    height: 200,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        // 分享入口图标
+      ],
+    ),
+  ),
+);
 
-```dart
-const OhosProgressIndicator.circular();          // 无限转圈
-OhosProgressIndicator.circular(value: 0.6);      // 确定进度
-const OhosProgressIndicator.linear();            // 线性
-OhosProgressIndicator.linear(value: 0.6);
+final String? action = await showOhosMenu<String>(
+  context: context,
+  items: const [
+    OhosMenuItem(label: '复制', icon: Icons.copy_rounded, value: 'copy'),
+    OhosMenuItem(label: '删除', icon: Icons.delete_rounded, value: 'delete', danger: true),
+  ],
+);
 
-OhosBadge(count: 12, child: Icon(Icons.message)); // 数字角标
-const OhosBadge(isDot: true);                     // 红点
-```
-
-### 选项卡 / 标签
-
-```dart
-DefaultTabController(
-  length: 3,
-  child: const OhosTabBar(tabs: [Tab(text: '推荐'), Tab(text: '关注'), Tab(text: '热榜')]),
-)
-
-OhosChip(
-  label: const Text('全部'),
-  selected: _selected == '全部',
-  onPressed: () => setState(() {}),
+showOhosPopup(
+  context: context,
+  content: '长按扫码支付',
+  targetKey: payButtonKey, // GlobalKey
 );
 ```
 
-## 在 HarmonyOS 上运行
+### 即时反馈 / 进度 / 二维码
 
-要求使用鸿蒙社区 Flutter 分叉（CPF-Flutter）：
+```dart
+showOhosToast(context, '操作成功', icon: OhosIcons.checkmark_circle_fill);
+
+showOhosSnackBar(
+  context,
+  message: '已删除 1 个文件',
+  actionLabel: '撤销',
+  onAction: () => showOhosToast(context, '已撤销'),
+);
+
+const OhosProgressIndicator.circular();                     // 无限转圈
+OhosProgressIndicator.linear(value: 0.6);                   // 线性进度
+
+OhosQrCode(data: 'https://github.com/shaohushuo/ohos_ui'); // 二维码
+```
+
+## 在 HarmonyOS 模拟器上运行 Demo
+
+`example/` 是一个展示全部控件的画廊应用（6 大分类入口）。要求使用鸿蒙社区 Flutter 分叉：
 
 - 仓库：`https://atomgit.com/CPF-Flutter/flutter_flutter`
 - 推荐分支：`oh-3.35.7-release`
 - 通过 [fvm](https://fvm.app) 管理：`fvm use ohos/oh-3.35.7-release`
 
-```bash
-# 生成 ohos 平台工程（需要 DevEco 的 node / ohpm / hvigor 在 PATH 中）
-fvm flutter create --platforms ohos .
+### 1. 准备环境
 
-# 构建并安装到模拟器 / 真机（免签名）
-fvm flutter build hap --debug --no-codesign
-hdc install -r build/ohos/hap/entry-default-unsigned.hap
-hdc shell aa start -a EntryAbility -b com.example.my_app
+需要 DevEco Studio 内置工具链（node / ohpm / hvigor）与 OpenHarmony SDK：
+
+```bash
+export DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk
+export JAVA_HOME=/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home
+export PATH="/Applications/DevEco-Studio.app/Contents/tools/node/bin:/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin:/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin:$HOME/Library/OpenHarmony/Sdk/26.0.0/toolchains:$PATH"
 ```
 
-> 字体：鸿蒙设备自带 `HarmonyOS Sans`，ohos_ui 会自动使用；其他平台自动回退系统字体。
+> 本仓库自带 `env.sh`，`source env.sh` 即可。
 
-## 完整示例
-
-`example/` 目录是一个展示全部组件的画廊应用，包含 4 个标签页（组件 / 表单 / 反馈 / 关于），运行方式：
+### 2. 生成 ohos 平台工程并拉取依赖
 
 ```bash
 cd example
 fvm flutter pub get
+fvm flutter create --platforms ohos .
+```
+
+### 3. 构建 HAP 并安装到模拟器
+
+```bash
 fvm flutter build hap --debug --no-codesign
+hdc list targets              # 确认模拟器在线（如 127.0.0.1:5555）
 hdc install -r build/ohos/hap/entry-default-unsigned.hap
 hdc shell aa start -a EntryAbility -b com.example.ohos_ui_example
 ```
 
+### 4. 截图（可选）
+
+```bash
+hdc shell snapshot_display -f /data/local/tmp/home.jpeg
+hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
+```
+
+> 字体：鸿蒙设备自带 `HarmonyOS Sans`，ohos_ui_kit 会自动使用；其他平台自动回退系统字体。
+
+## 截图
+
+所有截图来自 OpenHarmony 模拟器（API 26，1280×2832）实机运行：
+
+| 页面 | 截图 |
+| --- | --- |
+| 主页（6 大分类）| `doc/screenshots/gallery_home.png` |
+| 导航类：标题栏 / 子页签 / 底部页签 / 导航点 / 轮播 | `doc/screenshots/gallery_navigation.png` |
+| 展示类：文本 / 图片 / 进度 / 徽标 / 索引条 / 滚动条 / 反馈 / 气泡 / 数据面板 / 二维码 / 文本时钟 / 空白 | `doc/screenshots/gallery_display.png` |
+| 操作类：按钮 / 下拉 / 状态按钮 / 操作块 / 工具栏 / 核心操作栏 / 菜单 | `doc/screenshots/gallery_action.png` |
+| 输入类：文本框 / 搜索框 / 数字加减 / 图案锁 | `doc/screenshots/gallery_input.png` |
+| 选择类：勾选 / 单选 / 开关 / 评分 / 滑动条 / 分段按钮 / 颜色选择器 / 选择器 | `doc/screenshots/gallery_selection.png` |
+| 容器类：列表 / 卡片 / 弹出框 / 气泡 / 半模态面板 | `doc/screenshots/gallery_container.png` |
+| 弹出框（交互）| `doc/screenshots/gallery_dialog.png` |
+| 半模态面板（交互）| `doc/screenshots/gallery_bottom_sheet.png` |
+| 气泡提示（交互）| `doc/screenshots/gallery_popup.png` |
+| 菜单（交互）| `doc/screenshots/gallery_menu.png` |
+
 ## 设计来源
 
 - 华为鸿蒙设计入门文档：https://developer.huawei.com/consumer/cn/design/devstart/
+- 控件概览（42 控件清单）：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380
 - HarmonyOS-Design（设计原则 Skill 库）：https://github.com/dososo/HarmonyOS-Design
 - HarmonyOS 官方 AppIcon 设计源文件（Sketch）
 
 ## 常见问题
 
-- **部署时报 `npm not found`？** 需要把 DevEco Studio 内置工具加入 PATH：node、ohpm、hvigor 所在目录。
-- **`flutter run` 报签名错误？** 使用 `flutter build hap --debug --no-codesign` 构建后 `hdc install`，模拟器免签名运行。
+- **构建时报 `npm not found`？** 需要把 DevEco Studio 内置工具加入 PATH（node / ohpm / hvigor），参见上方「准备环境」。
+- **`flutter build hap` 签名报错？** 使用 `--no-codesign` 构建后 `hdc install`，模拟器免签名运行。
+- **首页顶部内容被标题栏遮挡？** 已修复：`OhosScaffold` 将 `OhosAppBar` 与 `body` 按 Column 布局（v0.1.0 之前为 Stack 叠加）。
+- **pub.dev 还没发布？** 是的，当前以 GitHub 代码为主；发布后 `fvm flutter pub add ohos_ui_kit` 即可。
 
 ## License
 

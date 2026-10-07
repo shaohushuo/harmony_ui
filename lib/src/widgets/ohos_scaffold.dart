@@ -50,14 +50,15 @@ class OhosScaffold extends StatelessWidget {
       child: SafeArea(
         child: Stack(
           children: <Widget>[
-            if (body != null) body!,
-            if (appBar != null)
-              Align(alignment: Alignment.topCenter, child: appBar!),
-            if (bottomNavigationBar != null)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: bottomNavigationBar,
+            Positioned.fill(
+              child: Column(
+                children: <Widget>[
+                  if (appBar != null) appBar!,
+                  Expanded(child: body ?? const SizedBox.shrink()),
+                  if (bottomNavigationBar != null) bottomNavigationBar!,
+                ],
               ),
+            ),
             if (floatingActionButton != null)
               Align(
                 alignment: Alignment.bottomRight,
