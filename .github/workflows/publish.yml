@@ -1,0 +1,42 @@
+name: publish
+
+# 推送 v* 标签时自动发布到 pub.dev（
+# 例如: git tag v0.1.0 && git push origin v0.1.0）
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    name: Publish to pub.dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Dry run
+        run: dart pub publish --dry-run
+
+      # 1) 本地执行 dart pub login 得到 OAuth 凭据
+      # 2) base64 后存入仓库 Secret: PUB_DEV_CREDENTIALS
+      #    base64 ~/.config/dart/pub-credentials.json
+      - name: Restore pub.dev credentials
+        run: |
+          mkdir -p "$HOME/.config/dart"
+          if [ -n "${{ secrets.PUB_DEV_CREDENTIALS }}" ]; then
+            echo "${{ secrets.PUB_DEV_CREDENTIALS }}" | base64 --decode > "$HOME/.config/dart/pub-credentials.json"
+          fi
+
+      - name: Publish
+        run: dart pub publish --force
+        env:
+          # GitHub Actions 运行在海外节点，无需再走本地代理；
+          # 本地发布请使用 tool/publish.sh（已内置代理环境变量）
+          PUB_DRY_RUN: "false"

@@ -1,0 +1,24 @@
+name: ohos_ui_example
+description: "ohos_ui widget gallery running on HarmonyOS."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ohos_ui:
+    path: ../
+  ohos_icons:
+    path: ../../ohos-icons
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
