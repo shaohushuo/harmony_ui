@@ -1,4 +1,4 @@
-/// ohos_ui — a Material/Cupertino-style widget library that implements the
+/// ohos_ui_kit — a Material/Cupertino-style widget library that implements the
 /// HarmonyOS design language.
 ///
 /// Wrap your app with an [OhosTheme] to provide design tokens (colors,

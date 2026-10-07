@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ohos_ui/ohos_ui.dart';
+import 'package:ohos_ui_kit/ohos_ui_kit.dart';
 
 Widget wrap(Widget child) {
   return OhosTheme(

@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ohos_ui:
+  ohos_ui_kit:
     path: ../
   ohos_icons:
     path: ../../ohos-icons

@@ -1,4 +1,4 @@
-# ohos_ui
+# ohos_ui_kit
 
 <p align="center">
   <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_home.png" alt="ohos_ui gallery home" width="260"/>
@@ -6,7 +6,7 @@
   <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_about.png" alt="ohos_ui gallery about" width="260"/>
 </p>
 
-[![pub package](https://img.shields.io/pub/v/ohos_ui.svg)](https://pub.dev/packages/ohos_ui)
+[![pub package](https://img.shields.io/pub/v/ohos_ui_kit.svg)](https://pub.dev/packages/ohos_ui_kit)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml)
 
@@ -43,16 +43,16 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 ## 安装
 
 ```bash
-fvm flutter pub add ohos_ui
+fvm flutter pub add ohos_ui_kit
 # 或直接运行
-flutter pub add ohos_ui
+flutter pub add ohos_ui_kit
 ```
 
 ## 快速开始
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:ohos_ui/ohos_ui.dart';
+import 'package:ohos_ui_kit/ohos_ui_kit.dart';
 
 void main() => runApp(const MyApp());
 

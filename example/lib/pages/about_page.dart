@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
-import 'package:ohos_ui/ohos_ui.dart';
+import 'package:ohos_ui_kit/ohos_ui_kit.dart';
 
 /// Package overview and the HarmonyOS color palette.
 class AboutPage extends StatelessWidget {
