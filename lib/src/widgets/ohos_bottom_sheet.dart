@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
 import 'ohos_divider.dart';
+import 'ohos_light_material.dart';
 
 /// Shows a HarmonyOS half-sheet panel (半模态面板 in the guideline) — a
 /// rounded bottom sheet with title, content and optional dismiss button.
+///
+/// The panel uses the ULTRA_THICK immersive-light material so complex content
+/// stays readable above any page underneath.
 ///
 /// ```dart
 /// await showOhosBottomSheet(
@@ -24,70 +28,74 @@ Future<void> showOhosBottomSheet({
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: OhosTheme.of(context).popupColor,
+    backgroundColor: Colors.transparent,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     builder: (BuildContext context) {
       final OhosThemeData theme = OhosTheme.of(context);
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: theme.textTertiaryColor.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: theme.typography.titleMedium?.copyWith(
-                        color: theme.textPrimaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+      return OhosLightMaterial(
+        level: OhosLightMaterialLevel.ultraThick,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: theme.textTertiaryColor.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  if (showCloseButton)
-                    InkWell(
-                      onTap: () => Navigator.pop(context),
-                      customBorder: const CircleBorder(),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 22,
-                          color: theme.textSecondaryColor,
+                ),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: theme.typography.titleMedium?.copyWith(
+                          color: theme.textPrimaryColor,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Flexible(child: SingleChildScrollView(child: content)),
-              const SizedBox(height: 8),
-              const OhosDivider(indent: 0, endIndent: 0),
-              SizedBox(
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: OhosButton(
-                    onPressed: dismissLabel == null
-                        ? null
-                        : () => Navigator.pop(context),
-                    child: Text(dismissLabel ?? ''),
+                    if (showCloseButton)
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        customBorder: const CircleBorder(),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 22,
+                            color: theme.textSecondaryColor,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Flexible(child: SingleChildScrollView(child: content)),
+                const SizedBox(height: 8),
+                const OhosDivider(indent: 0, endIndent: 0),
+                SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: OhosButton(
+                      onPressed: dismissLabel == null
+                          ? null
+                          : () => Navigator.pop(context),
+                      child: Text(dismissLabel ?? ''),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );

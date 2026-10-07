@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
 import 'ohos_icon_button.dart';
+import 'ohos_light_material.dart';
 
 /// The top application bar of `ohos_ui`, the counterpart of Flutter's
 /// [AppBar].
@@ -19,6 +20,8 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.elevation = 0,
     this.height = 56,
+    this.lightMaterial = false,
+    this.lightLevel = OhosLightMaterialLevel.ultraThin,
   });
 
   /// The main title widget, typically a [Text].
@@ -43,6 +46,13 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Logical height of the bar.
   final double height;
 
+  /// Whether the bar uses the immersive light material
+  /// (ULTRA_THIN + top gradient fade) instead of an opaque background.
+  final bool lightMaterial;
+
+  /// Immersive-light level when [lightMaterial] is true.
+  final OhosLightMaterialLevel lightLevel;
+
   @override
   Size get preferredSize => Size.fromHeight(height);
 
@@ -58,8 +68,10 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: () => Navigator.maybePop(context),
       );
     }
-    return Material(
-      color: backgroundColor ?? theme.backgroundColor,
+    final Widget surface = Material(
+      color: lightMaterial
+          ? Colors.transparent
+          : backgroundColor ?? theme.backgroundColor,
       elevation: elevation,
       child: SizedBox(
         height: preferredSize.height,
@@ -94,6 +106,15 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
           ],
         ),
       ),
+    );
+    if (!lightMaterial) {
+      return surface;
+    }
+    return OhosLightMaterial(
+      level: lightLevel,
+      gradientFade: OhosLightFade.top,
+      gradientExtent: 24,
+      child: surface,
     );
   }
 }

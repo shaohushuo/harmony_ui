@@ -38,10 +38,13 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 
 ## 特性
 
-- **HarmonyOS 设计令牌**：主题色 `#0A59F7` / `#317AF7`、11 色多彩色板、功能色（成功/警告/危险）、文字三级透明度、24vp 卡片圆角、胶囊按钮、弹性按压曲线，全部来自鸿蒙官方设计规范。
+- **HarmonyOS 设计令牌**：主题色 `#0A59F7` / `#317AF7`、11 色多彩色板、功能色、四级文字/图标透明度（90%/60%/40%/20%）、组件分层背景（`comp_background_primary/gray`）、20%/10% 品牌高亮背景（`comp_emphasize_secondary/tertiary`）与交互态色（hover/pressed/focus/select），全部对齐官方 Token 表。
 - **明暗双主题**：`OhosThemeData.light()` / `OhosThemeData.dark()` 开箱即用，支持 `copyWith` 定制。
 - **API 对齐 Flutter**：使用方式与 Material/Cupertino 组件一致，学习成本低。
 - **原生字体**：默认使用 HarmonyOS 系统字体 `HarmonyOS Sans`（非鸿蒙平台自动回退系统字体）。
+- **沉浸光感材质**：`OhosLightMaterial` 实现官方 ULTRA_THIN … ULTRA_THICK 五档毛玻璃背板，支持顶部/底部渐变模糊，AppBar、底部页签、半模态面板开箱即用。
+- **响应式布局**：`OhosResponsiveBuilder` + `OhosGrid` 实现 600/840vp 断点（4/8/12 列）、16/24/32vp 边距与 8/12/16vp 槽宽，侧边页签在 ≥840vp 自动生效。
+- **转场动效**：`OhosGeometry` 提供与官方「转场动效」一致的弹簧/缓出曲线与 90/200/300/400ms 时长，配套「一镜到底」共享元素演示。
 - **零平台依赖**：纯 Dart / Flutter 实现，唯一第三方依赖为二维码生成 `qr` 包。
 - **完整控件覆盖**：官方「控件概览」6 大类 42 个控件全部实现，见下方清单。
 
@@ -184,7 +187,86 @@ class MyApp extends StatelessWidget {
 | 气泡提示 | `showOhosPopup` |
 | 半模态面板 | `showOhosBottomSheet` |
 
+## 设计语言实现（对齐官方设计规范）
+
+实现均对照官方文档的「色彩」「布局」「沉浸光感」「响应式」「转场动效」章节，示例代码见 `example/lib/pages/layout_page.dart` 与 `navigation_page.dart`。
+
+### 色彩 Token
+
+`OhosColors` 与 `OhosThemeData` 中的颜色 1:1 对应官方 Token 表（`0xAARRGGBB`）：
+
+- 文字/图标四级：`font_primary #E5000000`、`font_secondary #99000000`、`font_tertiary #66000000`、`font_fourth #33000000`（深色模式对应白色系列）。
+- 背景分层：`background_secondary #F1F3F5`（页面）、`background_tertiary #E5E5EA`、`comp_background_primary #FFFFFF`（卡片/组件）、`comp_background_gray #F1F3F5`（灰底）。
+- 品牌高亮背景：`comp_emphasize_secondary #330A59F7`（20%）、`comp_emphasize_tertiary #190A59F7`（10%），用于选中态与悬浮强调。
+- 交互事件色：`interactive_hover #0C000000`、`interactive_pressed #19000000`、`interactive_focus #FF0A59F7`、`interactive_select #330A59F7`。
+- 组件直接取主题字段：`theme.emphasizeSecondaryColor`、`theme.compBackgroundGrayColor`、`theme.interactivePressedColor` 等。
+
+### 沉浸光感（Immersive Light）
+
+```dart
+// 顶部悬浮：ULTRA_THIN + 渐变模糊
+OhosLightMaterial(
+  level: OhosLightMaterialLevel.ultraThin,
+  gradientFade: OhosLightFade.top,
+  child: OhosAppBar(lightMaterial: true, title: const Text('标题')),
+)
+
+// 底部悬浮：THIN + 渐变蒙层
+OhosNavigationBar(
+  type: OhosNavigationBarType.float,
+  lightMaterial: true,
+  destinations: destinations,
+  ...
+)
+
+// 半模态 / 大弹层：ULTRA_THICK
+showOhosBottomSheet(context: context, title: '分享', content: ...);
+```
+
+- 五档模糊强度映射：ULTRA_THIN=8、THIN=16、REGULAR=24、THICK=32、ULTRA_THICK=40（sigma）。
+- `OhosBottomSheet` 默认 ULTRA_THICK 材质；`OhosAppBar(lightMaterial: true)` 默认 ULTRA_THIN。
+
+### 布局基础（栅格 / 断点 / 边距）
+
+- 断点：`<600vp` 紧凑 / `600–840vp` 中 / `≥840vp` 宽；栅格 4/8/12 列，边距 16/24/32vp，槽宽 8/12/16vp，内容最大 2220vp。
+- `OhosResponsiveBuilder` 依据窗口宽度重建子树；`OhosGrid` + `OhosGridItem(columnSpan:)` 直接按栅格排布：
+
+```dart
+OhosGrid(
+  children: [
+    OhosGridItem(columnSpan: 2, child: card),
+    OhosGridItem(columnSpan: 2, child: card),
+  ],
+)
+```
+
+### 响应式布局方法
+
+- **挪移**：`OhosNavigationBar` 为纯内容组件；在宽屏（≥840vp）建议配合侧边页签使用（导航结构文档的「侧边 Tab」模式），示例可参考 `OhosWindowSize.useSideTab`。
+- **折行/缩放/分栏**：`example` 的「响应式断点」演示按断点切换 1/2/4 列，展示 compact/medium/large 三种窗口形态。
+
+### 转场动效（Transition / Motion）
+
+- 运动曲线：`OhosGeometry.spring`（按压反馈）、`easeOut`（界面转场）、`sharedElement`（一镜到底共享转场）。
+- 时长：90ms 按压反馈 / 200ms 普通转场 / 300ms 共享转场 / 400ms 页面转场。
+- 层级关系：同层级（编辑/页签）、上下层级（父子页面）、跨层级（应用间）分别对应不同曲线。
+- 一镜到底：共享元素放大转场演示见「转场动效 一镜到底」Demo（`AnimatedContainer` + `sharedElement` 曲线）。
+
+### 与官方控件的重点一致性
+
+| 规范点 | 官方值 | 实现 |
+| --- | --- | --- |
+| 下划线子页签指示条 | 24×3vp 品牌色 | `OhosTabBar`（underline） |
+| 胶囊子页签激活填充 | 品牌色实色填充 | `OhosTabBar(type: capsule)` / `OhosChipGroup` |
+| 胶囊子页签未激活背景 | `comp_background_gray` 灰底 | `OhosChipGroup` |
+| 胶囊间距 | 不宜过大（默认 8vp） | `OhosChipGroup(spacing: 8)` |
+| 底部页签高度 | 平铺 48vp / 悬浮 56vp | `OhosNavigationBar` 默认值 |
+| 底部页签激活高亮 | 20% 品牌色 `comp_emphasize_secondary` | `OhosNavigationBar` 选中胶囊 |
+| 图标尺寸 | 24×24vp | `OhosNavigationBar(iconSize: 24)` |
+| 页签数量建议 | 3–5 个 | 文档建议，未强制 |
+
 ## 使用示例
+
 
 ### 主题
 
@@ -399,7 +481,7 @@ OhosQrCode(data: 'https://github.com/shaohushuo/ohos_ui'); // 二维码
 
 ## 在 HarmonyOS 模拟器上运行 Demo
 
-`example/` 是一个展示全部控件的画廊应用（6 大分类入口）。要求使用鸿蒙社区 Flutter 分叉：
+`example/` 是一个展示全部控件的画廊应用（6 大控件分类 + 布局与动效分类，共 7 个入口）。要求使用鸿蒙社区 Flutter 分叉：
 
 - 仓库：`https://atomgit.com/CPF-Flutter/flutter_flutter`
 - 推荐分支：`oh-3.35.7-release`
@@ -449,8 +531,14 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 
 | 页面 | 截图 |
 | --- | --- |
-| 主页（6 大分类）| `doc/screenshots/gallery_home.png` |
-| 导航类：标题栏 / 子页签 / 底部页签 / 导航点 / 轮播 | `doc/screenshots/gallery_navigation.png` |
+| 主页（7 大分类）| `doc/screenshots/gallery_home.png` |
+| 导航类：沉浸光感标题栏 / 下划线+胶囊子页签 / ChipGroup 多选 / 平铺+悬浮底部页签 | `doc/screenshots/gallery_navigation.png` |
+| 导航类（滚动）：胶囊子页签 / ChipGroup / 底部页签 | `doc/screenshots/gallery_navigation_capsule.png` |
+| 导航类（滚动）：平铺式 + 悬浮式底部页签 | `doc/screenshots/gallery_navigation_bottom.png` |
+| 布局与动效：栅格系统 / 响应式断点 / 沉浸光感 / 转场动效 | `doc/screenshots/gallery_layout_grid.png` |
+| 布局与动效（滚动）：沉浸光感 THIN/THICK 材质 | `doc/screenshots/gallery_layout_light.png` |
+| 布局与动效（滚动）：一镜到底共享元素 / 动效曲线对比 | `doc/screenshots/gallery_layout_motion.png` |
+| 布局与动效（交互）：共享元素放大转场 | `doc/screenshots/gallery_shared_element.png` |
 | 展示类：文本 / 图片 / 进度 / 徽标 / 索引条 / 滚动条 / 反馈 / 气泡 / 数据面板 / 二维码 / 文本时钟 / 空白 | `doc/screenshots/gallery_display.png` |
 | 操作类：按钮 / 下拉 / 状态按钮 / 操作块 / 工具栏 / 核心操作栏 / 菜单 | `doc/screenshots/gallery_action.png` |
 | 输入类：文本框 / 搜索框 / 数字加减 / 图案锁 | `doc/screenshots/gallery_input.png` |
@@ -465,6 +553,13 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 
 - 华为鸿蒙设计入门文档：https://developer.huawei.com/consumer/cn/design/devstart/
 - 控件概览（42 控件清单）：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380
+- 色彩 Token：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/color-0000001776857164
+- 沉浸光感：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/immersivelight-0000002612101053
+- 布局基础（栅格/断点）：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/design-layout-basics-0000001795579413
+- 响应式布局（结构/方法）：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/design-responsive-layout-structure-0000001748539684
+- 转场动效：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/design-concepts-0000001795698445
+- 子页签规范：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/chipsgroup-0000001929788350
+- 底部页签规范：https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/bottomtab-0000001956787789
 - HarmonyOS-Design（设计原则 Skill 库）：https://github.com/dososo/HarmonyOS-Design
 - HarmonyOS 官方 AppIcon 设计源文件（Sketch）
 

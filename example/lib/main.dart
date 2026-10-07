@@ -6,6 +6,7 @@ import 'pages/action_page.dart';
 import 'pages/container_page.dart';
 import 'pages/display_page.dart';
 import 'pages/input_page.dart';
+import 'pages/layout_page.dart';
 import 'pages/navigation_page.dart';
 import 'pages/selection_page.dart';
 
@@ -77,6 +78,12 @@ class HomePage extends StatelessWidget {
       subtitle: '勾选 · 开关 · 评分 · 滑动条 · 选择器',
       icon: OhosIcons.star_fill,
       builder: (BuildContext context) => SelectionPage(),
+    ),
+    GalleryCategory(
+      title: '布局与动效',
+      subtitle: '栅格 · 响应式断点 · 沉浸光感 · 转场动效',
+      icon: OhosIcons.slider_horizontal_2,
+      builder: (BuildContext context) => LayoutPage(),
     ),
     GalleryCategory(
       title: '容器类',

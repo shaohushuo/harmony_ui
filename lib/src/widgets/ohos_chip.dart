@@ -35,15 +35,18 @@ class OhosChip extends StatelessWidget {
     final bool enabled = onPressed != null;
     final Color fg = selected ? theme.highlightColor : theme.textSecondaryColor;
     final Color bg = selected
-        ? (selectedColor ?? theme.highlightColor.withValues(alpha: 0.12))
-        : theme.cardColor;
+        ? (selectedColor ??
+              (theme.emphasizeTertiaryColor ??
+                  theme.highlightColor.withValues(alpha: 0.10)))
+        : (theme.compBackgroundGrayColor ?? theme.cardColor);
     return Material(
       color: bg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: selected
-              ? theme.highlightColor.withValues(alpha: 0.4)
+              ? (theme.emphasizeSecondaryColor ??
+                    theme.highlightColor.withValues(alpha: 0.20))
               : theme.textTertiaryColor.withValues(alpha: 0.3),
         ),
       ),
