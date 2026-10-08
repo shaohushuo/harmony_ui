@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 本地发布 ohos_ui 到 pub.dev（已配置代理，避免连不上外网）
+# 本地发布 harmony_ui 到 pub.dev（已配置代理，避免连不上外网）
 set -euo pipefail
 
 export HTTP_PROXY=http://127.0.0.1:1087

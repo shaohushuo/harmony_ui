@@ -1,7 +1,7 @@
 # harmony_ui
 
 <p align="center">
-  <img src="doc/screenshots/gallery_home.png" alt="ohos_ui gallery 主页" width="230"/>
+  <img src="doc/screenshots/gallery_home.png" alt="harmony_ui gallery 主页" width="230"/>
   <img src="doc/screenshots/gallery_navigation.png" alt="导航类" width="230"/>
   <img src="doc/screenshots/gallery_display.png" alt="展示类" width="230"/>
   <img src="doc/screenshots/gallery_action.png" alt="操作类" width="230"/>
@@ -10,10 +10,10 @@
   <img src="doc/screenshots/gallery_container.png" alt="容器类" width="230"/>
 </p>
 
-[![GitHub CI](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/ohos_ui/actions/workflows/ci.yml)
+[![GitHub CI](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库名 `ohos_ui`，包名 `harmony_ui`）。
+> 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库：`shaohushuo/harmony_ui`，包名 `harmony_ui`）。
 
 Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范），并完整覆盖官方「控件概览」文档中的 **6 大类 42 个控件**。组件命名与 API 尽可能对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，方便迁移：
 
@@ -60,13 +60,13 @@ fvm flutter pub add harmony_ui
 
 ```bash
 fvm flutter pub add harmony_ui \
-  --git-url git@github.com:shaohushuo/ohos_ui.git
+  --git-url git@github.com:shaohushuo/harmony_ui.git
 
 # 或直接在 pubspec.yaml 中声明
 # dependencies:
 #   harmony_ui:
 #     git:
-#       url: https://github.com/shaohushuo/ohos_ui.git
+#       url: https://github.com/shaohushuo/harmony_ui.git
 #       ref: main
 ```
 
@@ -476,7 +476,7 @@ showOhosSnackBar(
 const OhosProgressIndicator.circular();                     // 无限转圈
 OhosProgressIndicator.linear(value: 0.6);                   // 线性进度
 
-OhosQrCode(data: 'https://github.com/shaohushuo/ohos_ui'); // 二维码
+OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'); // 二维码
 ```
 
 ## 在 HarmonyOS 模拟器上运行 Demo
