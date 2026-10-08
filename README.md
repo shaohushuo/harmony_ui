@@ -211,20 +211,38 @@ OhosLightMaterial(
   child: OhosAppBar(lightMaterial: true, title: const Text('标题')),
 )
 
-// 底部悬浮：THIN + 渐变蒙层
+// 底部悬浮：THIN + 渐变蒙层，光池跟随选中项，按压出现指尖光晕
 OhosNavigationBar(
   type: OhosNavigationBarType.float,
   lightMaterial: true,
+  glow: true,
   destinations: destinations,
   ...
 )
 
-// 半模态 / 大弹层：ULTRA_THICK
+// 半模态 / 大弹层：ULTRA_THICK（可开启光感漫射）
+OhosLightMaterial(
+  level: OhosLightMaterialLevel.ultraThick,
+  effectTuning: const OhosLightEffectTuning(scatterScale: 0.6),
+  child: panel,
+)
 showOhosBottomSheet(context: context, title: '分享', content: ...);
 ```
 
-- 五档模糊强度映射：ULTRA_THIN=8、THIN=16、REGULAR=24、THICK=32、ULTRA_THICK=40（sigma）。
-- `OhosBottomSheet` 默认 ULTRA_THICK 材质；`OhosAppBar(lightMaterial: true)` 默认 ULTRA_THIN。
+材质由多层合成，对应官方「沉浸光感」的各层描述：
+
+- 五档模糊强度：ULTRA_THIN=8、THIN=16、REGULAR=24、THICK=32、ULTRA_THICK=40（sigma），各档带有独立的表面填充/光池/高光/阴影/漫射参数。
+- 光池（glow pools）：`OhosLightPalette.glowColors` 彩色光晕在介质内漫溢，`glowAlignment` 移动时产生「光跟随交互」的效果（底部页签选中项、按压位置）。
+- 镜面高光与边缘高光：`animationValue` 驱动高光扫掠，上边缘画 rim 亮边与顶缘发丝高光。
+- 光感漫射：`OhosLightEffectTuning.scatterScale` 开启背景放大折射带（默认关闭以省性能）。
+- 调参：`OhosLightEffectTuning`（blur/surface/glow/shadow/specular/scatter 六项倍率），可模拟官方「强/均衡/弱」三档。
+- `OhosBottomSheet` 默认 ULTRA_THICK；`OhosAppBar(lightMaterial: true)` 默认 ULTRA_THIN。
+
+> 技术参考（MIT）：材质分层思路借鉴自
+> [harmony_immersive_glow_tabbar](https://gitcode.com/ZuoYueLiang/harmony_immersive_glow_tabbar)
+> 与 [liquid_glass_widgets](https://pub.dev/packages/liquid_glass_widgets)。
+> 注意 `liquid_glass_widgets` 要求 Flutter ≥ 3.41.0，而鸿蒙社区分叉为
+> `oh-3.35.7-release`（3.35.x），无法直接依赖，故采用同思路的自绘实现。
 
 ### 布局基础（栅格 / 断点 / 边距）
 
