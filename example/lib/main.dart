@@ -6,6 +6,7 @@ import 'pages/action_page.dart';
 import 'pages/container_page.dart';
 import 'pages/display_page.dart';
 import 'pages/input_page.dart';
+import 'pages/kit_page.dart';
 import 'pages/layout_page.dart';
 import 'pages/navigation_page.dart';
 import 'pages/selection_page.dart';
@@ -90,6 +91,12 @@ class HomePage extends StatelessWidget {
       subtitle: '列表 · 弹出框 · 半模态面板',
       icon: OhosIcons.folder_fill,
       builder: (BuildContext context) => ContainerPage(),
+    ),
+    GalleryCategory(
+      title: 'UI Design Kit',
+      subtitle: '点光源 · 按压阴影 · 侧边栏 · 横滑 · 常驻通知',
+      icon: Icons.auto_awesome_rounded,
+      builder: (BuildContext context) => KitPage(),
     ),
   ];
 

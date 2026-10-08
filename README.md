@@ -47,6 +47,7 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 - **转场动效**：`OhosGeometry` 提供与官方「转场动效」一致的弹簧/缓出曲线与 90/200/300/400ms 时长，配套「一镜到底」共享元素演示。
 - **零平台依赖**：纯 Dart / Flutter 实现，唯一第三方依赖为二维码生成 `qr` 包。
 - **完整控件覆盖**：官方「控件概览」6 大类 42 个控件全部实现，见下方清单。
+- **UI Design Kit 增强能力**：点光源、按压阴影、侧边栏/侧边菜单、横滑列表项、常驻通知、动态模糊标题栏、可展开操作栏、分层图标、应用内多窗入口等，对照华为「UI Design Kit 能力」文档实现。
 
 ## 安装
 
@@ -282,6 +283,149 @@ OhosGrid(
 | 底部页签激活高亮 | 20% 品牌色 `comp_emphasize_secondary` | `OhosNavigationBar` 选中胶囊 |
 | 图标尺寸 | 24×24vp | `OhosNavigationBar(iconSize: 24)` |
 | 页签数量建议 | 3–5 个 | 文档建议，未强制 |
+
+
+## UI Design Kit 增强组件（对照华为「UI Design Kit 能力」文档）
+
+实现均对照华为开发者文档「[UI Design Kit 简介](https://developer.huawei.com/consumer/cn/doc/doccenter-capabilities/ui-design-introduction.md)」
+能力清单（点光源、按压阴影、侧边栏/侧边菜单、横滑列表项、常驻通知、动态模糊标题栏、
+可展开操作栏、分层图标、应用内多窗入口等），示例代码见 `example/lib/pages/kit_page.dart`（示例首页 →「UI Design Kit」分类）。
+
+<p align="center">
+  <img src="doc/screenshots/kit_02_pointlight_feathering.png" alt="点光源效果" width="230"/>
+  <img src="doc/screenshots/kit_04_sidebar_submenu.png" alt="侧边栏 + 侧边菜单" width="230"/>
+  <img src="doc/screenshots/kit_05_rows_open.png" alt="横滑列表项" width="230"/>
+  <img src="doc/screenshots/kit_06_snackbar_resident.png" alt="常驻通知 SnackBar" width="230"/>
+  <img src="doc/screenshots/kit_07_tabdiv_visible.png" alt="子页签分割线" width="230"/>
+  <img src="doc/screenshots/kit_08_picker_picked.png" alt="颜色选择器（光谱）" width="230"/>
+  <img src="doc/screenshots/kit_09_blur_scrolled.png" alt="动态模糊标题栏" width="230"/>
+  <img src="doc/screenshots/kit_10_actionbar.png" alt="可展开操作栏" width="230"/>
+  <img src="doc/screenshots/kit_11_bottom_sections.png" alt="分层图标 + 多窗入口" width="230"/>
+</p>
+
+### 点光源（PointLight）
+
+ArkUI `PointLight`（点光源）能力：发光源 `OhosLightSource` 朝 `OhosIlluminated`
+受光面按类型投射环境光与「光晕 + 光柱」效果，支持 5 种受光类型与强度调节。
+模拟器不支持原生 HDS 光影（文档明确），本实现用自绘合成达到同样的视觉层次。
+
+```dart
+OhosIlluminated(
+  illuminatedType: OhosPointLightIlluminatedType.borderContent, // none/border/content/borderContent/defaultFeatheringBorder
+  lightAlignment: const Alignment(0.2, 0.3),
+  options: const OhosPointLightOptions(color: Colors.white, intensity: 12, height: 150),
+  borderRadius: BorderRadius.circular(22),
+  child: card,
+)
+// 发光源（举例：卡片中心的圆钮）
+OhosLightSource(size: 34, options: const OhosPointLightOptions(intensity: 10, height: 150))
+```
+
+### 按压阴影（PressShadow）
+
+`OhosPressShadow` 对应 ArkUI `visualEffect(pressShadow)`：按压时表面
+`BLEND_WHITE`（白色混合）或 `BLEND_GRADIENT`（指尖径向渐变），抬手淡出。
+
+```dart
+OhosPressShadow(
+  type: OhosPressShadowType.blendGradient,
+  borderRadius: BorderRadius.circular(24),
+  child: card,
+)
+```
+
+### 侧边栏 + 侧边菜单（SideBar / SideMenu）
+
+- `OhosSideBar`：overlay 悬浮侧边栏，圆角尾缘、遮罩、点外部自动收起、展开动画。
+- `OhosSideMenu` / `OhosSideMenuItem` / `OhosSideMenuSubItem`：一/二/三级菜单、展开态、红点与数字角标。
+
+```dart
+OhosSideBar(
+  isShowSideBar: _show,
+  onIsShowSideBarChanged: (bool v) => setState(() => _show = v),
+  overlay: true,
+  width: 230,
+  sideBar: OhosSideMenu(
+    items: const [
+      OhosSideMenuItem(label: '收件箱', icon: Icon(Icons.mail_outline_rounded)),
+      OhosSideMenuItem(label: '消息', icon: Icon(Icons.chat_bubble_outline_rounded),
+        badgeCount: 8, subItems: [OhosSideMenuSubItem(label: '短信', badgeCount: 50)]),
+    ],
+    selectedValue: _selected,
+    onSelected: (String v) => setState(() => _selected = v),
+  ),
+  content: const MyPage(),
+)
+```
+
+### 横滑列表项（SwipeAction）
+
+`OhosListItem` 左滑显示操作按钮，支持整划删除（`fullDelete`），滑动越界自动回调并移除。
+
+```dart
+OhosListItem(
+  fullDelete: true,
+  onFullDelete: () => setState(() => rows.removeAt(i)),
+  actions: [
+    OhosSwipeAction(icon: const Icon(Icons.share_rounded), backgroundColor: const Color(0xFF64BB5C), onTap: () {}),
+    OhosSwipeAction(icon: const Icon(Icons.delete_outline_rounded), backgroundColor: theme.dangerColor, onTap: () {}),
+  ],
+  child: row,
+)
+```
+
+### 常驻通知（Resident SnackBar）
+
+`showOhosSnackBar(resident: true)`：duration -1 语义，常驻显示直到点击关闭按钮，
+支持图标 + 标题 + 描述与「传统消息 + 撤销」组合。
+
+### 子页签分割线（Divider Follow-Scroll）
+
+`OhosTabBar` 新增 `OhosTabBarDividerMode.visible / none / followScroll`：
+常显、常隐、以及绑定滚动控制器「跟手」——内容滑动时分割线淡入，回顶淡出。
+
+### 颜色选择器（三模式 + 收藏）
+
+`OhosColorPicker` 提供 网格 / 光谱 / 滑块 三种模式与收藏管理：
+
+```dart
+OhosColorPicker(
+  colors: const [Color(0xFF0A59F7), /* ... */],
+  selectedColor: _color,
+  onChanged: (Color c) => setState(() => _color = c),
+  tabs: const [OhosColorPickerTab.grid, OhosColorPickerTab.spectrum, OhosColorPickerTab.sliders],
+  favoriteColors: _favorites,
+  onFavoritesChanged: (List<Color> c) => setState(() => _favorites = c),
+)
+```
+
+### 动态模糊标题栏（AppBar Scroll Effect）
+
+`OhosAppBar` 的 `scrollEffect`：内容穿透标题栏滚动，滚动到阈值区间后
+`commonBlur / transitionBlur / gradientBlur` 背板淡入（BackdropFilter 动态模糊）。
+
+```dart
+OhosAppBar(
+  backgroundColor: Colors.transparent,
+  title: const Text('标题'),
+  scrollController: _scroller,
+  scrollEffect: const OhosAppBarScrollEffectOptions(
+    effect: OhosAppBarScrollEffectType.commonBlur,
+    blurEffectiveStartOffset: 0,
+    blurEffectiveEndOffset: 60,
+    blurSigma: 10,
+  ),
+)
+```
+
+### 可展开操作栏（Expandable ActionBar）
+
+`OhosActionBar(expandable: true)`：悬浮宫格操作栏，主按钮收起/展开次级操作。
+
+### 分层图标与多窗入口
+
+- `OhosLayeredIcon`：背景板 + 前景图标合成，支持缩放与描边。
+- `OhosMultiWindowEntry`：应用内多窗入口，无多窗能力设备自动禁用（灰化、不可点）。
 
 ## 使用示例
 
