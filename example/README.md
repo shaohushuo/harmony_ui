@@ -1,12 +1,12 @@
-# ohos_ui 组件画廊示例
+# harmony_ui 组件画廊示例
 
-展示 `ohos_ui` 全部组件的画廊应用，可在 HarmonyOS 模拟器 / 真机上运行。
+展示 `harmony_ui` 全部组件的画廊应用，可在 HarmonyOS 模拟器 / 真机上运行。
 
 ## 截图
 
-| 组件 | 表单 | 反馈 | 关于 |
+| 主页 | 导航类 | 布局与动效 | 输入类 |
 | --- | --- | --- | --- |
-| <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_home.png" width="150"/> | <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_form.png" width="150"/> | <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_feedback.png" width="150"/> | <img src="https://cdn.jsdelivr.net/gh/shaohushuo/ohos_ui@main/doc/screenshots/gallery_about.png" width="150"/> |
+| <img src="https://cdn.jsdelivr.net/gh/shaohushuo/harmony_ui@main/doc/screenshots/gallery_home.png" width="150"/> | <img src="https://cdn.jsdelivr.net/gh/shaohushuo/harmony_ui@main/doc/screenshots/gallery_navigation.png" width="150"/> | <img src="https://cdn.jsdelivr.net/gh/shaohushuo/harmony_ui@main/doc/screenshots/gallery_layout_light.png" width="150"/> | <img src="https://cdn.jsdelivr.net/gh/shaohushuo/harmony_ui@main/doc/screenshots/gallery_input.png" width="150"/> |
 
 ## 运行（HarmonyOS）
 

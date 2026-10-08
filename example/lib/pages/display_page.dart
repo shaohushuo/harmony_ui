@@ -157,7 +157,7 @@ class DisplayPage extends StatelessWidget {
           description: '生成二维码，自动包含静区。',
           child: DemoCard(
             child: Center(
-              child: OhosQrCode(data: 'https://github.com/shaohushuo/ohos_ui'),
+              child: OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'),
             ),
           ),
         ),
