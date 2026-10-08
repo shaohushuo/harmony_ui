@@ -66,15 +66,8 @@ class OhosSegmentedButton<T> extends StatelessWidget {
                         ? theme.cardColor
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular((height - 6) / 2),
-                    boxShadow: segment.value == selected
-                        ? <BoxShadow>[
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
+                    // No outer shadow: it would bleed onto the neighbouring
+                    // segments while tapping/animating.
                   ),
                   child: Text(
                     segment.label,

@@ -26,7 +26,8 @@ class LayoutPage extends StatelessWidget {
         ),
         DemoSection(
           title: '沉浸光感 OhosLightMaterial',
-          description: 'ULTRA_THIN 顶部悬浮 + 渐变模糊，THIN 底部悬浮，THICK 弹层。',
+          description: '背景模糊 + 光池 + 边缘高光；顶部 ULTRA_THIN 渐变模糊、'
+              '底部 THIN、弹层 THICK（含光感漫射）。',
           child: _LightDemo(),
         ),
         DemoSection(
@@ -196,17 +197,18 @@ class _LightDemo extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        const OhosLightMaterial(
+        OhosLightMaterial(
           level: OhosLightMaterialLevel.thick,
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-          child: SizedBox(
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          effectTuning: const OhosLightEffectTuning(scatterScale: 0.6),
+          child: const SizedBox(
             height: 72,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Icon(OhosIcons.plus, color: OhosColors.highlight),
                 SizedBox(width: 8),
-                Text('任意位置弹层 · THICK 材质'),
+                Text('任意位置弹层 · THICK + 漫射'),
               ],
             ),
           ),
@@ -224,81 +226,147 @@ class _SharedElementDemo extends StatefulWidget {
 }
 
 class _SharedElementDemoState extends State<_SharedElementDemo> {
-  int? _opened;
+  static const List<(int, Color, String)> _cards = <(int, Color, String)>[
+    (0, Color(0xFF0A59F7), '共享元素'),
+    (1, Color(0xFF64BB5C), '共享容器'),
+    (2, Color(0xFFED6F21), '共享动势'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final List<(int, Color, String)> cards = <(int, Color, String)>[
-      (0, const Color(0xFF0A59F7), '共享元素'),
-      (1, const Color(0xFF64BB5C), '共享容器'),
-      (2, const Color(0xFFED6F21), '共享动势'),
-    ];
-    if (_opened != null) {
-      final (int index, Color color, String label) = cards[_opened!];
-      return Center(
-        child: GestureDetector(
-          onTap: () => setState(() => _opened = null),
-          child: AnimatedContainer(
-            duration: OhosGeometry.durationLong,
-            curve: OhosGeometry.sharedElement,
-            width: 260,
-            height: 160,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(OhosIcons.arrow_left, color: Colors.white, size: 28),
-                const SizedBox(height: 8),
-                Text(
-                  '返回 · $label',
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    return Row(
-      children: <Widget>[
-        for (final (int index, Color color, String label) in cards)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: GestureDetector(
-                onTap: () => setState(() => _opened = index),
-                child: AnimatedContainer(
-                  duration: OhosGeometry.durationShort,
-                  curve: OhosGeometry.easeOut,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+    return SizedBox(
+      height: 96,
+      child: Row(
+        children: <Widget>[
+          for (final (int index, Color color, String label) in _cards)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Hero(
+                  tag: 'shared-card-$index',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _open(context, index),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        height: 96,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Pushes a full-screen page with the same [Hero] tag, so Flutter morphs
+  /// the small card into the large one (一镜到底) with the shared-element
+  /// curve instead of an instant tree swap.
+  void _open(BuildContext context, int index) {
+    final (int _, Color color, String label) = _cards[index];
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: OhosGeometry.durationLong,
+        reverseTransitionDuration: OhosGeometry.durationMedium,
+        pageBuilder:
+            (BuildContext context, Animation<double> animation,
+                Animation<double> secondaryAnimation) =>
+                _SharedCardPage(
+                  index: index,
+                  color: color,
+                  label: label,
+                ),
+        transitionsBuilder: (
+          BuildContext context,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+          Widget child,
+        ) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: OhosGeometry.easeOut,
+            ),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SharedCardPage extends StatelessWidget {
+  const _SharedCardPage({
+    required this.index,
+    required this.color,
+    required this.label,
+  });
+
+  final int index;
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black.withValues(alpha: 0.35),
+      body: Center(
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).maybePop(),
+          child: Hero(
+            tag: 'shared-card-$index',
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 260,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 24,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Icon(
+                      OhosIcons.arrow_left,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '返回 · $label',
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-      ],
+        ),
+      ),
     );
   }
 }

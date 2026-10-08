@@ -73,6 +73,7 @@ class OhosSwiper extends StatefulWidget {
     this.indicator = true,
     this.onPageChanged,
     this.controller,
+    this.clipRadius,
   });
 
   /// Page widgets.
@@ -98,6 +99,12 @@ class OhosSwiper extends StatefulWidget {
 
   /// Optional page controller.
   final PageController? controller;
+
+  /// Optional corner radius applied to every page. Wrap each page in a
+  /// [ClipRRect] so the rounded corners stay intact while pages slide
+  /// in/out of the viewport (otherwise the viewport's hard edge cuts the
+  /// entering page into right angles).
+  final BorderRadius? clipRadius;
 
   @override
   State<OhosSwiper> createState() => _OhosSwiperState();
@@ -169,7 +176,16 @@ class _OhosSwiperState extends State<OhosSwiper> {
               widget.onPageChanged?.call(index % pages.length);
             },
             itemBuilder: (BuildContext context, int index) {
-              return pages[index % pages.length];
+              final Widget page = pages[index % pages.length];
+              final BorderRadius? radius = widget.clipRadius;
+              if (radius == null) {
+                return page;
+              }
+              return ClipRRect(
+                borderRadius: radius,
+                clipBehavior: Clip.antiAlias,
+                child: page,
+              );
             },
           ),
         ),

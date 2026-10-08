@@ -149,10 +149,12 @@ class _SelectionPageState extends State<SelectionPage> {
           child: DemoCard(
             child: Row(
               children: <Widget>[
-                OhosColorPicker(
-                  colors: _palette,
-                  selectedColor: _color,
-                  onChanged: (Color c) => setState(() => _color = c),
+                Expanded(
+                  child: OhosColorPicker(
+                    colors: _palette,
+                    selectedColor: _color,
+                    onChanged: (Color c) => setState(() => _color = c),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Column(

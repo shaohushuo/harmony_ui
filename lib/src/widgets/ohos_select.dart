@@ -60,7 +60,7 @@ class OhosSelect<T> extends StatelessWidget {
           ? () async {
               final T? result = await showMenu<T>(
                 context: context,
-                position: RelativeRect.fromLTRB(0, 0, 0, 0),
+                position: _menuPosition(context),
                 color: theme.popupColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
@@ -104,7 +104,37 @@ class OhosSelect<T> extends StatelessWidget {
           : null,
       style: style,
       icon: const Icon(Icons.expand_more_rounded),
-      child: Text(label == null ? selected.label : '$label ${selected.label}'),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 88, maxWidth: 200),
+        child: Text(
+          label == null ? selected.label : '$label ${selected.label}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.start,
+        ),
+      ),
+    );
+  }
+
+  /// Anchors the dropdown right below the trigger button instead of the
+  /// overlay's origin, so the menu appears at the button's position.
+  RelativeRect _menuPosition(BuildContext context) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    final RenderBox? overlay = Overlay.maybeOf(
+      context,
+      rootOverlay: true,
+    )?.context.findRenderObject() as RenderBox?;
+    if (box == null || overlay == null || !box.hasSize) {
+      return RelativeRect.fromLTRB(0, 0, 0, 0);
+    }
+    final Offset topLeft = box.localToGlobal(Offset.zero);
+    final Offset bottomRight = box.localToGlobal(box.size.bottomRight(Offset.zero));
+    final double gap = 4;
+    return RelativeRect.fromLTRB(
+      topLeft.dx,
+      bottomRight.dy + gap,
+      overlay.size.width - bottomRight.dx,
+      overlay.size.height - bottomRight.dy - gap,
     );
   }
 }

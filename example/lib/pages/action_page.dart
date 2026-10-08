@@ -107,48 +107,68 @@ class ActionPage extends StatelessWidget {
             ),
           ),
         ),
-        DemoSection(
+        const DemoSection(
           title: '菜单 OhosMenu / showOhosMenu',
           description: '点击按钮弹出列表菜单；也支持宫格样式。',
-          child: DemoCard(
-            child: Wrap(
-              spacing: 12,
-              children: <Widget>[
-                OhosButton(
-                  onPressed: () async {
-                    final String? result = await showOhosMenu<String>(
-                      context: context,
-                      items: const <OhosMenuItem<String>>[
-                        OhosMenuItem(
-                          label: '复制',
-                          icon: Icons.copy_rounded,
-                          value: 'copy',
-                        ),
-                        OhosMenuItem(
-                          label: '收藏',
-                          icon: Icons.star_border_rounded,
-                          value: 'star',
-                        ),
-                        OhosMenuItem(
-                          label: '删除',
-                          icon: Icons.delete_rounded,
-                          value: 'delete',
-                          danger: true,
-                        ),
-                      ],
-                    );
-                    if (result != null && context.mounted) {
-                      showOhosToast(context, '选择了: $result');
-                    }
-                  },
-                  style: OhosButtonStyle.tonal,
-                  child: const Text('打开菜单'),
-                ),
-              ],
-            ),
-          ),
+          child: _MenuDemo(),
         ),
       ],
+    );
+  }
+}
+
+
+class _MenuDemo extends StatefulWidget {
+  const _MenuDemo();
+
+  @override
+  State<_MenuDemo> createState() => _MenuDemoState();
+}
+
+class _MenuDemoState extends State<_MenuDemo> {
+  final GlobalKey _anchorKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return DemoCard(
+      child: Wrap(
+        spacing: 12,
+        children: <Widget>[
+          OhosButton(
+            key: _anchorKey,
+            onPressed: () async {
+              final String? result = await showOhosMenu<String>(
+                context: context,
+                anchor: _anchorKey,
+                items: const <OhosMenuItem<String>>[
+                  OhosMenuItem(
+                    label: '复制',
+                    icon: Icons.copy_rounded,
+                    value: 'copy',
+                  ),
+                  OhosMenuItem(
+                    label: '收藏',
+                    icon: Icons.star_border_rounded,
+                    value: 'star',
+                  ),
+                  OhosMenuItem(
+                    label: '删除',
+                    icon: Icons.delete_rounded,
+                    value: 'delete',
+                    danger: true,
+                  ),
+                ],
+              );
+              if (result == null || !context.mounted) {
+                return;
+              }
+              showOhosToast(context, '选择了: $result');
+            },
+            style: OhosButtonStyle.tonal,
+            child: const Text('打开菜单'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -195,6 +215,8 @@ class _ToggleDemoState extends State<_ToggleDemo> {
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 10,
+      runSpacing: 10,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: <Widget>[
         OhosToggleButton(
           value: _on,

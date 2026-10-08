@@ -75,34 +75,44 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: elevation,
       child: SizedBox(
         height: preferredSize.height,
-        child: Row(
+        child: Stack(
+          fit: StackFit.expand,
           children: <Widget>[
-            if (leadingWidget != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: leadingWidget,
-              ),
-            Expanded(
-              child: DefaultTextStyle.merge(
-                style:
-                    theme.typography.titleMedium ??
-                    const TextStyle(fontSize: 17),
-                textAlign: TextAlign.center,
-                child: Align(
-                  alignment: Alignment.center,
+            // The title is always centered in the full bar width, regardless
+            // of whether a leading/back button or actions are present.
+            DefaultTextStyle.merge(
+              style:
+                  theme.typography.titleMedium ?? const TextStyle(fontSize: 17),
+              textAlign: TextAlign.center,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 64),
                   child: title ?? const SizedBox.shrink(),
                 ),
               ),
             ),
-            if (actions != null && actions!.isNotEmpty)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  for (final Widget action in actions!) action,
-                  const SizedBox(width: 8),
-                ],
+            if (leadingWidget != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: leadingWidget,
+                ),
               ),
-            SizedBox(width: leadingWidget == null ? 8 : 0),
+            if (actions != null && actions!.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (final Widget action in actions!) action,
+                      const SizedBox(width: 4),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
