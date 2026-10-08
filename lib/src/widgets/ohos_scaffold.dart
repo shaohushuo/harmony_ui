@@ -45,9 +45,12 @@ class OhosScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final Color background = backgroundColor ?? theme.backgroundColor;
-    return Material(
-      color: background,
-      child: SafeArea(
+    // Built on a real [Scaffold] so `ScaffoldMessenger`-based overlays
+    // (e.g. SnackBar shown through [showOhosSnackBar]) have a host to
+    // present in, and drawers are wired up.
+    return Scaffold(
+      backgroundColor: background,
+      body: SafeArea(
         child: Stack(
           children: <Widget>[
             Positioned.fill(
@@ -70,6 +73,8 @@ class OhosScaffold extends StatelessWidget {
           ],
         ),
       ),
+      drawer: drawer,
+      endDrawer: endDrawer,
     );
   }
 }

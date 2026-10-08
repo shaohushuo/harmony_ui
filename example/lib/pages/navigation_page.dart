@@ -40,7 +40,7 @@ class NavigationPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '底部页签 OhosNavigationBar（悬浮式 56vp）',
-          description: '悬浮胶囊 + 沉浸光感 THIN 材质，激活项图标与文字同排。',
+          description: '悬浮胶囊 + 沉浸光感：光池跟随选中项，按压出现指尖光晕与彩色焦散。',
           child: _NavigationBarDemo(type: OhosNavigationBarType.float),
         ),
         const DemoSection(
@@ -217,6 +217,7 @@ class _NavigationBarDemoState extends State<_NavigationBarDemo> {
         child: OhosNavigationBar(
           type: widget.type,
           lightMaterial: widget.type == OhosNavigationBarType.float,
+          glow: widget.type == OhosNavigationBarType.float,
           backgroundColor: Colors.white,
           currentIndex: _index,
           onDestinationSelected: (int i) => setState(() => _index = i),
@@ -259,6 +260,7 @@ class _SwiperDemo extends StatelessWidget {
     return OhosSwiper(
       height: 120,
       autoPlay: true,
+      clipRadius: BorderRadius.circular(16),
       children: <Widget>[
         for (int i = 0; i < colors.length; i++)
           Container(

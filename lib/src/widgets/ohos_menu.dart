@@ -9,23 +9,36 @@ enum OhosMenuStyle { list, grid }
 /// Shows a rounded HarmonyOS menu anchored at a position (菜单 in the
 /// HarmonyOS guideline).
 ///
+/// Pass [anchor] (a [BuildContext] or [GlobalKey] of the triggering widget)
+/// so the menu pops up right below the trigger; otherwise provide [position]
+/// explicitly.
+///
 /// ```dart
 /// await showOhosMenu<String>(
 ///   context: context,
+///   anchor: buttonKey,
 ///   items: const [
 ///     OhosMenuItem(label: '复制', icon: Icons.copy, value: 'copy'),
 ///     OhosMenuItem(label: '删除', icon: Icons.delete, value: 'delete'),
 ///   ],
-///   position: RelativeRect.fromLTRB(offset.dx, offset.dy, 0, 0),
 /// );
 /// ```
 Future<T?> showOhosMenu<T>({
   required BuildContext context,
   required List<OhosMenuItem<T>> items,
   RelativeRect? position,
+
+  /// Menu style: a vertical list or a grid.
   OhosMenuStyle style = OhosMenuStyle.list,
+
+  /// Widget to anchor the menu to — a [BuildContext] or [GlobalKey] of the
+  /// triggering control. When provided the menu is positioned right below it.
+  Object? anchor,
 }) {
-  final RelativeRect rect = position ?? RelativeRect.fromLTRB(16, 120, 16, 16);
+  final RelativeRect rect =
+      position ??
+      _anchorRect(context, anchor) ??
+      RelativeRect.fromLTRB(16, 120, 16, 16);
   return showMenu<T>(
     context: context,
     position: rect,
@@ -118,6 +131,40 @@ Future<T?> showOhosMenu<T>({
             ),
           ),
     ],
+  );
+}
+
+/// Computes a [RelativeRect] that anchors the menu below the widget
+/// referenced by [anchor] (a [BuildContext] or a [GlobalKey]). Falls back to
+/// `null` when the anchor cannot be resolved.
+RelativeRect? _anchorRect(BuildContext context, Object? anchor) {
+  BuildContext? anchorContext;
+  if (anchor is BuildContext) {
+    anchorContext = anchor;
+  } else if (anchor is GlobalKey) {
+    anchorContext = anchor.currentContext;
+  }
+  if (anchorContext == null) {
+    return null;
+  }
+  final RenderBox? box = anchorContext.findRenderObject() as RenderBox?;
+  final RenderBox? overlay = Overlay.maybeOf(
+    context,
+    rootOverlay: true,
+  )?.context.findRenderObject() as RenderBox?;
+  if (box == null || overlay == null || !box.hasSize) {
+    return null;
+  }
+  final Offset topLeft = box.localToGlobal(Offset.zero);
+  final Offset bottomRight = box.localToGlobal(
+    box.size.bottomRight(Offset.zero),
+  );
+  final double gap = 4;
+  return RelativeRect.fromLTRB(
+    topLeft.dx,
+    bottomRight.dy + gap,
+    overlay.size.width - bottomRight.dx,
+    overlay.size.height - bottomRight.dy - gap,
   );
 }
 
