@@ -14,6 +14,51 @@ enum OhosTabBarType {
   capsule,
 }
 
+/// Divider (分割线) behaviour under the underline tab strip.
+enum OhosTabBarDividerMode {
+  /// The divider is always visible.
+  visible,
+
+  /// No divider.
+  none,
+
+  /// The divider fades in as the bound [ScrollController] scrolls past
+  /// `blurEffectiveStartOffset` (跟手滑动效果).
+  followScroll,
+}
+
+/// Style options of the underline strip divider.
+class OhosTabBarDividerOptions {
+  const OhosTabBarDividerOptions({
+    this.mode = OhosTabBarDividerMode.visible,
+    this.color,
+    this.strokeWidth = 1,
+    this.startMargin = 0,
+    this.endMargin = 0,
+    this.followStartOffset = 0,
+    this.followEndOffset = 20,
+  });
+
+  /// How the divider shows.
+  final OhosTabBarDividerMode mode;
+
+  /// Divider color; defaults to the theme divider color.
+  final Color? color;
+
+  /// Divider thickness.
+  final double strokeWidth;
+
+  /// Left margin of the divider line.
+  final double startMargin;
+
+  /// Right margin of the divider line.
+  final double endMargin;
+
+  /// Scroll offset range (vp) over which the follow-scroll divider fades in.
+  final double followStartOffset;
+  final double followEndOffset;
+}
+
 /// A HarmonyOS segmented tab strip, the counterpart of Material's
 /// [TabBar].
 ///
@@ -32,6 +77,9 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
     this.indicatorColor,
     this.backgroundColor,
     this.showDivider = false,
+    this.divider,
+    this.dividerStyle,
+    this.scrollController,
   });
 
   /// The tab labels.
@@ -56,8 +104,17 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
 
   /// Whether a 1px hairline separates the strip from the content below
-  /// (bottom-tab style).
+  /// (bottom-tab style). Superseded by [dividerStyle].
   final bool showDivider;
+
+  /// Optional divider configuration (常显/常隐/跟手滑动).
+  final OhosTabBarDividerOptions? divider;
+
+  /// Alias of [divider]; kept for readability in call sites.
+  final OhosTabBarDividerOptions? dividerStyle;
+
+  /// Listens for the follow-scroll divider mode.
+  final ScrollController? scrollController;
 
   @override
   Size get preferredSize => Size.fromHeight(height);
@@ -95,44 +152,49 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
     }
     return Material(
       color: backgroundColor ?? theme.backgroundColor,
-      child: Container(
+      child: SizedBox(
         height: height,
-        decoration: showDivider
-            ? BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: theme.dividerColor, width: 1),
-                ),
-              )
-            : null,
-        child: AnimatedBuilder(
-          animation: controller,
-          builder: (BuildContext context, Widget? child) {
-            final List<Widget> items = <Widget>[
-              for (int i = 0; i < length; i++)
-                _tabItem(
-                  context,
-                  tabs[i],
-                  i == controller.index,
-                  () => controller.index = i,
-                ),
-            ];
-            if (isScrollable) {
-              return ListView(
-                scrollDirection: Axis.horizontal,
-                children: <Widget>[
-                  for (int i = 0; i < items.length; i++) ...<Widget>[
-                    SizedBox(width: 96, child: items[i]),
-                  ],
-                ],
-              );
-            }
-            return Row(
-              children: <Widget>[
-                for (int i = 0; i < items.length; i++)
-                  Expanded(child: items[i]),
-              ],
-            );
-          },
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: controller,
+                builder: (BuildContext context, Widget? child) {
+                  final List<Widget> items = <Widget>[
+                    for (int i = 0; i < length; i++)
+                      _tabItem(
+                        context,
+                        tabs[i],
+                        i == controller.index,
+                        () => controller.index = i,
+                      ),
+                  ];
+                  if (isScrollable) {
+                    return ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: <Widget>[
+                        for (int i = 0; i < items.length; i++) ...<Widget>[
+                          SizedBox(width: 96, child: items[i]),
+                        ],
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: <Widget>[
+                      for (int i = 0; i < items.length; i++)
+                        Expanded(child: items[i]),
+                    ],
+                  );
+                },
+              ),
+            ),
+            _UnderlineDivider(
+              options: divider ?? dividerStyle,
+              legacyShowDivider: showDivider,
+              dividerColor: theme.dividerColor,
+              scrollController: scrollController,
+            ),
+          ],
         ),
       ),
     );
@@ -189,6 +251,71 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Renders the strip divider (常显 / 常隐 / 跟手滑动) at the bottom edge.
+class _UnderlineDivider extends StatelessWidget {
+  const _UnderlineDivider({
+    required this.options,
+    required this.legacyShowDivider,
+    required this.dividerColor,
+    this.scrollController,
+  });
+
+  final OhosTabBarDividerOptions? options;
+  final bool legacyShowDivider;
+  final Color dividerColor;
+  final ScrollController? scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosTabBarDividerOptions opts =
+        options ??
+        OhosTabBarDividerOptions(
+          mode: legacyShowDivider
+              ? OhosTabBarDividerMode.visible
+              : OhosTabBarDividerMode.none,
+        );
+    final OhosTabBarDividerMode mode = opts.mode;
+    if (mode == OhosTabBarDividerMode.none) {
+      return const SizedBox.shrink();
+    }
+    final Color color = opts.color ?? dividerColor;
+    final Widget line = Container(
+      height: opts.strokeWidth,
+      margin: EdgeInsets.only(left: opts.startMargin, right: opts.endMargin),
+      color: color,
+    );
+    if (mode == OhosTabBarDividerMode.visible) {
+      return Align(alignment: Alignment.bottomCenter, child: line);
+    }
+    // followScroll: fade + slide in as the content scrolls under the strip.
+    final ScrollController? controller = scrollController;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ListenableBuilder(
+        listenable: controller ?? ValueNotifier<double>(0),
+        builder: (BuildContext context, Widget? child) {
+          final double offset = (controller?.hasClients ?? false)
+              ? controller!.offset
+              : 0;
+          final double span =
+              (opts.followEndOffset - opts.followStartOffset).clamp(0.1, 1e9);
+          final double t =
+              ((offset - opts.followStartOffset) / span).clamp(0.0, 1.0);
+          return Opacity(
+            opacity: t,
+            child: Transform.translate(
+              offset: Offset(0, (1 - t) * 3),
+              child: child,
+            ),
+          );
+        },
+        child: line,
       ),
     );
   }

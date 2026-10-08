@@ -1,8 +1,52 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
 import 'ohos_icon_button.dart';
 import 'ohos_light_material.dart';
+
+/// 标题栏动态模糊 style, mirroring `ScrollEffectType`.
+enum OhosAppBarScrollEffectType {
+  /// No scroll-dependent effect.
+  none,
+
+  /// 通用模糊 (COMMON_BLUR): a uniform blur backplate and a hairline fade in
+  /// as content scrolls under the bar.
+  commonBlur,
+
+  /// 过渡模糊 (TRANSITION_BLUR): the bar's background / content linearly
+  /// transitions from `originalStyle` to `scrollEffectStyle`.
+  transitionBlur,
+
+  /// 渐变模糊 (GRADIENT_BLUR): blur strength ramps and the backplate fades in
+  /// with a soft gradient edge.
+  gradientBlur,
+}
+
+/// Scroll range (vp) over which the dynamic blur reaches full strength, plus
+/// the scrolled style, mirroring `scrollEffectOpts` +
+/// `originalStyle/scrollEffectStyle`.
+class OhosAppBarScrollEffectOptions {
+  const OhosAppBarScrollEffectOptions({
+    this.effect = OhosAppBarScrollEffectType.none,
+    this.blurEffectiveStartOffset = 0,
+    this.blurEffectiveEndOffset = 20,
+    this.blurSigma = 10,
+  });
+
+  /// Dynamic blur style.
+  final OhosAppBarScrollEffectType effect;
+
+  /// Scroll offset at which the effect starts.
+  final double blurEffectiveStartOffset;
+
+  /// Scroll offset at which the effect reaches full strength.
+  final double blurEffectiveEndOffset;
+
+  /// Maximum blur sigma.
+  final double blurSigma;
+}
 
 /// The top application bar of `ohos_ui`, the counterpart of Flutter's
 /// [AppBar].
@@ -22,6 +66,9 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.height = 56,
     this.lightMaterial = false,
     this.lightLevel = OhosLightMaterialLevel.ultraThin,
+    this.scrollEffect,
+    this.scrollController,
+    this.scrolledBackgroundColor,
   });
 
   /// The main title widget, typically a [Text].
@@ -53,6 +100,16 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Immersive-light level when [lightMaterial] is true.
   final OhosLightMaterialLevel lightLevel;
 
+  /// Optional scroll-driven dynamic blur (动态模糊) configuration.
+  final OhosAppBarScrollEffectOptions? scrollEffect;
+
+  /// Listens to the content scroll extent for [scrollEffect].
+  final ScrollController? scrollController;
+
+  /// Background color once the scroll effect is fully active
+  /// (`scrollEffectStyle.backgroundStyle.backgroundColor`).
+  final Color? scrolledBackgroundColor;
+
   @override
   Size get preferredSize => Size.fromHeight(height);
 
@@ -68,10 +125,11 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: () => Navigator.maybePop(context),
       );
     }
+    final Color baseColor = lightMaterial
+        ? Colors.transparent
+        : backgroundColor ?? theme.backgroundColor;
     final Widget surface = Material(
-      color: lightMaterial
-          ? Colors.transparent
-          : backgroundColor ?? theme.backgroundColor,
+      color: baseColor,
       elevation: elevation,
       child: SizedBox(
         height: preferredSize.height,
@@ -117,14 +175,124 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
     );
-    if (!lightMaterial) {
-      return surface;
+    Widget result = lightMaterial
+        ? OhosLightMaterial(
+            level: lightLevel,
+            gradientFade: OhosLightFade.top,
+            gradientExtent: 24,
+            child: surface,
+          )
+        : surface;
+    final OhosAppBarScrollEffectOptions? effect = scrollEffect;
+    final ScrollController? scroller = scrollController;
+    if (effect != null &&
+        scroller != null &&
+        effect.effect != OhosAppBarScrollEffectType.none) {
+      result = _ScrollEffectBar(
+        effect: effect,
+        controller: scroller,
+        baseColor: baseColor,
+        scrolledColor: scrolledBackgroundColor,
+        child: result,
+      );
     }
-    return OhosLightMaterial(
-      level: lightLevel,
-      gradientFade: OhosLightFade.top,
-      gradientExtent: 24,
-      child: surface,
+    return result;
+  }
+}
+
+
+/// Applies the scroll-driven dynamic blur (动态模糊) to an [OhosAppBar].
+class _ScrollEffectBar extends StatelessWidget {
+  const _ScrollEffectBar({
+    required this.effect,
+    required this.controller,
+    required this.baseColor,
+    required this.scrolledColor,
+    required this.child,
+  });
+
+  final OhosAppBarScrollEffectOptions effect;
+  final ScrollController controller;
+  final Color baseColor;
+  final Color? scrolledColor;
+  final Widget child;
+
+  double get _progress {
+    final double offset = controller.hasClients ? controller.offset : 0;
+    final double span =
+        (effect.blurEffectiveEndOffset - effect.blurEffectiveStartOffset)
+            .clamp(0.1, 1e9);
+    return ((offset - effect.blurEffectiveStartOffset) / span).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (BuildContext context, Widget? child) {
+        final double t = _progress;
+        if (t <= 0) {
+          return child!;
+        }
+        switch (effect.effect) {
+          case OhosAppBarScrollEffectType.none:
+            return child!;
+          case OhosAppBarScrollEffectType.transitionBlur:
+            final OhosThemeData theme = OhosTheme.of(context);
+            final Color target = scrolledColor ?? Colors.white;
+            final Color color = Color.lerp(baseColor, target, t)!;
+            return Material(
+              color: color,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(child: child!),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Opacity(
+                      opacity: t,
+                      child: Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: theme.dividerColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          case OhosAppBarScrollEffectType.commonBlur:
+          case OhosAppBarScrollEffectType.gradientBlur:
+            final double eased = effect.effect ==
+                    OhosAppBarScrollEffectType.gradientBlur
+                ? Curves.easeOut.transform(t)
+                : t;
+            final double sigma = effect.blurSigma * eased;
+            return ClipRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  BackdropFilter(
+                    filter: ui.ImageFilter.blur(
+                      sigmaX: sigma,
+                      sigmaY: sigma,
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                  child!,
+                  // Frosted tint over the blurred backdrop.
+                  ColoredBox(
+                    color: Colors.white.withValues(
+                      alpha: 0.20 + 0.30 * eased,
+                    ),
+                  ),
+                ],
+              ),
+            );
+        }
+      },
+      child: child,
     );
   }
 }
