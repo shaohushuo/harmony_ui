@@ -13,18 +13,33 @@ import 'package:ohos_ui_example/pages/selection_page.dart';
 
 /// Gallery 的「斑马线」回归测试。
 ///
-/// 每个示例页在窄屏（360 / 320vp）下逐屏下滑一遍，把 `RenderFlex overflowed`
-/// 收集起来；出现溢出就失败，并给出溢出的 Row / Column / Stack 与源码行号。
-/// 组件库里凡是固定高度/固定宽度的行（页签、操作栏、数据面板、索引条）最容易
-/// 在窄屏翻车，这个测试就是用来兜住它们的。
+/// 每个示例页在窄屏 + 系统字体放大（Android 上 1.15 很常见，Mate 60 Pro 出厂即
+/// 1.15）下逐屏下滑一遍，把 `RenderFlex overflowed` 收集起来；出现溢出就失败，
+/// 并给出溢出的 Row / Column / Stack 与源码行号。
+///
+/// 组件库里凡是「固定高度 / 固定字号」的行（页签、操作栏、数据面板、索引条）最容易
+/// 在窄屏和大字号下翻车，这个测试就是用来兜住它们的。
 const List<Size> _sizes = <Size>[
   Size(360, 800),
   Size(320, 800),
+  Size(387, 820), // Mate 60 Pro 竖屏逻辑宽度
 ];
 
-Widget _host(Widget page) {
+const List<double> _textScales = <double>[
+  1.0,
+  1.15, // Mate 60 Pro 默认字号
+  1.3, // 无障碍「大字体」
+];
+
+Widget _host(Widget page, double textScale) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
+    builder: (BuildContext context, Widget? child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: child!,
+    ),
     home: OhosTheme(data: OhosThemeData.light(), child: page),
   );
 }
@@ -36,6 +51,7 @@ Widget _host(Widget page) {
 Future<void> _scan(
   WidgetTester tester,
   Widget page,
+  double textScale,
   List<String> errors,
 ) async {
   final void Function(FlutterErrorDetails)? previous = FlutterError.onError;
@@ -64,7 +80,7 @@ Future<void> _scan(
     tester.takeException();
   }
 
-  await tester.pumpWidget(_host(page));
+  await tester.pumpWidget(_host(page, textScale));
   await settle();
 
   for (int i = 0; i < 24; i++) {
@@ -89,20 +105,23 @@ void main() {
   };
 
   for (final Size size in _sizes) {
-    for (final MapEntry<String, Widget> entry in pages.entries) {
-      testWidgets('${entry.key} 页在 ${size.width}x${size.height} 下不溢出', (
-        WidgetTester tester,
-      ) async {
-        await tester.binding.setSurfaceSize(size);
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+    for (final double textScale in _textScales) {
+      for (final MapEntry<String, Widget> entry in pages.entries) {
+        testWidgets(
+          '${entry.key} 页 @ ${size.width.toInt()}vp ×${textScale}x 字号不溢出',
+          (WidgetTester tester) async {
+            await tester.binding.setSurfaceSize(size);
+            addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        final List<String> errors = <String>[];
-        await _scan(tester, entry.value, errors);
+            final List<String> errors = <String>[];
+            await _scan(tester, entry.value, textScale, errors);
 
-        if (errors.isNotEmpty) {
-          fail(errors.join('\n- - - - -\n'));
-        }
-      });
+            if (errors.isNotEmpty) {
+              fail(errors.join('\n- - - - -\n'));
+            }
+          },
+        );
+      }
     }
   }
 }

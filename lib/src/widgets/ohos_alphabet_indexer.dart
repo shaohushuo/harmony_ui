@@ -60,9 +60,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
           builder: (BuildContext context, BoxConstraints constraints) {
             final double perLetter =
                 constraints.maxHeight / widget.indexer.length;
-            final double fontSize = perLetter > 12
-                ? 12
-                : perLetter.clamp(7, 12) * 0.92;
+            // 系统字体放大（如 Mate 60 Pro 默认 1.15）会把文字等比撑高，
+            // 只按 vp 摊分还会溢出 27px —— 先把缩放折算回设计字号再取 95% 留余量。
+            final double scaled = MediaQuery.textScalerOf(context).scale(12);
+            final double textScale = scaled <= 0 ? 1 : scaled / 12;
+            final double fontSize = (perLetter / textScale * 0.95)
+                .clamp(5, 12);
             return Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[

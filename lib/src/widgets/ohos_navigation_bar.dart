@@ -461,33 +461,41 @@ class _OhosNavItem extends StatelessWidget {
         ),
       );
     }
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          AnimatedContainer(
-            duration: OhosGeometry.durationShort,
-            curve: OhosGeometry.spring,
-            width: 56,
-            height: selected ? 32 : 26,
-            decoration: BoxDecoration(
-              color: pillColor,
-              borderRadius: BorderRadius.circular(selected ? 16 : 13),
+    // 标签是固定 10vp 的设计字号，但系统字体放大后行高会涨，48vp 的平铺栏
+    // 装不下（1.3x 时溢出 1vp）。这里限制最大放大倍数，并让标签在极端情况下
+    // 可被压缩，避免 RenderFlex 溢出。
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            AnimatedContainer(
+              duration: OhosGeometry.durationShort,
+              curve: OhosGeometry.spring,
+              width: 56,
+              height: selected ? 32 : 26,
+              decoration: BoxDecoration(
+                color: pillColor,
+                borderRadius: BorderRadius.circular(selected ? 16 : 13),
+              ),
+              child: Center(child: content),
             ),
-            child: Center(child: content),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            destination.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: (theme.typography.labelSmall ??
-                    const TextStyle(fontSize: 10))
-                .copyWith(color: labelColor, fontSize: 10, height: 1.2),
-          ),
-        ],
+            const SizedBox(height: 1),
+            Flexible(
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: (theme.typography.labelSmall ??
+                        const TextStyle(fontSize: 10))
+                    .copyWith(color: labelColor, fontSize: 10, height: 1.2),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
