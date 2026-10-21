@@ -64,6 +64,7 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.elevation = 0,
     this.height = 56,
+    this.primary = true,
     this.lightMaterial = false,
     this.lightLevel = OhosLightMaterialLevel.ultraThin,
     this.scrollEffect,
@@ -92,6 +93,30 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Logical height of the bar.
   final double height;
+
+  /// Whether this bar is the topmost one on screen and should therefore keep
+  /// the system status bar clear.
+  ///
+  /// When true (the default) the bar absorbs `MediaQuery.padding.top` into its
+  /// own height, the same way Material's `AppBar` does with
+  /// `SafeArea(bottom: false)`: the background still paints edge-to-edge, but
+  /// the title / leading / actions are pushed below the clock and signal icons.
+  ///
+  /// This matters on OpenHarmony, where immersive (edge-to-edge) layouts are
+  /// the norm: a bar that ignores the inset draws the title *under* the status
+  /// bar, and the actions end up hidden behind the system icons — silently,
+  /// with no overflow error.
+  ///
+  /// Note that [preferredSize] deliberately stays [height]: `Scaffold` already
+  /// reserves `preferredSize.height + MediaQuery.padding.top` for its `appBar`
+  /// slot (see `Scaffold.appBarMaxHeight`), so adding the inset here needs no
+  /// change on the caller's side.
+  ///
+  /// Set false when the bar is **not** at the top of the screen (for example
+  /// inside a nested panel that already sits below the status bar) or when the
+  /// caller has wrapped it in a `SafeArea` itself, otherwise the inset is
+  /// applied twice.
+  final bool primary;
 
   /// Whether the bar uses the immersive light material
   /// (ULTRA_THIN + top gradient fade) instead of an opaque background.
@@ -128,50 +153,57 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     final Color baseColor = lightMaterial
         ? Colors.transparent
         : backgroundColor ?? theme.backgroundColor;
+    // 状态栏内边距：只把**内容**往下压，背景色仍铺到屏幕最顶端（沉浸式）。
+    // `maybePaddingOf` 而不是 `paddingOf`：脱离 MediaQuery 使用时不至于抛异常。
+    final double topInset =
+        primary ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0 : 0.0;
     final Widget surface = Material(
       color: baseColor,
       elevation: elevation,
-      child: SizedBox(
-        height: preferredSize.height,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            // The title is always centered in the full bar width, regardless
-            // of whether a leading/back button or actions are present.
-            DefaultTextStyle.merge(
-              style:
-                  theme.typography.titleMedium ?? const TextStyle(fontSize: 17),
-              textAlign: TextAlign.center,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 64),
-                  child: title ?? const SizedBox.shrink(),
-                ),
-              ),
-            ),
-            if (leadingWidget != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: leadingWidget,
-                ),
-              ),
-            if (actions != null && actions!.isNotEmpty)
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      for (final Widget action in actions!) action,
-                      const SizedBox(width: 4),
-                    ],
+      child: Padding(
+        padding: EdgeInsets.only(top: topInset),
+        child: SizedBox(
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              // The title is always centered in the full bar width, regardless
+              // of whether a leading/back button or actions are present.
+              DefaultTextStyle.merge(
+                style: theme.typography.titleMedium ??
+                    const TextStyle(fontSize: 17),
+                textAlign: TextAlign.center,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 64),
+                    child: title ?? const SizedBox.shrink(),
                   ),
                 ),
               ),
-          ],
+              if (leadingWidget != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: leadingWidget,
+                  ),
+                ),
+              if (actions != null && actions!.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        for (final Widget action in actions!) action,
+                        const SizedBox(width: 4),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

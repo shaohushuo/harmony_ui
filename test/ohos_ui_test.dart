@@ -275,4 +275,64 @@ void main() {
       expect(OhosWindowSize.fromWidth(840).margin, 32);
     });
   });
+
+  group('OhosAppBar', () {
+    /// OpenHarmony 上应用基本都是沉浸式（edge-to-edge），状态栏直接压在顶栏上。
+    /// `Scaffold` 给 `appBar` 槽位预留的高度是
+    /// `preferredSize.height + MediaQuery.padding.top`，所以组件自己把这段内边距
+    /// 算进去就够了 —— 调用方不需要再包 `SafeArea`，`preferredSize` 也不用改。
+    Widget host({required double topPadding, required OhosAppBar bar}) {
+      return OhosTheme(
+        data: OhosThemeData.light(),
+        child: MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(
+              size: const Size(360, 800),
+              padding: EdgeInsets.only(top: topPadding),
+            ),
+            child: Scaffold(appBar: bar, body: const SizedBox.expand()),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('primary 默认吃掉状态栏内边距：栏高 = height + inset，标题下移',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(title: Text('标题')),
+        ),
+      );
+
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56 + 24);
+      // 标题仍在 56 的工具栏区域正中（24 + 28），不是被状态栏压到顶上
+      expect(tester.getCenter(find.text('标题')).dy, 52);
+    });
+
+    testWidgets('状态栏为 0 时保持 56（桌面/无状态栏场景不变）',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(topPadding: 0, bar: const OhosAppBar(title: Text('标题'))),
+      );
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56);
+    });
+
+    testWidgets('primary: false 不吃内边距（调用方自己处理时用）',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(primary: false, title: Text('标题')),
+        ),
+      );
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56);
+    });
+
+    test('preferredSize 不含状态栏：Scaffold 已经加过一次，重复加会多留一条',
+        () {
+      const OhosAppBar bar = OhosAppBar(title: Text('t'));
+      expect(bar.preferredSize, const Size.fromHeight(56));
+    });
+  });
 }
