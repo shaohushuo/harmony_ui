@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/ohos_colors.dart';
 import '../theme/ohos_theme.dart';
 
 /// A HarmonyOS text input with an underline accent, the counterpart of
@@ -168,11 +167,11 @@ class _OhosTextFieldState extends State<OhosTextField> {
                 color: theme.textTertiaryColor.withValues(alpha: 0.2),
               ),
             ),
-            errorBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: OhosColors.danger, width: 2),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: theme.dangerColor, width: 2),
             ),
-            focusedErrorBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: OhosColors.danger, width: 2),
+            focusedErrorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: theme.dangerColor, width: 2),
             ),
           ),
         ),

@@ -44,6 +44,131 @@ void main() {
       expect(theme.dangerColor, const Color(0xFFE84026));
       expect(theme.typography.bodyLarge?.fontSize, 16);
     });
+
+    test('ink preset is pure black on pure white, without mid-tones', () {
+      final OhosThemeData ink = OhosThemeData.ink();
+      expect(ink.monochrome, isTrue);
+      // 墨水屏仍是「白纸黑字」，不能走 isDark 分支
+      expect(ink.isDark, isFalse);
+      expect(ink.brightness, Brightness.light);
+      expect(ink.backgroundColor, Colors.white);
+      expect(ink.cardColor, Colors.white);
+      expect(ink.popupColor, Colors.white);
+      expect(ink.textPrimaryColor, Colors.black);
+      expect(ink.textSecondaryColor, Colors.black);
+      // 三级色留给 hint：必须明显淡于正文，否则「未输入」与「已输入」同色
+      expect(ink.textTertiaryColor, const Color(0xFF767676));
+      // 功能色压成黑：红色在 16 级灰上是中灰，会和正文糊在一起
+      expect(ink.successColor, Colors.black);
+      expect(ink.warningColor, Colors.black);
+      expect(ink.dangerColor, Colors.black);
+      // 水波纹 / hover / focus 会留半透明灰块且刷新慢 → 全关
+      expect(ink.interactiveHoverColor, Colors.transparent);
+      expect(ink.interactivePressedColor, Colors.transparent);
+      expect(ink.interactiveFocusColor, Colors.transparent);
+      expect(ink.interactiveSelectColor, const Color(0x33000000));
+      // 关键：light 预设的 10% 黑分隔线在墨水屏上等于没有
+      expect(ink.dividerColor, Colors.black);
+      expect(ink.multiColors.length, 11);
+      expect(ink.multiColors.first, Colors.black);
+      expect(ink.multiColors.last, Colors.white);
+    });
+
+    test('copyWith keeps monochrome, light/dark presets stay colorful', () {
+      expect(OhosThemeData.light().monochrome, isFalse);
+      expect(OhosThemeData.dark().monochrome, isFalse);
+      expect(OhosThemeData.light().copyWith(monochrome: true).monochrome, isTrue);
+      expect(
+        OhosThemeData.ink().copyWith(highlightColor: Colors.grey).monochrome,
+        isTrue,
+      );
+    });
+
+    // `MaterialApp` 提供 Directionality / Navigator，组件本身不再包一层。
+    Widget themed(OhosThemeData data, Widget child) {
+      return OhosTheme(
+        data: data,
+        child: MaterialApp(home: OhosScaffold(body: child)),
+      );
+    }
+
+    testWidgets('ink 主题下 OhosLightMaterial 不再整层模糊', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        themed(
+          OhosThemeData.ink(),
+          const OhosLightMaterial(
+            level: OhosLightMaterialLevel.ultraThick,
+            child: SizedBox(width: 120, height: 48),
+          ),
+        ),
+      );
+      expect(find.byType(BackdropFilter), findsNothing);
+
+      // 彩屏仍然走模糊
+      await tester.pumpWidget(
+        themed(
+          OhosThemeData.light(),
+          const OhosLightMaterial(
+            level: OhosLightMaterialLevel.ultraThick,
+            child: SizedBox(width: 120, height: 48),
+          ),
+        ),
+      );
+      expect(find.byType(BackdropFilter), findsOneWidget);
+    });
+
+    testWidgets('ink 主题下输入框错误态读 theme.dangerColor，不再是硬编码红', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        themed(
+          OhosThemeData.ink(),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: OhosTextField(errorText: '必填'),
+          ),
+        ),
+      );
+
+      final InputDecoration decoration =
+          tester.widget<TextField>(find.byType(TextField)).decoration!;
+      final UnderlineInputBorder errorBorder =
+          decoration.errorBorder! as UnderlineInputBorder;
+      expect(errorBorder.borderSide.color, Colors.black);
+    });
+
+    testWidgets('ink 主题下弹层补 1px 黑描边，不靠 scrim 才分得清边界', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        themed(
+          OhosThemeData.ink(),
+          OhosButton(onPressed: () {}, child: const Text('打开')),
+        ),
+      );
+
+      final BuildContext context = tester.element(find.text('打开'));
+      showOhosDialog<void>(
+        context: context,
+        title: '标题',
+        content: '内容',
+        actions: <OhosDialogAction>[
+          OhosDialogAction(
+            label: '好',
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final Dialog dialog = tester.widget<Dialog>(find.byType(Dialog));
+      final RoundedRectangleBorder shape =
+          dialog.shape! as RoundedRectangleBorder;
+      expect(shape.side.color, Colors.black);
+      expect(shape.side.width, 1);
+    });
   });
 
   group('OhosButton', () {

@@ -30,6 +30,7 @@ class OhosThemeData with Diagnosticable {
     required this.dividerColor,
     required this.scrimColor,
     required this.typography,
+    this.monochrome = false,
     this.backgroundSecondaryColor,
     this.backgroundTertiaryColor,
     this.compBackgroundPrimaryColor,
@@ -45,6 +46,15 @@ class OhosThemeData with Diagnosticable {
 
   /// Whether this theme targets a light or dark interface.
   final Brightness brightness;
+
+  /// True for the e-ink preset (see [OhosThemeData.ink]).
+  ///
+  /// An e-ink theme is [Brightness.light] — black text on white paper — so
+  /// components must read **this** flag, not [isDark], when deciding whether to
+  /// composite: no `BackdropFilter` blur, no ripples, no shadows, 1px black
+  /// borders instead. Reusing [isDark] would also block a future second
+  /// monochrome preset (e.g. dark-paper e-ink).
+  final bool monochrome;
 
   /// Brand / system highlight color (light: #0A59F7, dark: #317AF7).
   final Color highlightColor;
@@ -199,9 +209,64 @@ class OhosThemeData with Diagnosticable {
     );
   }
 
+  /// Monochrome preset for e-ink panels (e.g. Huawei MatePad Paper).
+  ///
+  /// Pure black on pure white with **no mid-tones**: a 16-level gray panel
+  /// cannot resolve `#F1F3F5` against white, and the light preset's `10%`
+  /// dividers / `20%` highlights simply disappear. Boundaries therefore come
+  /// from 1px black lines (`dividerColor` is pure black here) rather than from
+  /// layered surfaces and shadows.
+  ///
+  /// [brightness] stays [Brightness.light] (black on white) so existing
+  /// `isDark` branches keep working; detect this preset with [monochrome].
+  ///
+  /// Colors are copied from the reference implementation in issue feedback:
+  /// tertiary text keeps `#767676` because it also drives hint text — pure
+  /// black would make "not yet typed" look identical to "typed", while
+  /// `#767676` still sits on level 9 of 16.
+  factory OhosThemeData.ink({String? fontFamily}) {
+    return OhosThemeData(
+      brightness: Brightness.light,
+      monochrome: true,
+      highlightColor: OhosColors.inkForeground,
+      onHighlightColor: OhosColors.inkBackground,
+      highlightTextColor: OhosColors.inkForeground,
+      backgroundColor: OhosColors.inkBackground,
+      backgroundSecondaryColor: OhosColors.inkBackground,
+      backgroundTertiaryColor: OhosColors.inkBackground,
+      cardColor: OhosColors.inkBackground,
+      compBackgroundPrimaryColor: OhosColors.inkBackground,
+      compBackgroundGrayColor: OhosColors.inkBackground,
+      popupColor: OhosColors.inkBackground,
+      textPrimaryColor: OhosColors.inkForeground,
+      textSecondaryColor: OhosColors.inkForeground,
+      textTertiaryColor: const Color(0xFF767676),
+      textFourthColor: OhosColors.inkInteractive,
+      multiColors: OhosColors.multiInk,
+      // 功能色也压成黑：红色在 16 级灰上变中灰，与正文糊在一起，
+      // 不如「黑字 + 文案说清楚」，需要强调时加粗或加图标。
+      successColor: OhosColors.inkForeground,
+      warningColor: OhosColors.inkForeground,
+      dangerColor: OhosColors.inkForeground,
+      emphasizeSecondaryColor: OhosColors.inkInteractive,
+      emphasizeTertiaryColor: const Color(0x1F000000),
+      // 水波纹 / hover / focus 在墨水屏上是半透明灰块且刷新慢，全部关掉；
+      // 点按反馈只留选中态（实心 20% 黑）。
+      interactiveHoverColor: Colors.transparent,
+      interactivePressedColor: Colors.transparent,
+      interactiveFocusColor: Colors.transparent,
+      interactiveSelectColor: OhosColors.inkInteractive,
+      // 关键：light 预设用 10% 黑做分隔线，墨水屏上等于没有。
+      dividerColor: OhosColors.inkForeground,
+      scrimColor: const Color(0x80000000),
+      typography: OhosTypography.light(fontFamily: fontFamily),
+    );
+  }
+
   /// Returns a copy with the given fields replaced.
   OhosThemeData copyWith({
     Brightness? brightness,
+    bool? monochrome,
     Color? highlightColor,
     Color? onHighlightColor,
     Color? highlightTextColor,
@@ -232,6 +297,7 @@ class OhosThemeData with Diagnosticable {
   }) {
     return OhosThemeData(
       brightness: brightness ?? this.brightness,
+      monochrome: monochrome ?? this.monochrome,
       highlightColor: highlightColor ?? this.highlightColor,
       onHighlightColor: onHighlightColor ?? this.onHighlightColor,
       highlightTextColor: highlightTextColor ?? this.highlightTextColor,
@@ -276,6 +342,7 @@ class OhosThemeData with Diagnosticable {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(DiagnosticsProperty<Brightness>('brightness', brightness));
+    properties.add(FlagProperty('monochrome', value: monochrome, ifTrue: 'ink'));
     properties.add(ColorProperty('highlightColor', highlightColor));
   }
 }

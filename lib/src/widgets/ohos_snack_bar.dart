@@ -39,9 +39,14 @@ void showOhosSnackBar(
       duration: resident ? const Duration(days: 365) : duration,
       behavior: SnackBarBehavior.floating,
       backgroundColor: backgroundColor ?? theme.cardColor,
-      elevation: 6,
+      // 墨水屏：白底浮条 + elevation 会退化成「白底无边界」，改 1px 黑边；
+      // 彩屏继续用浮起阴影。
+      elevation: theme.monochrome ? 0 : 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
+        side: theme.monochrome
+            ? BorderSide(color: theme.dividerColor)
+            : BorderSide.none,
       ),
       content: Row(
         children: <Widget>[

@@ -44,6 +44,10 @@ class OhosAlertDialog extends StatelessWidget {
       backgroundColor: theme.popupColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
+        // 墨水屏：弹层与页面同为纯白，只剩遮罩提供边界 → 补 1px 黑描边。
+        side: theme.monochrome
+            ? BorderSide(color: theme.dividerColor)
+            : BorderSide.none,
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 40),
       clipBehavior: Clip.antiAlias,

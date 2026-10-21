@@ -34,6 +34,15 @@ class DisplayPage extends StatelessWidget {
           ),
         ),
         const DemoSection(
+          title: '墨主题 OhosThemeData.ink（墨水屏）',
+          description:
+              '纯黑 + 纯白、去掉中间调：分隔线是 1px 纯黑（light 预设的 10% 黑在 16 级灰上'
+              '等于没有），水波纹 / 悬停 / 阴影全关，三级色留 #767676 给占位文字。'
+              'brightness 仍是 light，组件要用 monochrome 判断而不是 isDark；'
+              'OhosLightMaterial 在该主题下退化成纯色，不再做每帧全屏模糊。',
+          child: _InkThemeDemo(),
+        ),
+        const DemoSection(
           title: '子标题 OhosSubheader',
           description: '区块标题，可带尾部链接。',
           child: DemoCard(
@@ -414,4 +423,71 @@ class _PlaceholderImage extends StatelessWidget {
       ),
     );
   }
+}
+/// 墨主题下的几种典型组件：纯色分层、1px 黑线、无模糊无阴影。
+class _InkThemeDemo extends StatelessWidget {
+  const _InkThemeDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return OhosTheme(
+      data: OhosThemeData.ink(),
+      child: Builder(
+        builder: (BuildContext context) {
+          final OhosThemeData ink = OhosTheme.of(context);
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ink.backgroundColor,
+              border: Border.all(color: ink.dividerColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '纯黑正文，纯白底',
+                  style: TextStyle(color: ink.textPrimaryColor, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '提示文字 #767676：仍明显淡于正文',
+                  style: TextStyle(color: ink.textTertiaryColor, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    OhosButton(onPressed: () {}, child: const Text('主要按钮')),
+                    const SizedBox(width: 12),
+                    OhosButton(
+                      style: OhosButtonStyle.outlined,
+                      onPressed: () {},
+                      child: const Text('次要按钮'),
+                    ),
+                    const SizedBox(width: 12),
+                    const OhosSwitch(value: true, onChanged: _noop),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OhosDivider(color: ink.dividerColor, indent: 0, thickness: 1),
+                const SizedBox(height: 8),
+                OhosLightMaterial(
+                  level: OhosLightMaterialLevel.ultraThick,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'ULTRA_THICK 在这里是一块纯色，不是磨砂玻璃',
+                      style: TextStyle(color: ink.textPrimaryColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  static void _noop(bool value) {}
 }
