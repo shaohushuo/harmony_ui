@@ -144,6 +144,10 @@ class OhosButton extends StatelessWidget {
             style:
                 (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
                     .copyWith(color: foreground),
+            // 按钮标签按惯例是单行：给 Text 默认省略号，配合上面的
+            // Flexible 收缩，窄容器不会再报 overflow。
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             child: child ?? const SizedBox.shrink(),
           );
 
@@ -157,9 +161,17 @@ class OhosButton extends StatelessWidget {
           ),
           const SizedBox(width: 8),
         ],
-        label,
+        // Flexible + 单行省略：窄容器（抽屉里的 3:2 双按钮、200vp 小窗）里
+        // label 自己收缩，而不是整行 RenderFlex overflow。
+        Flexible(child: label),
       ],
     );
+
+    // 墨水屏（`monochrome`）与 `NoSplash` 主题下不闪水波纹：前者每次点按都会
+    // 留一块半透明灰且刷新慢，后者是调用方显式关掉了 splash。
+    final bool noSplash =
+        theme.monochrome ||
+        Theme.of(context).splashFactory == NoSplash.splashFactory;
 
     return Material(
       color: background,
@@ -169,9 +181,11 @@ class OhosButton extends StatelessWidget {
       shadowColor: highlight.withValues(alpha: 0.25),
       child: InkWell(
         onTap: enabled ? onPressed : null,
-        splashColor: Colors.white.withValues(
-          alpha: style == OhosButtonStyle.filled ? 0.25 : 0.20,
-        ),
+        splashColor: noSplash
+            ? Colors.transparent
+            : Colors.white.withValues(
+                alpha: style == OhosButtonStyle.filled ? 0.25 : 0.20,
+              ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             minWidth: minSize.width,

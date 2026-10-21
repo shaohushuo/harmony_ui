@@ -50,12 +50,39 @@ class _InputPageState extends State<InputPage> {
             ),
           ),
         ),
+        const DemoSection(
+          title: '输入框另两种形态（填充 / 胶囊）',
+          description:
+              'variant: filled 是鸿蒙表单常见的灰底圆角块（墨水屏上填充色等于背景色，'
+              '会自动退回透明底 + 1px 线）；capsule 用于筛选入口，配 suffixIcon。',
+          child: DemoCard(
+            child: Column(
+              children: <Widget>[
+                OhosTextField(
+                  labelText: '昵称',
+                  hintText: '已填写内容',
+                  variant: OhosTextFieldVariant.filled,
+                  suffixIcon: Icon(Icons.check_circle_outline, size: 20),
+                ),
+                SizedBox(height: 14),
+                OhosTextField(
+                  hintText: '搜索项目',
+                  variant: OhosTextFieldVariant.capsule,
+                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                ),
+              ],
+            ),
+          ),
+        ),
         DemoSection(
           title: '搜索框 OhosSearchBar',
-          description: '胶囊搜索框，实时回显输入。当前: "$_query"',
+          description:
+              '胶囊搜索框，实时回显输入。当前: "$_query"；聚焦后右侧出现「取消」。',
           child: OhosSearchBar(
             hintText: '搜索应用、设置、文件',
             onChanged: (String q) => setState(() => _query = q),
+            onClear: () => setState(() => _query = ''),
+            onCancel: () => setState(() => _query = ''),
             onSubmitted: (String q) => showOhosToast(context, '搜索: $q'),
           ),
         ),

@@ -21,6 +21,7 @@ class OhosAlertDialog extends StatelessWidget {
     super.key,
     required this.title,
     this.content,
+    this.contentWidget,
     this.actions = const <OhosDialogAction>[],
     this.borderRadius = 28,
   });
@@ -30,6 +31,12 @@ class OhosAlertDialog extends StatelessWidget {
 
   /// Optional body text.
   final String? content;
+
+  /// Rich body, for text fields / lists that [content] cannot express.
+  ///
+  /// Takes precedence over [content]; the widget is laid out in the same
+  /// centered slot, so a form dialog keeps the ArkUI spacing.
+  final Widget? contentWidget;
 
   /// Action buttons laid out vertically (ArkUI style).
   final List<OhosDialogAction> actions;
@@ -67,7 +74,12 @@ class OhosAlertDialog extends StatelessWidget {
                           ))
                       .copyWith(color: theme.textPrimaryColor),
             ),
-            if (content != null)
+            if (contentWidget != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: contentWidget!,
+              )
+            else if (content != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
@@ -155,6 +167,7 @@ Future<T?> showOhosDialog<T>({
   required BuildContext context,
   required String title,
   String? content,
+  Widget? contentWidget,
   List<OhosDialogAction> actions = const <OhosDialogAction>[],
   bool barrierDismissible = true,
 }) {
@@ -162,7 +175,12 @@ Future<T?> showOhosDialog<T>({
     context: context,
     barrierDismissible: barrierDismissible,
     builder: (BuildContext context) {
-      return OhosAlertDialog(title: title, content: content, actions: actions);
+      return OhosAlertDialog(
+        title: title,
+        content: content,
+        contentWidget: contentWidget,
+        actions: actions,
+      );
     },
   );
 }

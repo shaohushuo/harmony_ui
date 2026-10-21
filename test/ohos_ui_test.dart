@@ -192,6 +192,48 @@ void main() {
       await tester.tap(find.text('禁用'), warnIfMissed: false);
       expect(pressed, 0);
     });
+
+    testWidgets('窄容器里的长标签不溢出，标签默认单行省略', (
+      WidgetTester tester,
+    ) async {
+      const String label = '这是一个非常长的按钮文案';
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 120,
+            child: OhosButton(onPressed: () {}, child: const Text(label)),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+
+      final DefaultTextStyle style = tester.widget<DefaultTextStyle>(
+        find.ancestor(of: find.text(label), matching: find.byType(DefaultTextStyle)).first,
+      );
+      expect(style.maxLines, 1);
+      expect(style.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('ink 主题下按钮不闪水波纹', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosButton(
+                  onPressed: () {},
+                  child: const Text('确定'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final InkWell ink = tester.widget<InkWell>(find.byType(InkWell).first);
+      expect(ink.splashColor, Colors.transparent);
+    });
   });
 
   group('OhosSwitch', () {
@@ -244,6 +286,140 @@ void main() {
       expect(result, 'hello');
       expect(find.text('输入内容'), findsOneWidget);
     });
+
+    testWidgets('filled 变体给灰底圆角块；墨水屏上退回透明底 + 1px 线', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosTextField(
+            hintText: '姓名',
+            variant: OhosTextFieldVariant.filled,
+          ),
+        ),
+      );
+      InputDecoration decoration =
+          tester.widget<TextField>(find.byType(TextField)).decoration!;
+      expect(decoration.filled, isTrue);
+      expect(decoration.fillColor, isNotNull);
+
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: const MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosTextField(
+                  hintText: '姓名',
+                  variant: OhosTextFieldVariant.filled,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      decoration = tester
+          .widget<TextField>(find.byType(TextField))
+          .decoration!;
+      // 墨水屏上「填充色 = 背景色」，靠 1px 线而不是靠底色分层
+      expect(decoration.filled, isFalse);
+      expect(
+        (decoration.enabledBorder! as OutlineInputBorder).borderSide.width,
+        1,
+      );
+    });
+
+    testWidgets('suffixIcon 与外部 focusNode 生效', (WidgetTester tester) async {
+      final FocusNode node = FocusNode();
+      addTearDown(node.dispose);
+
+      await tester.pumpWidget(
+        wrap(
+          OhosTextField(
+            hintText: '密码',
+            focusNode: node,
+            suffixIcon: const Icon(Icons.visibility_off),
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.visibility_off), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode,
+        same(node),
+      );
+
+      node.requestFocus();
+      await tester.pump();
+      expect(node.hasFocus, isTrue);
+    });
+  });
+
+  group('OhosSearchBar', () {
+    testWidgets('清空键回调 onClear，空态占位与清空键同宽（32vp）', (
+      WidgetTester tester,
+    ) async {
+      final TextEditingController controller = TextEditingController(
+        text: 'abc',
+      );
+      addTearDown(controller.dispose);
+      int cleared = 0;
+
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 320,
+            child: OhosSearchBar(
+              controller: controller,
+              onChanged: (String value) {},
+              onClear: () => cleared++,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.cancel_rounded));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, isEmpty);
+      expect(cleared, 1);
+      final SizedBox placeholder = tester.widget<SizedBox>(
+        find.byKey(const ValueKey<String>('empty')),
+      );
+      // 空态与清空键同宽，输入区宽度不会在空↔有字之间跳 20vp
+      expect(placeholder.width, 32);
+    });
+
+    testWidgets('聚焦时出现「取消」，点击清空并回调 onCancel', (
+      WidgetTester tester,
+    ) async {
+      final TextEditingController controller = TextEditingController(
+        text: 'abc',
+      );
+      addTearDown(controller.dispose);
+      int cancelled = 0;
+
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 360,
+            child: OhosSearchBar(
+              controller: controller,
+              onCancel: () => cancelled++,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('取消'), findsNothing);
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      expect(find.text('取消'), findsOneWidget);
+
+      await tester.tap(find.text('取消'));
+      await tester.pump();
+      expect(controller.text, isEmpty);
+      expect(cancelled, 1);
+    });
   });
 
   group('OhosAlertDialog', () {
@@ -290,6 +466,98 @@ void main() {
       await tester.tap(find.text('确认'));
       await tester.pumpAndSettle();
       expect(result, isTrue);
+    });
+
+    testWidgets('contentWidget 可放输入框，且优先于 content', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosAlertDialog(
+            title: '重命名',
+            content: '这段文字应被忽略',
+            contentWidget: const OhosTextField(hintText: '新名称'),
+            actions: <OhosDialogAction>[
+              OhosDialogAction(label: '好', onPressed: () {}),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.byType(OhosTextField), findsOneWidget);
+      expect(find.text('这段文字应被忽略'), findsNothing);
+    });
+  });
+
+  group('OhosListTile', () {
+    double titleSizeOf(WidgetTester tester, String label) {
+      final DefaultTextStyle style = tester.widget<DefaultTextStyle>(
+        find
+            .ancestor(of: find.text(label), matching: find.byType(DefaultTextStyle))
+            .first,
+      );
+      return style.style.fontSize!;
+    }
+
+    testWidgets('regular / compact 两档行高与字阶（对应 ListTile.dense）', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          Column(
+            children: <Widget>[
+              const OhosListTile(title: Text('常规')),
+              const OhosListTile(
+                density: OhosListTileDensity.compact,
+                title: Text('紧凑'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(titleSizeOf(tester, '常规'), 16);
+      expect(titleSizeOf(tester, '紧凑'), 14);
+      expect(
+        tester.getSize(find.byType(OhosListTile).last).height,
+        lessThan(tester.getSize(find.byType(OhosListTile).first).height),
+      );
+    });
+  });
+
+  group('showOhosBottomSheet', () {
+    testWidgets('ink 主题下退化成纯色面板，不再做整层模糊', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: Builder(
+                  builder: (BuildContext context) {
+                    return OhosButton(
+                      onPressed: () => showOhosBottomSheet(
+                        context: context,
+                        title: '分享',
+                        content: const SizedBox(height: 120),
+                      ),
+                      child: const Text('打开面板'),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('打开面板'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('分享'), findsOneWidget);
+      expect(find.byType(BackdropFilter), findsNothing);
     });
   });
 
