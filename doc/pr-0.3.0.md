@@ -20,6 +20,11 @@ Material 控件逐个替换为 `Ohos*` 时整理的反馈：`feedback/HARMONY_UI
    `OhosDivider` 默认缩进归 0。
 5. **窄屏溢出（gallery 斑马线）**：示例页与 5 个组件在 360 / 320vp 下的
    `RenderFlex overflowed` 全部修掉，并新增示例工程的回归测试。
+6. **窄屏 + 系统字体放大**：Android 常见 1.15x（Mate 60 Pro 出厂即 1.15）、无障碍
+   1.3x 下再查一遍 —— `OhosNavigationBar` 平铺栏标签限制最大放大 1.15x 并可压缩
+   （48vp 栏高、1.3x 时纵向溢出 1vp），`OhosAlphabetIndexer` 字号先按 `textScaler`
+   折算回设计字号再留 5% 余量（只按 vp 摊分，1.15x 下仍溢出 27vp），示例页两处
+   演示行相应改 `Wrap` / `Flexible`。
 
 ## 反馈条目对照
 
@@ -59,11 +64,14 @@ Material 控件逐个替换为 `Ohos*` 时整理的反馈：`feedback/HARMONY_UI
    标题会比之前偏约 20vp；需要绝对居中时在另一侧放等宽占位。
 3. **默认返回图标**：`arrow_back_ios_new_rounded` → `arrow_back_rounded`。
 4. 其余均为新增可选参数，向后兼容（`OhosListTile.padding` 改为可空，传值用法不变）。
+5. **`OhosNavigationBar` 平铺栏标签不再完全跟随系统字号**：默认栏高 48vp 装不下
+   1.3x 的标签行高，标签最大放大到 1.15x（与 Mate 60 Pro 出厂档一致）；需要更大
+   字号时可自行抬高 `height`。
 
 ## 验证
 
 - `flutter analyze`（库 + example）零问题
-- `flutter test` 48 条全通过，新增 25 条：
+- 库测试 `flutter test` 48 条全通过，新增 25 条：
   - AppBar：行排布不重叠、单侧按钮的居中基准、长标题被约束、`titleAlignment.start`、
     `titlePadding: zero`、`leadingWidth` 槽内居中、`bottom` 并入 `preferredSize`、
     `systemOverlayStyle`、`PrimaryScrollController` 回退、`toolbarHeight`、返回键图标
@@ -75,21 +83,28 @@ Material 控件逐个替换为 `Ohos*` 时整理的反馈：`feedback/HARMONY_UI
     分隔线默认缩进
 - 示例新增 4 处演示：AppBar「对齐 / bottom / 标题位放控件」、展示类「墨主题」、
   输入类「填充 / 胶囊形态」、容器类「高密度列表」
-- 示例工程新增 `example/test/gallery_overflow_test.dart`：8 个页面 × 360 / 320vp 逐屏下滑，
-  捕获 `RenderFlex overflowed` 并报出出问题的 `Row` / `Column` 与行号（16 条全通过）
+- 示例工程新增 `example/test/gallery_overflow_test.dart`：8 个页面 × 3 种宽度
+  （360 / 320 / 387vp）× 3 种字号（1.0 / 1.15 / 1.3）逐屏下滑，通过
+  `MediaQuery.textScaler` 注入系统字号，捕获 `RenderFlex overflowed` 并报出出问题的
+  `Row` / `Column` 与行号（72 条全通过）
 
 ## 提交
 
+分支基于 `upstream/main` 的最新提交 `2df9d8b`（已把该提交的
+`README.OpenHarmony.md` / `README.OpenHarmony_CN.md` / `CHANGELOG.OpenHarmony.md`
+合入，无冲突）：
+
 ```
-6b06717 fix(appbar): 吸收状态栏内边距，避免沉浸式下标题/动作被系统栏压住
-3c8dc24 refactor(appbar): 标题栏改为单行 Row 布局
-bd482b4 test(appbar): 补行布局与居中基准用例
-290f66a feat(appbar): 补齐标题对齐 / 内边距 / bottom / 状态栏样式
-0ea6c87 feat(theme): 新增墨水屏预设 OhosThemeData.ink 与 monochrome 开关
-e8f1103 feat: 按反馈补齐输入类与容器类组件的缺口
-a605792 fix: 收敛反馈里剩下的分隔线 / 单色阴影 / 返回键三项
-bb40502 docs: 补 0.3.0 PR 说明（反馈条目对照 / 破坏性变更 / 验证）
+f7cc71d fix: 窄屏叠加系统大字号时的溢出
 736b9b3 fix: 消除 gallery 与组件在窄屏下的「斑马线」
+bb40502 docs: 补 0.3.0 PR 说明（反馈条目对照 / 破坏性变更 / 验证）
+a605792 fix: 收敛反馈里剩下的分隔线 / 单色阴影 / 返回键三项
+e8f1103 feat: 按反馈补齐输入类与容器类组件的缺口
+0ea6c87 feat(theme): 新增墨水屏预设 OhosThemeData.ink 与 monochrome 开关
+290f66a feat(appbar): 补齐标题对齐 / 内边距 / bottom / 状态栏样式
+bd482b4 test(appbar): 补行布局与居中基准用例
+3c8dc24 refactor(appbar): 标题栏改为单行 Row 布局
+6b06717 fix(appbar): 吸收状态栏内边距，避免沉浸式下标题/动作被系统栏压住
 ```
 
 ## 尚未处理（有意留下）
