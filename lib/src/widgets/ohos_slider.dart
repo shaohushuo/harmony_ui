@@ -73,13 +73,19 @@ class _OhosSliderState extends State<OhosSlider> {
             decoration: BoxDecoration(
               color: theme.popupColor,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              // 墨水屏：气泡与页面同为纯白，用 1px 黑边代替看不见的浅阴影。
+              border: theme.monochrome
+                  ? Border.all(color: theme.dividerColor)
+                  : null,
+              boxShadow: theme.monochrome
+                  ? null
+                  : <BoxShadow>[
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
             ),
             child: Text(
               _bubble,

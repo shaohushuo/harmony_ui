@@ -135,7 +135,8 @@ class OhosListTile extends StatelessWidget {
               child: content,
             ),
           ),
-        if (divider) const OhosDivider(),
+        // 列表里让发丝线与文字左对齐（分隔线自身默认 indent 为 0）
+        if (divider) const OhosDivider(indent: 16),
       ],
     );
 

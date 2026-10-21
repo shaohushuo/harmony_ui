@@ -236,6 +236,31 @@ void main() {
     });
   });
 
+  group('OhosDivider', () {
+    testWidgets('默认 indent 0，与 Material Divider 版式一致', (
+      WidgetTester tester,
+    ) async {
+      double lineWidth() => tester
+          .getSize(
+            find.descendant(
+              of: find.byType(OhosDivider),
+              matching: find.byType(Container),
+            ),
+          )
+          .width;
+
+      await tester.pumpWidget(
+        wrap(const SizedBox(width: 200, child: OhosDivider())),
+      );
+      expect(lineWidth(), 200);
+
+      await tester.pumpWidget(
+        wrap(const SizedBox(width: 200, child: OhosDivider(indent: 16))),
+      );
+      expect(lineWidth(), 184);
+    });
+  });
+
   group('OhosSwitch', () {
     testWidgets('toggles value through onChanged', (WidgetTester tester) async {
       bool value = false;
@@ -941,6 +966,46 @@ void main() {
       final AnnotatedRegion<SystemUiOverlayStyle> region = tester
           .widget(find.byType(AnnotatedRegion<SystemUiOverlayStyle>));
       expect(region.value, SystemUiOverlayStyle.light);
+    });
+
+    testWidgets('toolbarHeight 是 height 的别名（对齐 kToolbarHeight 命名）',
+        (WidgetTester tester) async {
+      const OhosAppBar bar = OhosAppBar(title: Text('t'), height: 48);
+      expect(bar.toolbarHeight, 48);
+      expect(bar.toolbarHeight, bar.height);
+    });
+
+    testWidgets('自动返回键用鸿蒙风格的粗箭头', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: Builder(
+              builder: (BuildContext context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const Scaffold(
+                          appBar: OhosAppBar(title: Text('详情')),
+                          body: SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                    child: const Text('进入'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('进入'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsNothing);
     });
 
     testWidgets('没显式传 controller 时退回 PrimaryScrollController',

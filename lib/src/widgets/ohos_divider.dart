@@ -5,16 +5,15 @@ import '../theme/ohos_theme.dart';
 /// A hairline divider used to separate list items, the counterpart of
 /// Flutter's [Divider].
 ///
-/// Note the different default indent: this widget reserves 16vp at the start
-/// to line the hairline up with list-item text, while Material's `Divider`
-/// starts at 0. When replacing `Divider` in an existing layout, pass
-/// `indent: 0` (and usually `endIndent: 0`) to keep the previous geometry.
+/// [indent] defaults to 0, the same as Material's `Divider`, so a straight
+/// replacement keeps the previous geometry. Insets that align the hairline with
+/// list text are the caller's job — `OhosListTile` passes `indent: 16` itself.
 class OhosDivider extends StatelessWidget {
   const OhosDivider({
     super.key,
     this.thickness = 0.5,
     this.color,
-    this.indent = 16,
+    this.indent = 0,
     this.endIndent = 0,
     this.height = 1,
   });

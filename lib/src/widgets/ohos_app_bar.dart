@@ -132,6 +132,10 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Logical height of the bar.
   final double height;
 
+  /// Alias of [height] using Material's `AppBar.toolbarHeight` /
+  /// `kToolbarHeight` wording, so migrations do not mix the two up.
+  double get toolbarHeight => height;
+
   /// Whether this bar is the topmost one on screen and should therefore keep
   /// the system status bar clear.
   ///
@@ -205,7 +209,9 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     Widget? leadingWidget = leading;
     if (leadingWidget == null && automaticallyImplyLeading && canPop) {
       leadingWidget = OhosIconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        // 鸿蒙系统导航用带一点粗度的左箭头；iOS 那种细 chevron
+        // (`arrow_back_ios_new_rounded`) 在鸿蒙观感上偏轻。
+        icon: const Icon(Icons.arrow_back_rounded),
         onPressed: () => Navigator.maybePop(context),
       );
     }

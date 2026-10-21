@@ -58,17 +58,19 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '分隔器 OhosDivider',
-          description: '列表分隔线，支持缩进控制。',
+          description:
+              '发丝线，支持缩进。默认 indent 为 0（与 Material Divider 一致，'
+              '替换时版式不变）；列表项自己传 16，让线与文字左对齐。',
           child: DemoCard(
             padding: EdgeInsets.zero,
             child: Column(
               children: <Widget>[
-                OhosListTile(title: Text('默认缩进 16')),
-                OhosListTile(title: Text('自定义缩进 56')),
+                OhosListTile(title: Text('列表项：线与文字对齐（indent 16）')),
+                OhosListTile(title: Text('第二条列表项')),
                 OhosDivider(indent: 8, endIndent: 8, height: 16),
                 Padding(
                   padding: EdgeInsets.all(12),
-                  child: OhosDivider(indent: 0, endIndent: 0),
+                  child: OhosDivider(),
                 ),
               ],
             ),

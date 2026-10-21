@@ -70,13 +70,19 @@ class _OhosPopupOverlayEntry extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.popupColor,
               borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              // 墨水屏上浅阴影在白底上等于没有，改 1px 黑边托住边界。
+              border: theme.monochrome
+                  ? Border.all(color: theme.dividerColor)
+                  : null,
+              boxShadow: theme.monochrome
+                  ? null
+                  : <BoxShadow>[
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
             ),
             child: Text(
               content,
