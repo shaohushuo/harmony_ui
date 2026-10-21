@@ -51,9 +51,9 @@ class OhosAppBarScrollEffectOptions {
 /// The top application bar of `ohos_ui`, the counterpart of Flutter's
 /// [AppBar].
 ///
-/// Renders a back button when [leading] is provided or
-/// [automaticallyImplyLeading] is true and a route can pop; a centered
-/// [title]; and [actions] on the trailing edge.
+/// Lays the bar out as a single row: a back button when [leading] is provided
+/// or [automaticallyImplyLeading] is true and a route can pop, then [title]
+/// centered in the remaining space, then [actions] on the trailing edge.
 class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   const OhosAppBar({
     super.key,
@@ -164,42 +164,39 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         padding: EdgeInsets.only(top: topInset),
         child: SizedBox(
           height: height,
-          child: Stack(
-            fit: StackFit.expand,
+          // Row instead of a Stack of aligned layers: leading / title / actions
+          // take their natural widths and the title is laid out in the space
+          // left between them, so a long title wraps inside that space instead
+          // of sliding underneath the trailing icons.
+          child: Row(
             children: <Widget>[
-              // The title is always centered in the full bar width, regardless
-              // of whether a leading/back button or actions are present.
-              DefaultTextStyle.merge(
-                style: theme.typography.titleMedium ??
-                    const TextStyle(fontSize: 17),
-                textAlign: TextAlign.center,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 64),
-                    child: title ?? const SizedBox.shrink(),
+              if (leadingWidget != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: leadingWidget,
+                ),
+              Expanded(
+                child: DefaultTextStyle.merge(
+                  style: theme.typography.titleMedium ??
+                      const TextStyle(fontSize: 17),
+                  textAlign: TextAlign.center,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: title ?? const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),
-              if (leadingWidget != null)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: leadingWidget,
-                  ),
-                ),
               if (actions != null && actions!.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        for (final Widget action in actions!) action,
-                        const SizedBox(width: 4),
-                      ],
-                    ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (final Widget action in actions!) action,
+                      const SizedBox(width: 4),
+                    ],
                   ),
                 ),
             ],
