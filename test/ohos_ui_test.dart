@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:harmony_ui/harmony_ui.dart';
@@ -434,6 +435,146 @@ void main() {
       // 标题只拿到 leading 与 actions 之间的宽度（52…304，去掉左右 8vp 内边距）
       expect(title.width, lessThanOrEqualTo(304 - 52 - 16));
       expect(title.right, lessThanOrEqualTo(actions.left));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('titleAlignment.start 让标题贴在 leading 之后，不再强制居中',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            titleAlignment: OhosAppBarTitleAlignment.start,
+            leading: OhosIconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {},
+            ),
+            titlePadding: const EdgeInsets.symmetric(horizontal: 12),
+            title: const Text('仓库'),
+          ),
+        ),
+      );
+
+      final Rect leading = tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.arrow_back_ios_new_rounded),
+      );
+      final Rect title = tester.getRect(find.text('仓库'));
+      expect(title.left, moreOrLessEquals(leading.right + 12));
+      expect(title.center.dy, moreOrLessEquals(28, epsilon: 0.5));
+    });
+
+    testWidgets('titlePadding 可收紧：窄容器里标题能拿到更多宽度',
+        (WidgetTester tester) async {
+      const String long = '很长很长很长的标题';
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            titleAlignment: OhosAppBarTitleAlignment.start,
+            titlePadding: EdgeInsets.zero,
+            leading: OhosIconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {},
+            ),
+            title: const Text(long),
+          ),
+        ),
+      );
+
+      final Rect leading = tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.arrow_back_ios_new_rounded),
+      );
+      final Rect title = tester.getRect(find.text(long));
+      expect(title.left, moreOrLessEquals(leading.right));
+      // 单行放得下：52…360 共 308vp，足够这句 9 个汉字
+      expect(title.width, lessThanOrEqualTo(360 - 52));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('leadingWidth 固定左侧槽宽，leading 在槽内居中',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            leadingWidth: 96,
+            leading: OhosIconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {},
+            ),
+            title: const Text('标题'),
+          ),
+        ),
+      );
+
+      final Rect leading = tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.arrow_back_ios_new_rounded),
+      );
+      expect(leading.center.dx, moreOrLessEquals(48));
+      // 标题的可用区从 96 起算，而不是 52
+      expect(
+        tester.getCenter(find.text('标题')).dx,
+        moreOrLessEquals((96 + 360) / 2),
+      );
+    });
+
+    testWidgets('bottom 并入 preferredSize，工具栏高度不变', (WidgetTester tester) async {
+      const PreferredSize bottom = PreferredSize(
+        preferredSize: Size.fromHeight(40),
+        child: SizedBox(height: 40, child: Text('标签')),
+      );
+      const OhosAppBar bar = OhosAppBar(title: Text('标题'), bottom: bottom);
+      expect(bar.preferredSize, const Size.fromHeight(96));
+
+      await tester.pumpWidget(host(topPadding: 0, bar: bar));
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 96);
+      // 标题仍在 56vp 的工具栏里，不会被 bottom 挤下去
+      expect(tester.getCenter(find.text('标题')).dy, 28);
+      expect(tester.getRect(find.text('标签')).top, greaterThanOrEqualTo(56));
+    });
+
+    testWidgets('systemOverlayStyle 通过 AnnotatedRegion 交给系统状态栏',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: const OhosAppBar(
+            title: Text('标题'),
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+          ),
+        ),
+      );
+
+      final AnnotatedRegion<SystemUiOverlayStyle> region = tester
+          .widget(find.byType(AnnotatedRegion<SystemUiOverlayStyle>));
+      expect(region.value, SystemUiOverlayStyle.light);
+    });
+
+    testWidgets('没显式传 controller 时退回 PrimaryScrollController',
+        (WidgetTester tester) async {
+      final ScrollController controller = ScrollController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: PrimaryScrollController(
+              controller: controller,
+              child: const Scaffold(
+                appBar: OhosAppBar(
+                  title: Text('标题'),
+                  scrollEffect: OhosAppBarScrollEffectOptions(
+                    effect: OhosAppBarScrollEffectType.commonBlur,
+                  ),
+                ),
+                body: SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      );
+
       expect(tester.takeException(), isNull);
     });
   });

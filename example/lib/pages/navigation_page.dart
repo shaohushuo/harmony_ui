@@ -28,6 +28,14 @@ class NavigationPage extends StatelessWidget {
           child: _LightAppBarDemo(),
         ),
         const DemoSection(
+          title: '标题栏 OhosAppBar（对齐 / bottom / 标题位放控件）',
+          description:
+              'titleAlignment.start 换成左对齐标题（鸿蒙列表页 / 详情页常见），'
+              'titlePadding 可把两侧留白收紧，bottom 直接挂一条 OhosTabBar（高度并入 '
+              'preferredSize），标题位也可以整块换成搜索框（titlePadding: zero）。',
+          child: _AppBarSlotsDemo(),
+        ),
+        const DemoSection(
           title: '子页签 OhosTabBar（下划线样式）',
           description: '指示条 24x3vp，激活项品牌色，底部背景色填充与页面一致。',
           child: _TabBarDemo(type: OhosTabBarType.underline),
@@ -180,6 +188,87 @@ class _LightAppBarDemo extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 顶栏四个缺口（对齐 / 内边距 / bottom / 标题位放控件）落地后的样子。
+class _AppBarSlotsDemo extends StatefulWidget {
+  const _AppBarSlotsDemo();
+
+  @override
+  State<_AppBarSlotsDemo> createState() => _AppBarSlotsDemoState();
+}
+
+class _AppBarSlotsDemoState extends State<_AppBarSlotsDemo>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 3, vsync: this);
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: theme.textTertiaryColor.withValues(alpha: 0.4),
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            OhosAppBar(
+              primary: false,
+              titleAlignment: OhosAppBarTitleAlignment.start,
+              leading: OhosIconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                onPressed: () {},
+              ),
+              title: const Text('仓库 · feature/appbar'),
+              actions: <Widget>[
+                OhosIconButton(
+                  icon: const Icon(Icons.more_horiz),
+                  onPressed: () {},
+                ),
+              ],
+              bottom: OhosTabBar(
+                controller: _tabs,
+                tabs: const <Widget>[
+                  Text('文件'),
+                  Text('提交'),
+                  Text('分支'),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: theme.dividerColor),
+            OhosAppBar(
+              primary: false,
+              height: 60,
+              titlePadding: EdgeInsets.zero,
+              leading: OhosIconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                onPressed: () {},
+              ),
+              title: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: OhosSearchBar(
+                  hintText: '搜索文件',
+                  onChanged: (String value) {},
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

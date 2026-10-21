@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/ohos_theme.dart';
 import 'ohos_icon_button.dart';
@@ -48,17 +49,29 @@ class OhosAppBarScrollEffectOptions {
   final double blurSigma;
 }
 
+/// How [OhosAppBar.title] sits between the leading and trailing slots.
+enum OhosAppBarTitleAlignment {
+  /// Centered in the space left between leading and actions (default).
+  center,
+
+  /// Left (start) aligned, the usual HarmonyOS list / detail page look.
+  start,
+}
+
 /// The top application bar of `ohos_ui`, the counterpart of Flutter's
 /// [AppBar].
 ///
 /// Lays the bar out as a single row: a back button when [leading] is provided
-/// or [automaticallyImplyLeading] is true and a route can pop, then [title]
-/// centered in the remaining space, then [actions] on the trailing edge.
+/// or [automaticallyImplyLeading] is true and a route can pop, then [title] in
+/// the remaining space, then [actions] on the trailing edge.
 class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   const OhosAppBar({
     super.key,
     this.title,
+    this.titleAlignment = OhosAppBarTitleAlignment.center,
+    this.titlePadding = const EdgeInsets.symmetric(horizontal: 8),
     this.leading,
+    this.leadingWidth,
     this.actions,
     this.automaticallyImplyLeading = true,
     this.backgroundColor,
@@ -67,6 +80,8 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.primary = true,
     this.lightMaterial = false,
     this.lightLevel = OhosLightMaterialLevel.ultraThin,
+    this.bottom,
+    this.systemOverlayStyle,
     this.scrollEffect,
     this.scrollController,
     this.scrolledBackgroundColor,
@@ -75,10 +90,33 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// The main title widget, typically a [Text].
   final Widget? title;
 
+  /// How [title] is aligned in the space between leading and actions.
+  final OhosAppBarTitleAlignment titleAlignment;
+
+  /// Padding around [title], inside the space it is given.
+  ///
+  /// The bar no longer reserves a fixed 64vp on each side, so a narrow
+  /// container can keep its title readable by passing a smaller value; pass
+  /// [EdgeInsets.zero] when the title is a full-bleed widget such as a search
+  /// field.
+  final EdgeInsetsGeometry titlePadding;
+
   /// Leading widget of the bar (back button etc.).
   final Widget? leading;
 
+  /// Fixed width of the leading slot; the widget is centered inside it.
+  ///
+  /// Useful for aligning the title with the content below when the leading
+  /// slot is wider than an icon button. Null keeps the natural width.
+  final double? leadingWidth;
+
   /// Actions displayed at the trailing edge.
+  ///
+  /// The bar lays them out at their natural width and lets [title] shrink
+  /// first, so a crowded bar degrades to a shorter title rather than an
+  /// overlap. The actions themselves are not clipped or scrollable: once they
+  /// alone exceed the bar width the row overflows, so keep it to a handful of
+  /// icons or fold the rest into a "more" menu.
   final List<Widget>? actions;
 
   /// When true and [leading] is null, a back button is inserted when the
@@ -120,15 +158,35 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Whether the bar uses the immersive light material
   /// (ULTRA_THIN + top gradient fade) instead of an opaque background.
+  ///
+  /// Cost warning: this is a full-bar `BackdropFilter`, i.e. a blur composite
+  /// every frame. On e-ink panels (e.g. Huawei MatePad Paper) it smears, and on
+  /// low-end SoCs it drops frames — do not enable it by default for an app that
+  /// has to run there.
   final bool lightMaterial;
 
   /// Immersive-light level when [lightMaterial] is true.
   final OhosLightMaterialLevel lightLevel;
 
+  /// An optional widget below the toolbar, typically a [OhosTabBar].
+  ///
+  /// Its `preferredSize.height` is added to [preferredSize], the same way
+  /// Material's `AppBar.bottom` works.
+  final PreferredSizeWidget? bottom;
+
+  /// Icon brightness of the system status bar while this bar is on top.
+  ///
+  /// The component does not guess it, because a bar can sit on a gradient or an
+  /// image where automatic contrast fails. Null leaves the system default.
+  final SystemUiOverlayStyle? systemOverlayStyle;
+
   /// Optional scroll-driven dynamic blur (动态模糊) configuration.
   final OhosAppBarScrollEffectOptions? scrollEffect;
 
   /// Listens to the content scroll extent for [scrollEffect].
+  ///
+  /// When null the bar falls back to `PrimaryScrollController.maybeOf(context)`,
+  /// so a page whose body owns the primary controller needs no wiring.
   final ScrollController? scrollController;
 
   /// Background color once the scroll effect is fully active
@@ -136,7 +194,8 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? scrolledBackgroundColor;
 
   @override
-  Size get preferredSize => Size.fromHeight(height);
+  Size get preferredSize =>
+      Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context) {
@@ -157,51 +216,68 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     // `maybePaddingOf` 而不是 `paddingOf`：脱离 MediaQuery 使用时不至于抛异常。
     final double topInset =
         primary ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0 : 0.0;
+    final bool centered = titleAlignment == OhosAppBarTitleAlignment.center;
+    final Widget titleSlot = DefaultTextStyle.merge(
+      style: theme.typography.titleMedium ?? const TextStyle(fontSize: 17),
+      textAlign: centered ? TextAlign.center : TextAlign.start,
+      child: Padding(
+        padding: titlePadding,
+        child: title ?? const SizedBox.shrink(),
+      ),
+    );
+    final Widget toolbar = SizedBox(
+      height: height,
+      // Row instead of a Stack of aligned layers: leading / title / actions
+      // take their natural widths and the title is laid out in the space
+      // left between them, so a long title wraps inside that space instead
+      // of sliding underneath the trailing icons.
+      child: Row(
+        children: <Widget>[
+          if (leadingWidget != null)
+            leadingWidth == null
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: leadingWidget,
+                  )
+                : SizedBox(
+                    width: leadingWidth,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: leadingWidget,
+                    ),
+                  ),
+          Expanded(
+            child: centered
+                ? Center(child: titleSlot)
+                : Align(alignment: Alignment.centerLeft, child: titleSlot),
+          ),
+          if (actions != null && actions!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  for (final Widget action in actions!) action,
+                  const SizedBox(width: 4),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    final PreferredSizeWidget? bottomWidget = bottom;
+    final Widget content = bottomWidget == null
+        ? toolbar
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[toolbar, bottomWidget],
+          );
     final Widget surface = Material(
       color: baseColor,
       elevation: elevation,
       child: Padding(
         padding: EdgeInsets.only(top: topInset),
-        child: SizedBox(
-          height: height,
-          // Row instead of a Stack of aligned layers: leading / title / actions
-          // take their natural widths and the title is laid out in the space
-          // left between them, so a long title wraps inside that space instead
-          // of sliding underneath the trailing icons.
-          child: Row(
-            children: <Widget>[
-              if (leadingWidget != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: leadingWidget,
-                ),
-              Expanded(
-                child: DefaultTextStyle.merge(
-                  style: theme.typography.titleMedium ??
-                      const TextStyle(fontSize: 17),
-                  textAlign: TextAlign.center,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: title ?? const SizedBox.shrink(),
-                    ),
-                  ),
-                ),
-              ),
-              if (actions != null && actions!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      for (final Widget action in actions!) action,
-                      const SizedBox(width: 4),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
+        child: content,
       ),
     );
     Widget result = lightMaterial
@@ -213,15 +289,30 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
           )
         : surface;
     final OhosAppBarScrollEffectOptions? effect = scrollEffect;
-    final ScrollController? scroller = scrollController;
-    if (effect != null &&
-        scroller != null &&
-        effect.effect != OhosAppBarScrollEffectType.none) {
+    // 忘了传 controller 是最常见的误配：滚动效果会静默失效。先退到页面的
+    // `PrimaryScrollController`，两者都没有时在 debug 下直接断言报出来。
+    final ScrollController? scroller =
+        scrollController ?? PrimaryScrollController.maybeOf(context);
+    final bool wantsEffect =
+        effect != null && effect.effect != OhosAppBarScrollEffectType.none;
+    assert(
+      !wantsEffect || scroller != null,
+      'OhosAppBar.scrollEffect 需要一个 ScrollController：既没有显式传 '
+      'scrollController，祖先里也没有 PrimaryScrollController。',
+    );
+    if (wantsEffect && scroller != null) {
       result = _ScrollEffectBar(
         effect: effect,
         controller: scroller,
         baseColor: baseColor,
         scrolledColor: scrolledBackgroundColor,
+        child: result,
+      );
+    }
+    final SystemUiOverlayStyle? overlay = systemOverlayStyle;
+    if (overlay != null) {
+      result = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlay,
         child: result,
       );
     }
