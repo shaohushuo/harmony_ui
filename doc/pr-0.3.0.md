@@ -18,6 +18,8 @@ Material 控件逐个替换为 `Ohos*` 时整理的反馈：`feedback/HARMONY_UI
 4. **容器类组件**：`OhosAlertDialog.contentWidget`、`OhosListTile.density`、
    `showOhosBottomSheet(level, lightMaterial)`、`showOhosSnackBar(customMessenger)`、
    `OhosDivider` 默认缩进归 0。
+5. **窄屏溢出（gallery 斑马线）**：示例页与 5 个组件在 360 / 320vp 下的
+   `RenderFlex overflowed` 全部修掉，并新增示例工程的回归测试。
 
 ## 反馈条目对照
 
@@ -73,6 +75,8 @@ Material 控件逐个替换为 `Ohos*` 时整理的反馈：`feedback/HARMONY_UI
     分隔线默认缩进
 - 示例新增 4 处演示：AppBar「对齐 / bottom / 标题位放控件」、展示类「墨主题」、
   输入类「填充 / 胶囊形态」、容器类「高密度列表」
+- 示例工程新增 `example/test/gallery_overflow_test.dart`：8 个页面 × 360 / 320vp 逐屏下滑，
+  捕获 `RenderFlex overflowed` 并报出出问题的 `Row` / `Column` 与行号（16 条全通过）
 
 ## 提交
 
@@ -84,6 +88,8 @@ bd482b4 test(appbar): 补行布局与居中基准用例
 0ea6c87 feat(theme): 新增墨水屏预设 OhosThemeData.ink 与 monochrome 开关
 e8f1103 feat: 按反馈补齐输入类与容器类组件的缺口
 a605792 fix: 收敛反馈里剩下的分隔线 / 单色阴影 / 返回键三项
+bb40502 docs: 补 0.3.0 PR 说明（反馈条目对照 / 破坏性变更 / 验证）
+736b9b3 fix: 消除 gallery 与组件在窄屏下的「斑马线」
 ```
 
 ## 尚未处理（有意留下）
