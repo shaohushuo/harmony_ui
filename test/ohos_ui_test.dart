@@ -281,16 +281,30 @@ void main() {
     /// `Scaffold` 给 `appBar` 槽位预留的高度是
     /// `preferredSize.height + MediaQuery.padding.top`，所以组件自己把这段内边距
     /// 算进去就够了 —— 调用方不需要再包 `SafeArea`，`preferredSize` 也不用改。
-    Widget host({required double topPadding, required OhosAppBar bar}) {
+    // 测试画布默认 800vp 宽，`MediaQuery.size` 只改数据、不改布局约束，
+    // 所以用 `SizedBox(width:)` 真正把栏宽定成 360vp，横向断言才有意义。
+    Widget host({
+      required double topPadding,
+      required OhosAppBar bar,
+      double width = 360,
+    }) {
       return OhosTheme(
         data: OhosThemeData.light(),
         child: MaterialApp(
           home: MediaQuery(
             data: MediaQueryData(
-              size: const Size(360, 800),
+              size: Size(width, 800),
               padding: EdgeInsets.only(top: topPadding),
             ),
-            child: Scaffold(appBar: bar, body: const SizedBox.expand()),
+            // `home` 拿到的是路由给的紧约束，直接套 `SizedBox(width:)` 会被无视，
+            // 先用 `Align` 松开约束再把栏宽定成 360vp。
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: width,
+                child: Scaffold(appBar: bar, body: const SizedBox.expand()),
+              ),
+            ),
           ),
         ),
       );
@@ -333,6 +347,94 @@ void main() {
         () {
       const OhosAppBar bar = OhosAppBar(title: Text('t'));
       expect(bar.preferredSize, const Size.fromHeight(56));
+    });
+
+    testWidgets('leading / 标题 / actions 单行排布，标题不会压到右侧动作上',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            leading: OhosIconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {},
+            ),
+            title: const Text('标题'),
+            actions: <Widget>[
+              OhosIconButton(icon: const Icon(Icons.search), onPressed: () {}),
+            ],
+          ),
+        ),
+      );
+
+      final Rect leading = tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.arrow_back_ios_new_rounded),
+      );
+      final Rect title = tester.getRect(find.text('标题'));
+      final Rect actions = tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.search),
+      );
+
+      // 三段从左到右依次占位，谁也不叠在谁上面
+      expect(leading.right, lessThanOrEqualTo(title.left));
+      expect(title.right, lessThanOrEqualTo(actions.left));
+      // 同一行：三者的垂直中心都落在 56vp 工具栏的正中
+      expect(leading.center.dy, moreOrLessEquals(28, epsilon: 0.5));
+      expect(title.center.dy, moreOrLessEquals(28, epsilon: 0.5));
+      expect(actions.center.dy, moreOrLessEquals(28, epsilon: 0.5));
+    });
+
+    testWidgets('只有 actions 时标题居中于「剩余空间」而不是整栏中轴',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            title: const Text('标题'),
+            actions: <Widget>[
+              OhosIconButton(
+                icon: const Icon(Icons.search),
+                size: 40,
+                iconSize: 20,
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // 360vp 宽的栏，右侧动作占 40 + 4(Row 尾部留白) + 4(右边距) = 48vp，
+      // 标题在剩下的 0…312 里居中。
+      expect(tester.getCenter(find.text('标题')).dx, moreOrLessEquals(156));
+    });
+
+    testWidgets('长标题被约束在剩余空间内，不溢出也不盖住动作',
+        (WidgetTester tester) async {
+      const String long = '这是一条很长的标题文字用于检查排布';
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            leading: OhosIconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {},
+            ),
+            title: const Text(long),
+            actions: <Widget>[
+              OhosIconButton(icon: const Icon(Icons.search), onPressed: () {}),
+            ],
+          ),
+        ),
+      );
+
+      final Rect title = tester.getRect(find.text(long));
+      final Rect actions = tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.search),
+      );
+      // 标题只拿到 leading 与 actions 之间的宽度（52…304，去掉左右 8vp 内边距）
+      expect(title.width, lessThanOrEqualTo(304 - 52 - 16));
+      expect(title.right, lessThanOrEqualTo(actions.left));
+      expect(tester.takeException(), isNull);
     });
   });
 }
