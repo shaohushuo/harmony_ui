@@ -208,7 +208,13 @@ class _LightDemo extends StatelessWidget {
               children: <Widget>[
                 Icon(OhosIcons.plus, color: OhosColors.highlight),
                 SizedBox(width: 8),
-                Text('任意位置弹层 · THICK + 漫射'),
+                // 320vp 下这行标题会超出，允许它收缩换行
+                Flexible(
+                  child: Text(
+                    '任意位置弹层 · THICK + 漫射',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ],
             ),
           ),

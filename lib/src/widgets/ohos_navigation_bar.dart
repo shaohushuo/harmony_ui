@@ -424,13 +424,19 @@ class _OhosNavItem extends StatelessWidget {
           ],
         ),
         if (inline && selected)
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              destination.label,
-              style: theme.typography.labelSmall?.copyWith(
-                color: highlight,
-                fontWeight: FontWeight.w600,
+          // Flexible 必须在 Padding 外面：Padding 是 Row 的非弹性子项，会拿到
+          // 无界宽度，里面的 Flexible 就失去收缩能力（360vp 溢出 6.5vp 的原因）。
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.typography.labelSmall?.copyWith(
+                  color: highlight,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

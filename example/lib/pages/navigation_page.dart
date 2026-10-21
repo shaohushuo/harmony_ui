@@ -348,17 +348,14 @@ class _ChipGroupDemoState extends State<_ChipGroupDemo> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: <Widget>[
-            OhosChipGroup(
-              size: OhosChipGroupSize.small,
-              selectedIndex: _selected.isEmpty ? 0 : _selected.first,
-              onSelected: (int i) => setState(() => _selected = <int>{i}),
-              items: const <OhosChipItem>[
-                OhosChipItem(label: Text('默认')),
-                OhosChipItem(label: Text('小尺寸')),
-              ],
-            ),
+        // 不包 Row：塞进 Row 会拿到无界宽度，铺满型的 chip 组就没法按屏宽收起
+        OhosChipGroup(
+          size: OhosChipGroupSize.small,
+          selectedIndex: _selected.isEmpty ? 0 : _selected.first,
+          onSelected: (int i) => setState(() => _selected = <int>{i}),
+          items: const <OhosChipItem>[
+            OhosChipItem(label: Text('默认')),
+            OhosChipItem(label: Text('小尺寸')),
           ],
         ),
       ],

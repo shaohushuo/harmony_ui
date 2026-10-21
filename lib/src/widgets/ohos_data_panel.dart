@@ -96,27 +96,33 @@ class _OhosDataPanelItem extends StatelessWidget {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            entry.key,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.typography.bodySmall?.copyWith(
-              color: theme.textSecondaryColor,
+      // 网格单元高度随宽度变化：320vp 下两行文字（小字 + 24sp 数值）会超出
+      // 单元高度 9vp，出斑马线。整体按比例缩放，宁可小一点也不要溢出。
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              entry.key,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.typography.bodySmall?.copyWith(
+                color: theme.textSecondaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${prefix ?? ''}${entry.value.toStringAsFixed(decimals)}${suffix ?? ''}',
-            maxLines: 1,
-            style: theme.typography.headlineMedium?.copyWith(
-              color: theme.textPrimaryColor,
+            const SizedBox(height: 6),
+            Text(
+              '${prefix ?? ''}${entry.value.toStringAsFixed(decimals)}${suffix ?? ''}',
+              maxLines: 1,
+              style: theme.typography.headlineMedium?.copyWith(
+                color: theme.textPrimaryColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

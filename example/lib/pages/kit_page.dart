@@ -424,8 +424,15 @@ class _SwipeListDemoState extends State<_SwipeListDemo> {
                   children: <Widget>[
                     Icon(Icons.drive_file_move_rounded, color: theme.textSecondaryColor),
                     const SizedBox(width: 12),
-                    Text(_rows[i], style: theme.typography.bodyMedium),
-                    const Spacer(),
+                    // 窄屏下长条目名要省略，不能撑破整行
+                    Expanded(
+                      child: Text(
+                        _rows[i],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.typography.bodyMedium,
+                      ),
+                    ),
                     Icon(Icons.chevron_right_rounded, color: theme.textTertiaryColor),
                   ],
                 ),

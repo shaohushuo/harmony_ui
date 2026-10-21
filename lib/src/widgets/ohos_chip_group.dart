@@ -104,7 +104,22 @@ class OhosChipGroup extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return _strip(context);
+        // 被放进 Row / 无界宽度里时保持原来的自然宽度（滚动视图拿不到无界宽度）
+        if (!constraints.hasBoundedWidth) {
+          return _strip(context);
+        }
+        // 不滚动模式原来直接把 Row 塞进约束里，窄屏放不下就出斑马线。
+        // 这里仍然整行展示，但超出部分改为横向滚动，内容窄时保持原来的左对齐。
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _strip(context),
+            ),
+          ),
+        );
       },
     );
   }

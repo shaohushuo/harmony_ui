@@ -456,16 +456,18 @@ class _InkThemeDemo extends StatelessWidget {
                   style: TextStyle(color: ink.textTertiaryColor, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
-                Row(
+                // 窄窗口放不下一行：用 Wrap 让它自动换行，而不是溢出
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
                     OhosButton(onPressed: () {}, child: const Text('主要按钮')),
-                    const SizedBox(width: 12),
                     OhosButton(
                       style: OhosButtonStyle.outlined,
                       onPressed: () {},
                       child: const Text('次要按钮'),
                     ),
-                    const SizedBox(width: 12),
                     const OhosSwitch(value: true, onChanged: _noop),
                   ],
                 ),

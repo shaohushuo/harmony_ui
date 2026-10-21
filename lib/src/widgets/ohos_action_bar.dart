@@ -78,12 +78,23 @@ class OhosActionBar extends StatelessWidget {
               padding: padding,
               child: Row(
                 children: <Widget>[
-                  for (final Widget action in secondaryActions)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: action,
+                  // 次要操作放不下一行时横向滚动，主按钮始终贴右；
+                  // 原来用 Spacer + 自然宽度，窄屏（320/360vp）整行直接溢出。
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          for (final Widget action in secondaryActions)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: action,
+                            ),
+                        ],
+                      ),
                     ),
-                  const Spacer(),
+                  ),
                   OhosButton(
                     onPressed: primaryLoading ? null : onPrimaryPressed,
                     loading: primaryLoading,

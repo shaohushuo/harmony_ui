@@ -65,10 +65,14 @@ class DemoSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: theme.typography.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+              // 标题可能很长（“标题栏 OhosAppBar（对齐 / bottom / …）”），
+              // 窄窗口下必须让它换行，否则整行 RenderFlex 溢出。
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.typography.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
