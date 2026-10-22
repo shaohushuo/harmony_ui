@@ -38,7 +38,8 @@ flutter pub get
 
 | 库版本 | 分支 / TAG | Flutter 版本 |
 | --- | --- | --- |
-| 0.2.0 | `main` | oh-3.35.7-release |
+| 0.3.0 | `main` / `v0.3.0` | oh-3.35.7-release |
+| 0.2.0 | 历史提交 | oh-3.35.7-release |
 | 0.1.0 | 历史提交 | oh-3.35.7-release |
 
 ## 约束与限制
@@ -192,7 +193,7 @@ theme.typography.bodyLarge;  // 文字样式
 
 ## 新增特性
 
-v0.2.0 新增 UI Design Kit 增强组件与沉浸光感增强（彩色光池、镜头高光、光感漫射），详见 [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)。
+v0.3.0 新增墨水屏主题、标题栏布局与参数增强、输入 / 容器组件补齐，并完成窄屏 / 大字号适配与 focusNode 生命周期修复，详见 [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)。
 
 ## 常见问题
 

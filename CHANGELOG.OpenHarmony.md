@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## v0.3.0
+
+Release date: 2026-10-22
+
+### Features
+
+- 墨水屏（e-ink）主题：新增 `OhosThemeData.ink()`、`monochrome` 能力开关与纯黑字阶 `OhosTypography.monochrome`；光感材质自动退化为纯色，弹窗与常驻通知补 1px 纯黑描边
+- 标题栏增强：`OhosAppBar` 新增 `primary`、`titleAlignment`、`titlePadding`、`leadingWidth`、`bottom`、`systemOverlayStyle`，改为单行 Row 布局，可在标题位放搜索框、底部挂子页签
+- 输入组件增强：`OhosTextField` 新增 `variant`（下划线 / 填充 / 胶囊）、`suffixIcon` 与外部 `focusNode`；`OhosSearchBar` 新增 `focusNode`、`onClear`、`onCancel` / `cancelText`
+- 容器与操作增强：`OhosAlertDialog.contentWidget` 表单内容槽、`OhosListTile.density`、`showOhosBottomSheet(level / lightMaterial)`、`showOhosSnackBar(customMessenger)`
+- 窄屏与无障碍适配：`OhosActionBar` 次要操作横向滚动、`OhosChipGroup` 放不下时横向滚动、`OhosNavigationBar` 胶囊标签省略、`OhosAlphabetIndexer` 字号按高度自适应；新增 `OhosNavigationBar.maxTextScaleFactor`（默认 1.15，传 `null` 关闭钳制）
+
+### Bugfix
+
+- 修复 `OhosTextField` / `OhosSearchBar` 外部 `focusNode` / `controller` 中途更换时的同步与所有权问题，只释放组件自建实例
+- 修复 `OhosSearchBar` 换节点后焦点态过期；取消按钮改为可访问的 `TextButton`（48×40vp 命中区）
+- 修复 `OhosDataPanel` 整格 `FittedBox` 导致的静默缩字：标签保持有界省略，仅数值按比例缩放
+- 修复 `OhosAlertDialog.contentWidget` 在窄屏 / 大字号下的纵向溢出，内容区可滚动
+- 修复 `OhosAppBar` 沉浸式状态栏遮挡、标题被右侧操作覆盖，以及 `scrollEffect` 缺少 controller 时静默失效
+- 修复窄屏叠加 1.15x / 1.3x 系统字号时示例与组件的多处 `RenderFlex overflowed`
+- 修复墨主题下错误态底线仍为红色、弹出气泡 / 滑块气泡阴影不可见
+
+### Breaking changes
+
+- `OhosAppBar.primary` 默认 `true`，会吸收 `MediaQuery.padding.top`；外层已套 `SafeArea` 或标题栏不在屏幕顶部时传 `false`
+- `OhosAppBar` 标题居中基准由整栏中轴改为 leading 与 actions 之间；`OhosDivider.indent` 默认值由 16 改为 0
+- `OhosChipGroup.scrollable: false` 现在表示“放得下时不加滚动视图”，放不下仍会横向滚动
+- `OhosDataPanel` 不再整体等比缩放，长标签省略、数值单独缩放
+
+### Optimization
+
+- 库测试由 48 条增至 62 条，覆盖 focusNode / controller 切换、ink 渲染、弹窗滚动等路径
+- 示例新增 8 页 × 3 宽度 × 3 字号溢出矩阵（72 条），并接入 CI 执行
+
 ## v0.2.0
 
 Release date: 2026-10-21

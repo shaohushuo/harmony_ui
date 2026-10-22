@@ -38,7 +38,8 @@ Current version and branch mapping:
 
 | Library version | Branch / TAG | Flutter version |
 | --- | --- | --- |
-| 0.2.0 | `main` | oh-3.35.7-release |
+| 0.3.0 | `main` / `v0.3.0` | oh-3.35.7-release |
+| 0.2.0 | historical commit | oh-3.35.7-release |
 | 0.1.0 | historical commit | oh-3.35.7-release |
 
 ## Constraints
@@ -192,7 +193,7 @@ theme.typography.bodyLarge;  // text style
 
 ## New Features
 
-v0.2.0 adds UI Design Kit enhanced components and immersive light enhancements (glow pools, lens specular, light scatter). See [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md) for details.
+v0.3.0 adds an e-ink theme, app bar layout and parameter enhancements, input/container widget additions, plus narrow-screen, large-text and focusNode lifecycle fixes. See [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md) for details.
 
 ## FAQ
 
