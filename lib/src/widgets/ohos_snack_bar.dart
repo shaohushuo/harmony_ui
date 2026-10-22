@@ -28,9 +28,13 @@ void showOhosSnackBar(
   String? title,
   String? content,
   Color? backgroundColor,
+  ScaffoldMessengerState? customMessenger,
 }) {
   final OhosThemeData theme = OhosTheme.of(context);
-  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  // 就近查找只覆盖祖先：分层页面（抽屉 / 弹层挂在根 Navigator）里必须能显式
+  // 指定某一层 messenger，否则提示会被外层整个盖住。
+  final ScaffoldMessengerState messenger =
+      customMessenger ?? ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   final bool hasIcon = icon != null;
   final bool hasTitle = title != null || content != null;
@@ -39,9 +43,14 @@ void showOhosSnackBar(
       duration: resident ? const Duration(days: 365) : duration,
       behavior: SnackBarBehavior.floating,
       backgroundColor: backgroundColor ?? theme.cardColor,
-      elevation: 6,
+      // 墨水屏：白底浮条 + elevation 会退化成「白底无边界」，改 1px 黑边；
+      // 彩屏继续用浮起阴影。
+      elevation: theme.monochrome ? 0 : 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
+        side: theme.monochrome
+            ? BorderSide(color: theme.dividerColor)
+            : BorderSide.none,
       ),
       content: Row(
         children: <Widget>[

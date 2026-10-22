@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 /// A flexible blank area used to push content, matching the "空白" control in
 /// the HarmonyOS design guideline (e.g. an empty list bottom).
 ///
+/// This is a **spacer**, not an empty state: it paints nothing and carries no
+/// icon or copy. For "no data yet" screens compose the usual
+/// icon + title + hint column; the library does not ship an empty-state widget.
+///
 /// When placed inside a bounded box (e.g. wrapped by `Expanded` in a `Column`)
 /// the blank fills the available space; in an unbounded context (e.g. directly
 /// inside a `ListView`) it only occupies [minSize] so it never creates

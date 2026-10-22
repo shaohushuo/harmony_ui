@@ -21,6 +21,7 @@ class OhosAlertDialog extends StatelessWidget {
     super.key,
     required this.title,
     this.content,
+    this.contentWidget,
     this.actions = const <OhosDialogAction>[],
     this.borderRadius = 28,
   });
@@ -30,6 +31,15 @@ class OhosAlertDialog extends StatelessWidget {
 
   /// Optional body text.
   final String? content;
+
+  /// Rich body, for text fields / lists that [content] cannot express.
+  ///
+  /// Takes precedence over [content]; the widget is laid out in the same
+  /// centered slot, so a form dialog keeps the ArkUI spacing. The slot scrolls
+  /// vertically when the content is taller than the space left by the title and
+  /// the actions, so a multi-field form on a narrow screen (or with a large
+  /// system font) does not overflow the dialog.
+  final Widget? contentWidget;
 
   /// Action buttons laid out vertically (ArkUI style).
   final List<OhosDialogAction> actions;
@@ -44,6 +54,10 @@ class OhosAlertDialog extends StatelessWidget {
       backgroundColor: theme.popupColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
+        // 墨水屏：弹层与页面同为纯白，只剩遮罩提供边界 → 补 1px 黑描边。
+        side: theme.monochrome
+            ? BorderSide(color: theme.dividerColor)
+            : BorderSide.none,
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 40),
       clipBehavior: Clip.antiAlias,
@@ -63,7 +77,16 @@ class OhosAlertDialog extends StatelessWidget {
                           ))
                       .copyWith(color: theme.textPrimaryColor),
             ),
-            if (content != null)
+            if (contentWidget != null)
+              // 表单 / 列表可能比弹窗剩余空间高（320vp 窄屏 + 1.3x 字号下几个
+              // 输入框就够）：Flexible + 滚动，宁可滚也不纵向溢出。
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SingleChildScrollView(child: contentWidget!),
+                ),
+              )
+            else if (content != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
@@ -151,6 +174,7 @@ Future<T?> showOhosDialog<T>({
   required BuildContext context,
   required String title,
   String? content,
+  Widget? contentWidget,
   List<OhosDialogAction> actions = const <OhosDialogAction>[],
   bool barrierDismissible = true,
 }) {
@@ -158,7 +182,12 @@ Future<T?> showOhosDialog<T>({
     context: context,
     barrierDismissible: barrierDismissible,
     builder: (BuildContext context) {
-      return OhosAlertDialog(title: title, content: content, actions: actions);
+      return OhosAlertDialog(
+        title: title,
+        content: content,
+        contentWidget: contentWidget,
+        actions: actions,
+      );
     },
   );
 }

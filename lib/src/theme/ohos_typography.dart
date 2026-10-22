@@ -109,8 +109,19 @@ class OhosTypography with Diagnosticable {
     return _build(fontFamily, textPrimaryDark);
   }
 
+  /// The monochrome (e-ink) typography: pure black, no alpha.
+  ///
+  /// The light preset uses `90%` black (`0xE6000000`), which a 16-level gray
+  /// panel renders as a lighter gray and blurs the "pure black on pure white,
+  /// no mid-tones" goal — most visibly on component defaults that do not
+  /// `copyWith` a color themselves (app bar titles, plain `OhosText`).
+  static OhosTypography monochrome({String? fontFamily}) {
+    return _build(fontFamily, textPrimaryMonochrome);
+  }
+
   static const Color textPrimary = Color(0xE6000000);
   static const Color textPrimaryDark = Color(0xDBFFFFFF);
+  static const Color textPrimaryMonochrome = Color(0xFF000000);
 
   static OhosTypography _build(String? fontFamily, Color color) {
     return OhosTypography(

@@ -158,4 +158,43 @@ class OhosColors {
 
   /// Scrim color used behind dialogs and popups.
   static const Color scrim = Color(0x66000000);
+
+  // ---------------------------------------------------------------------------
+  // E-ink (ink) preset
+  // ---------------------------------------------------------------------------
+
+  /// E-ink foreground: pure black.
+  ///
+  /// A 16-level gray panel turns `black87` text into a mid-tone that reads as
+  /// smudged and refreshes slowly, so the ink preset uses pure black instead of
+  /// the 90% / 60% / 40% opacity ladder of the light preset.
+  static const Color inkForeground = Color(0xFF000000);
+
+  /// E-ink background: pure white, shared by page / card / popup surfaces.
+  ///
+  /// Layering by mid-tone is impossible on e-ink — every surface is the same
+  /// white, and boundaries come from 1px black lines instead of shadows.
+  static const Color inkBackground = Color(0xFFFFFFFF);
+
+  /// The only mid-tone kept in the ink preset: selection / pressed feedback.
+  ///
+  /// 20% black survives on a 16-level panel; the light preset's 10%
+  /// (`interactivePressed`) flattens into the background.
+  static const Color inkInteractive = Color(0x33000000);
+
+  /// 11-step grayscale for the multi-color system, one slot per [multiLight]
+  /// entry so indices keep their meaning.
+  static const List<Color> multiInk = <Color>[
+    Color(0xFF000000),
+    Color(0xFF1A1A1A),
+    Color(0xFF333333),
+    Color(0xFF4D4D4D),
+    Color(0xFF666666),
+    Color(0xFF808080),
+    Color(0xFF999999),
+    Color(0xFFB3B3B3),
+    Color(0xFFCCCCCC),
+    Color(0xFFE6E6E6),
+    Color(0xFFFFFFFF),
+  ];
 }

@@ -48,6 +48,30 @@ class ContainerPage extends StatelessWidget {
             ),
           ),
         ),
+        const DemoSection(
+          title: '高密度列表（density: compact）',
+          description:
+              '对应 Material 的 ListTile(dense: true)：标题 14 / 副标题 12、上下 8vp。'
+              '文件列表、提交列表这类替换场景用它，行高不会被常规档撑高。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            child: OhosList(
+              header: OhosSubheader(title: '提交记录'),
+              children: <Widget>[
+                OhosListTile(
+                  density: OhosListTileDensity.compact,
+                  title: Text('修复标题栏状态栏内边距'),
+                  subtitle: Text('3f2a91c · 2 分钟前'),
+                ),
+                OhosListTile(
+                  density: OhosListTileDensity.compact,
+                  title: Text('补齐顶栏对齐与 bottom 槽位'),
+                  subtitle: Text('b41d07e · 昨天'),
+                ),
+              ],
+            ),
+          ),
+        ),
         DemoSection(
           title: '卡片 OhosCard',
           description: '可点击卡片，用于功能入口聚合。',

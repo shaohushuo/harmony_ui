@@ -24,6 +24,8 @@ Future<void> showOhosBottomSheet({
   required Widget content,
   String? dismissLabel,
   bool showCloseButton = true,
+  OhosLightMaterialLevel level = OhosLightMaterialLevel.ultraThick,
+  bool lightMaterial = true,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -34,10 +36,7 @@ Future<void> showOhosBottomSheet({
     ),
     builder: (BuildContext context) {
       final OhosThemeData theme = OhosTheme.of(context);
-      return OhosLightMaterial(
-        level: OhosLightMaterialLevel.ultraThick,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: SafeArea(
+      final Widget panel = SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Column(
@@ -97,7 +96,21 @@ Future<void> showOhosBottomSheet({
               ],
             ),
           ),
-        ),
+        );
+
+      if (!lightMaterial || theme.monochrome) {
+        // 关掉毛玻璃，或墨水屏上本来就不该做整层模糊：退化成纯色面板。
+        return Material(
+          color: theme.cardColor,
+          clipBehavior: Clip.antiAlias,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: panel,
+        );
+      }
+      return OhosLightMaterial(
+        level: level,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: panel,
       );
     },
   );

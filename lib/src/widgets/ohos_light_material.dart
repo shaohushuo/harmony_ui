@@ -344,6 +344,18 @@ class OhosLightMaterial extends StatelessWidget {
     final double blurSigma = spec.blurSigma * tuning.blurScale;
     final BorderRadius border = borderRadius ?? BorderRadius.zero;
 
+    if (theme.monochrome) {
+      // 墨水屏：`BackdropFilter` 是每帧全屏合成，投影像拖尾 —— 两者都不做，
+      // 直接退化成一块纯色，边界交给调用方自己的 1px 线。
+      return ClipRRect(
+        borderRadius: border,
+        child: ColoredBox(
+          color: palette.surfaceTint ?? theme.cardColor,
+          child: child,
+        ),
+      );
+    }
+
     final Widget backplate = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: border,

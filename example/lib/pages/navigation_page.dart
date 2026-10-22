@@ -14,9 +14,26 @@ class NavigationPage extends StatelessWidget {
       title: '导航类',
       children: <Widget>[
         const DemoSection(
+          title: '标题栏 OhosAppBar（状态栏内边距 primary）',
+          description:
+              '沉浸式（edge-to-edge）下系统状态栏会直接压在顶栏上。primary 为 true（默认）时'
+              '组件自己吃掉 MediaQuery.padding.top：背景仍铺到屏幕最顶端，标题与动作下移到'
+              '状态栏下面 —— 栏高变成 height + inset。示例里注入 24vp 模拟状态栏'
+              '（真机上这个值由系统给出），下面对照 80vp / 56vp 两种高度。',
+          child: _StatusBarInsetDemo(),
+        ),
+        const DemoSection(
           title: '标题栏 OhosAppBar（沉浸光感）',
           description: 'lightMaterial 开启后使用 ULTRA_THIN 材质 + 顶部渐变模糊。',
           child: _LightAppBarDemo(),
+        ),
+        const DemoSection(
+          title: '标题栏 OhosAppBar（对齐 / bottom / 标题位放控件）',
+          description:
+              'titleAlignment.start 换成左对齐标题（鸿蒙列表页 / 详情页常见），'
+              'titlePadding 可把两侧留白收紧，bottom 直接挂一条 OhosTabBar（高度并入 '
+              'preferredSize），标题位也可以整块换成搜索框（titlePadding: zero）。',
+          child: _AppBarSlotsDemo(),
         ),
         const DemoSection(
           title: '子页签 OhosTabBar（下划线样式）',
@@ -47,6 +64,81 @@ class NavigationPage extends StatelessWidget {
           title: '导航点 OhosPageIndicator',
           description: '配合轮播 OhosSwiper 使用，支持自动播放。',
           child: _SwiperDemo(),
+        ),
+      ],
+    );
+  }
+}
+
+/// 对照 [OhosAppBar.primary]：上面那条自己让开状态栏，下面那条不管。
+///
+/// 示例运行在桌面 / 平板窗口里，真实状态栏内边距是 0，所以这里用
+/// `MediaQuery.copyWith(padding: …)` 注入 24vp —— 只是为了让两条的高度差
+/// （80 vs 56）在 gallery 里也看得见。
+class _StatusBarInsetDemo extends StatelessWidget {
+  const _StatusBarInsetDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        padding: const EdgeInsets.only(top: 24),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: theme.textTertiaryColor.withValues(alpha: 0.4),
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _bar(context, primary: true, caption: 'primary: true（默认）· 高 80vp'),
+              Divider(
+                height: 1,
+                color: theme.textTertiaryColor.withValues(alpha: 0.4),
+              ),
+              _bar(context, primary: false, caption: 'primary: false · 高 56vp'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _bar(
+    BuildContext context, {
+    required bool primary,
+    required String caption,
+  }) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
+          child: Text(
+            caption,
+            style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+          ),
+        ),
+        OhosAppBar(
+          primary: primary,
+          title: const Text('标题'),
+          actions: <Widget>[
+            OhosIconButton(
+              icon: const Icon(Icons.search),
+              tooltip: '搜索',
+              size: 40,
+              iconSize: 20,
+              onPressed: () {},
+            ),
+          ],
         ),
       ],
     );
@@ -96,6 +188,87 @@ class _LightAppBarDemo extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 顶栏四个缺口（对齐 / 内边距 / bottom / 标题位放控件）落地后的样子。
+class _AppBarSlotsDemo extends StatefulWidget {
+  const _AppBarSlotsDemo();
+
+  @override
+  State<_AppBarSlotsDemo> createState() => _AppBarSlotsDemoState();
+}
+
+class _AppBarSlotsDemoState extends State<_AppBarSlotsDemo>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 3, vsync: this);
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: theme.textTertiaryColor.withValues(alpha: 0.4),
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            OhosAppBar(
+              primary: false,
+              titleAlignment: OhosAppBarTitleAlignment.start,
+              leading: OhosIconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                onPressed: () {},
+              ),
+              title: const Text('仓库 · feature/appbar'),
+              actions: <Widget>[
+                OhosIconButton(
+                  icon: const Icon(Icons.more_horiz),
+                  onPressed: () {},
+                ),
+              ],
+              bottom: OhosTabBar(
+                controller: _tabs,
+                tabs: const <Widget>[
+                  Text('文件'),
+                  Text('提交'),
+                  Text('分支'),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: theme.dividerColor),
+            OhosAppBar(
+              primary: false,
+              height: 60,
+              titlePadding: EdgeInsets.zero,
+              leading: OhosIconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                onPressed: () {},
+              ),
+              title: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: OhosSearchBar(
+                  hintText: '搜索文件',
+                  onChanged: (String value) {},
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -175,17 +348,14 @@ class _ChipGroupDemoState extends State<_ChipGroupDemo> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: <Widget>[
-            OhosChipGroup(
-              size: OhosChipGroupSize.small,
-              selectedIndex: _selected.isEmpty ? 0 : _selected.first,
-              onSelected: (int i) => setState(() => _selected = <int>{i}),
-              items: const <OhosChipItem>[
-                OhosChipItem(label: Text('默认')),
-                OhosChipItem(label: Text('小尺寸')),
-              ],
-            ),
+        // 不包 Row：塞进 Row 会拿到无界宽度，铺满型的 chip 组就没法按屏宽收起
+        OhosChipGroup(
+          size: OhosChipGroupSize.small,
+          selectedIndex: _selected.isEmpty ? 0 : _selected.first,
+          onSelected: (int i) => setState(() => _selected = <int>{i}),
+          items: const <OhosChipItem>[
+            OhosChipItem(label: Text('默认')),
+            OhosChipItem(label: Text('小尺寸')),
           ],
         ),
       ],

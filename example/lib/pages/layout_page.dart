@@ -92,13 +92,15 @@ class _ResponsiveDemo extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Row(
+              // 用 Wrap 而不是 Row：窄屏 + 大字号时两段文字会超过一行宽度。
+              Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
                   Text(
                     '${size.type.name} · ${size.width.round()}vp',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(width: 8),
                   Text(
                     '$columns 列',
                     style: const TextStyle(
@@ -174,7 +176,7 @@ class _LightDemo extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               bottom: 24,
@@ -185,10 +187,17 @@ class _LightDemo extends StatelessWidget {
                   height: 56,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
+                    children: const <Widget>[
                       Icon(OhosIcons.music_fill, size: 22),
                       SizedBox(width: 8),
-                      Text('底部悬浮 · THIN 材质'),
+                      // 320vp + 1.3x 字号下这行标题会超出，允许收缩
+                      Flexible(
+                        child: Text(
+                          '底部悬浮 · THIN 材质',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -208,7 +217,13 @@ class _LightDemo extends StatelessWidget {
               children: <Widget>[
                 Icon(OhosIcons.plus, color: OhosColors.highlight),
                 SizedBox(width: 8),
-                Text('任意位置弹层 · THICK + 漫射'),
+                // 320vp 下这行标题会超出，允许它收缩换行
+                Flexible(
+                  child: Text(
+                    '任意位置弹层 · THICK + 漫射',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ],
             ),
           ),

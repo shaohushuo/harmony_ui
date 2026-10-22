@@ -63,6 +63,7 @@ class OhosNavigationBar extends StatefulWidget {
     this.iconSize = 24,
     this.glow = true,
     this.enablePressGlow = true,
+    this.maxTextScaleFactor = 1.15,
   });
 
   /// Destinations of the bar.
@@ -100,6 +101,18 @@ class OhosNavigationBar extends StatefulWidget {
   /// Whether the press lens is painted at the touch point. Only applies when
   /// [glow] is true.
   final bool enablePressGlow;
+
+  /// Upper bound of the system text scale applied to the 平铺式 label.
+  ///
+  /// The tile label is a fixed 10vp design size and the bar is 48vp tall, so
+  /// the 1.3x accessibility scale would overflow it by 1vp; the label is
+  /// therefore clamped to 1.15x (Mate 60 Pro 出厂档) by default.
+  ///
+  /// Pass `null` to stop clamping and let the label follow the system scale
+  /// (`TextOverflow.ellipsis` still applies) — combine it with a taller
+  /// [height] so the label has room, e.g. `height: 64`. Ignored for
+  /// [OhosNavigationBarType.float], whose label sits inline and already scales.
+  final double? maxTextScaleFactor;
 
   @override
   State<OhosNavigationBar> createState() => _OhosNavigationBarState();
@@ -224,6 +237,7 @@ class _OhosNavigationBarState extends State<OhosNavigationBar>
                   onTap: () => widget.onDestinationSelected(i),
                   inline: widget.type == OhosNavigationBarType.float,
                   iconSize: widget.iconSize,
+                  maxTextScaleFactor: widget.maxTextScaleFactor,
                 ),
               ),
           ],
@@ -390,6 +404,7 @@ class _OhosNavItem extends StatelessWidget {
     required this.onTap,
     required this.inline,
     required this.iconSize,
+    required this.maxTextScaleFactor,
   });
 
   final OhosNavigationDestination destination;
@@ -397,6 +412,7 @@ class _OhosNavItem extends StatelessWidget {
   final VoidCallback onTap;
   final bool inline;
   final double iconSize;
+  final double? maxTextScaleFactor;
 
   @override
   Widget build(BuildContext context) {
@@ -424,13 +440,19 @@ class _OhosNavItem extends StatelessWidget {
           ],
         ),
         if (inline && selected)
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              destination.label,
-              style: theme.typography.labelSmall?.copyWith(
-                color: highlight,
-                fontWeight: FontWeight.w600,
+          // Flexible 必须在 Padding 外面：Padding 是 Row 的非弹性子项，会拿到
+          // 无界宽度，里面的 Flexible 就失去收缩能力（360vp 溢出 6.5vp 的原因）。
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.typography.labelSmall?.copyWith(
+                  color: highlight,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -455,7 +477,11 @@ class _OhosNavItem extends StatelessWidget {
         ),
       );
     }
-    return InkWell(
+    // 标签是固定 10vp 的设计字号，但系统字体放大后行高会涨，48vp 的平铺栏
+    // 装不下（1.3x 时溢出 1vp）。默认限制最大放大倍数，并让标签在极端情况下
+    // 可被压缩，避免 RenderFlex 溢出；调用方也可以传 maxTextScaleFactor: null
+    // 关掉钳制（同时抬高 height），而不是被无声地固定在 1.15x。
+    final Widget tile = InkWell(
       onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -473,16 +499,26 @@ class _OhosNavItem extends StatelessWidget {
             child: Center(child: content),
           ),
           const SizedBox(height: 1),
-          Text(
-            destination.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: (theme.typography.labelSmall ??
-                    const TextStyle(fontSize: 10))
-                .copyWith(color: labelColor, fontSize: 10, height: 1.2),
+          Flexible(
+            child: Text(
+              destination.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  (theme.typography.labelSmall ??
+                          const TextStyle(fontSize: 10))
+                      .copyWith(color: labelColor, fontSize: 10, height: 1.2),
+            ),
           ),
         ],
       ),
+    );
+    if (maxTextScaleFactor == null) {
+      return tile;
+    }
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: maxTextScaleFactor!,
+      child: tile,
     );
   }
 }

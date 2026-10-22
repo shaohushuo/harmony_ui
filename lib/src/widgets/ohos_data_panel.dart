@@ -96,9 +96,13 @@ class _OhosDataPanelItem extends StatelessWidget {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
+      // 网格单元高度随宽度变化：320vp 下两行文字（小字 + 24sp 数值）会超出
+      // 单元高度，出斑马线。这里只让**数值**在放不下时等比缩小 ——
+      // 不能把整列塞进 FittedBox：那会给标签传无界宽度，`maxLines: 1` +
+      // 省略号直接失效，整个单元被缩小（1.3x 系统字号会被缩回 1x 以下，
+      // 长标签连带把数值也压小），信息层级全乱。
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           Text(
             entry.key,
@@ -109,11 +113,17 @@ class _OhosDataPanelItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            '${prefix ?? ''}${entry.value.toStringAsFixed(decimals)}${suffix ?? ''}',
-            maxLines: 1,
-            style: theme.typography.headlineMedium?.copyWith(
-              color: theme.textPrimaryColor,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${prefix ?? ''}${entry.value.toStringAsFixed(decimals)}${suffix ?? ''}',
+                maxLines: 1,
+                style: theme.typography.headlineMedium?.copyWith(
+                  color: theme.textPrimaryColor,
+                ),
+              ),
             ),
           ),
         ],

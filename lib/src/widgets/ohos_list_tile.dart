@@ -3,6 +3,18 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_divider.dart';
 
+/// Vertical rhythm of [OhosListTile].
+enum OhosListTileDensity {
+  /// Settings-list comfort: title 16sp, subtitle 14sp, 14vp vertical padding.
+  regular,
+
+  /// File / commit list rhythm: title 14sp, subtitle 12sp, 8vp padding.
+  ///
+  /// The Material equivalent is `ListTile(dense: true)`; use this instead of
+  /// squeezing a regular tile when replacing a dense list.
+  compact,
+}
+
 /// A HarmonyOS list item, the counterpart of Flutter's [ListTile].
 ///
 /// Provides [leading], [title], [subtitle] and [trailing] slots on a white
@@ -18,7 +30,8 @@ class OhosListTile extends StatelessWidget {
     this.onTap,
     this.selected = false,
     this.divider = true,
-    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    this.density = OhosListTileDensity.regular,
+    this.padding,
   });
 
   /// Leading widget (icon or avatar).
@@ -42,8 +55,11 @@ class OhosListTile extends StatelessWidget {
   /// Whether to draw the hairline divider below the tile.
   final bool divider;
 
-  /// Inner padding of the tile.
-  final EdgeInsetsGeometry padding;
+  /// Vertical rhythm; see [OhosListTileDensity].
+  final OhosListTileDensity density;
+
+  /// Inner padding of the tile; null uses the value implied by [density].
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +67,13 @@ class OhosListTile extends StatelessWidget {
     final Color titleColor = selected
         ? theme.highlightColor
         : theme.textPrimaryColor;
+    final bool compact = density == OhosListTileDensity.compact;
+    final double titleSize = compact ? 14 : 16;
+    final double subtitleSize = compact ? 12 : 14;
     final Widget content = Padding(
-      padding: padding,
+      padding:
+          padding ??
+          EdgeInsets.symmetric(horizontal: 16, vertical: compact ? 8 : 14),
       child: Row(
         children: <Widget>[
           if (leading != null)
@@ -71,17 +92,20 @@ class OhosListTile extends StatelessWidget {
                   style:
                       (theme.typography.bodyLarge ??
                               const TextStyle(fontSize: 16))
-                          .copyWith(color: titleColor),
+                          .copyWith(color: titleColor, fontSize: titleSize),
                   child: title,
                 ),
                 if (subtitle != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.only(top: compact ? 2 : 4),
                     child: DefaultTextStyle.merge(
                       style:
                           (theme.typography.bodySmall ??
                                   const TextStyle(fontSize: 14))
-                              .copyWith(color: theme.textSecondaryColor),
+                              .copyWith(
+                                color: theme.textSecondaryColor,
+                                fontSize: subtitleSize,
+                              ),
                       child: subtitle!,
                     ),
                   ),
@@ -111,7 +135,8 @@ class OhosListTile extends StatelessWidget {
               child: content,
             ),
           ),
-        if (divider) const OhosDivider(),
+        // 列表里让发丝线与文字左对齐（分隔线自身默认 indent 为 0）
+        if (divider) const OhosDivider(indent: 16),
       ],
     );
 

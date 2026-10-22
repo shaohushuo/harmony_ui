@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 
-import '../theme/ohos_colors.dart';
+import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
 
-/// A HarmonyOS text input with an underline accent, the counterpart of
-/// Flutter's [TextField]. Matches ArkUI's default underline input style and
-/// turns the accent line brand-colored while focused.
+/// Visual variant of [OhosTextField].
+enum OhosTextFieldVariant {
+  /// ArkUI default: transparent background with an accent underline.
+  underline,
+
+  /// Gray rounded block without a line, the common HarmonyOS form field.
+  ///
+  /// On an e-ink theme (`OhosThemeData.monochrome`) the fill would equal the
+  /// page background, so the field falls back to a transparent background with
+  /// a 1px border instead of a fill.
+  filled,
+
+  /// Fully rounded search-like field with a 1px outline.
+  capsule,
+}
+
+/// A HarmonyOS text input, the counterpart of Flutter's [TextField].
+///
+/// Defaults to ArkUI's underline style and turns the accent line brand-colored
+/// while focused; [variant] switches to the filled / capsule forms used by
+/// HarmonyOS forms and search entries.
 class OhosTextField extends StatefulWidget {
   const OhosTextField({
     super.key,
     this.controller,
+    this.focusNode,
     this.hintText,
     this.labelText,
     this.prefixIcon,
+    this.suffixIcon,
     this.errorText,
     this.obscureText = false,
     this.enabled = true,
@@ -22,12 +42,23 @@ class OhosTextField extends StatefulWidget {
     this.onSubmitted,
     this.initialValue,
     this.maxLines = 1,
+    this.variant = OhosTextFieldVariant.underline,
     this.style,
   });
 
   /// Controller for the text; if null an internal one is created from
   /// [initialValue].
+  ///
+  /// Swapping the controller later (including back to null) is supported: only
+  /// an internal one is disposed by the widget.
   final TextEditingController? controller;
+
+  /// External focus node, e.g. to focus the field from a button.
+  ///
+  /// When null the field owns one internally; a supplied node is never disposed
+  /// by the widget. Swapping the node later is supported — the Field moves to
+  /// the new node and only an internally created one is disposed.
+  final FocusNode? focusNode;
 
   /// Hint shown when empty.
   final String? hintText;
@@ -37,6 +68,9 @@ class OhosTextField extends StatefulWidget {
 
   /// Leading icon inside the field.
   final Widget? prefixIcon;
+
+  /// Trailing icon inside the field (clear / visibility toggle etc.).
+  final Widget? suffixIcon;
 
   /// Error message shown below the field in the danger color.
   final String? errorText;
@@ -65,6 +99,9 @@ class OhosTextField extends StatefulWidget {
   /// Maximum number of lines.
   final int maxLines;
 
+  /// Visual variant: underline (default) / filled / capsule.
+  final OhosTextFieldVariant variant;
+
   /// Overrides the input text style.
   final TextStyle? style;
 
@@ -73,17 +110,58 @@ class OhosTextField extends StatefulWidget {
 }
 
 class _OhosTextFieldState extends State<OhosTextField> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  /// 只有自己创建的实例才由本组件 dispose：外部传入的归调用方所有。
+  /// 用独立的 owner 标记（而不是读 `widget.controller == null`）是必须的 ——
+  /// 后者在 didUpdateWidget 里已经指向新 widget，判不出旧实例是谁创建的。
+  bool _ownsController = false;
+  bool _ownsFocusNode = false;
   bool _focused = false;
 
   @override
   void initState() {
     super.initState();
+    _useController(widget.controller);
+    _useFocusNode(widget.focusNode);
+  }
+
+  void _useController(TextEditingController? controller) {
     _controller =
-        widget.controller ??
-        TextEditingController(text: widget.initialValue ?? '');
-    _focusNode = FocusNode()..addListener(_onFocus);
+        controller ?? TextEditingController(text: widget.initialValue ?? '');
+    _ownsController = controller == null;
+  }
+
+  void _useFocusNode(FocusNode? focusNode) {
+    _focusNode = focusNode ?? FocusNode();
+    _ownsFocusNode = focusNode == null;
+    _focusNode.addListener(_onFocus);
+    _focused = _focusNode.hasFocus;
+  }
+
+  void _releaseFocusNode() {
+    _focusNode.removeListener(_onFocus);
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
+  }
+
+  @override
+  void didUpdateWidget(OhosTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 控制器 / 焦点节点可以中途换（含换成 null）：只处理自己那份，
+    // 并同步监听器与焦点态，否则换了节点后「聚焦高亮 / 取消按钮」会停在旧状态。
+    if (widget.controller != oldWidget.controller) {
+      if (_ownsController) {
+        _controller.dispose();
+      }
+      _useController(widget.controller);
+    }
+    if (widget.focusNode != oldWidget.focusNode) {
+      _releaseFocusNode();
+      _useFocusNode(widget.focusNode);
+    }
   }
 
   void _onFocus() {
@@ -94,8 +172,8 @@ class _OhosTextFieldState extends State<OhosTextField> {
 
   @override
   void dispose() {
-    _focusNode.dispose();
-    if (widget.controller == null) {
+    _releaseFocusNode();
+    if (_ownsController) {
       _controller.dispose();
     }
     super.dispose();
@@ -114,6 +192,65 @@ class _OhosTextFieldState extends State<OhosTextField> {
         : _focused
         ? highlight
         : theme.textTertiaryColor;
+    final InputDecoration decoration = switch (widget.variant) {
+      OhosTextFieldVariant.underline => InputDecoration(
+        hintText: widget.hintText,
+        labelText: widget.labelText,
+        prefixIcon: widget.prefixIcon,
+        suffixIcon: widget.suffixIcon,
+        errorText: widget.errorText,
+        enabled: widget.enabled,
+        errorMaxLines: 2,
+        hintStyle: TextStyle(color: theme.textTertiaryColor),
+        labelStyle: TextStyle(
+          color: hasError
+              ? theme.dangerColor
+              : _focused
+              ? highlight
+              : theme.textSecondaryColor,
+        ),
+        errorStyle: TextStyle(color: theme.dangerColor),
+        prefixIconColor: accent,
+        suffixIconColor: theme.textSecondaryColor,
+        filled: false,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 0,
+          vertical: 12,
+        ),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: theme.textTertiaryColor.withValues(alpha: 0.5),
+          ),
+        ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: accent, width: 2),
+        ),
+        disabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: theme.textTertiaryColor.withValues(alpha: 0.2),
+          ),
+        ),
+        errorBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: theme.dangerColor, width: 2),
+        ),
+        focusedErrorBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: theme.dangerColor, width: 2),
+        ),
+      ),
+      OhosTextFieldVariant.filled || OhosTextFieldVariant.capsule =>
+        _boxedDecoration(
+          theme: theme,
+          hasError: hasError,
+          accent: accent,
+          // 墨水屏上「填充色 = 背景色」，灰底方块的边界会整个消失 →
+          // 改回透明底 + 1px 黑边，靠线而不是靠色分层。
+          useFill: widget.variant == OhosTextFieldVariant.filled &&
+              !theme.monochrome,
+          radius: widget.variant == OhosTextFieldVariant.capsule
+              ? OhosGeometry.radiusCapsule
+              : OhosGeometry.radiusMedium,
+        ),
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -133,50 +270,65 @@ class _OhosTextFieldState extends State<OhosTextField> {
               (theme.typography.bodyLarge?.copyWith(
                 color: theme.textPrimaryColor,
               )),
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            labelText: widget.labelText,
-            prefixIcon: widget.prefixIcon,
-            errorText: widget.errorText,
-            enabled: widget.enabled,
-            errorMaxLines: 2,
-            hintStyle: TextStyle(color: theme.textTertiaryColor),
-            labelStyle: TextStyle(
-              color: hasError
-                  ? theme.dangerColor
-                  : _focused
-                  ? highlight
-                  : theme.textSecondaryColor,
-            ),
-            errorStyle: TextStyle(color: theme.dangerColor),
-            prefixIconColor: accent,
-            filled: false,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 0,
-              vertical: 12,
-            ),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.textTertiaryColor.withValues(alpha: 0.5),
-              ),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: accent, width: 2),
-            ),
-            disabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.textTertiaryColor.withValues(alpha: 0.2),
-              ),
-            ),
-            errorBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: OhosColors.danger, width: 2),
-            ),
-            focusedErrorBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: OhosColors.danger, width: 2),
-            ),
-          ),
+          decoration: decoration,
         ),
       ],
+    );
+  }
+
+  /// Filled / capsule variants: a boxed field whose border only shows while
+  /// focused or in error, unless the fill is unavailable (e-ink) — then a
+  /// hairline border carries the boundary instead.
+  InputDecoration _boxedDecoration({
+    required OhosThemeData theme,
+    required bool hasError,
+    required Color accent,
+    required bool useFill,
+    required double radius,
+  }) {
+    final BorderRadius borderRadius = BorderRadius.circular(radius);
+    final Color hairline = theme.textTertiaryColor.withValues(alpha: 0.5);
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: color, width: width),
+        );
+    return InputDecoration(
+      hintText: widget.hintText,
+      labelText: widget.labelText,
+      prefixIcon: widget.prefixIcon,
+      suffixIcon: widget.suffixIcon,
+      errorText: widget.errorText,
+      enabled: widget.enabled,
+      errorMaxLines: 2,
+      hintStyle: TextStyle(color: theme.textTertiaryColor),
+      labelStyle: TextStyle(
+        color: hasError
+            ? theme.dangerColor
+            : _focused
+            ? theme.highlightColor
+            : theme.textSecondaryColor,
+      ),
+      errorStyle: TextStyle(color: theme.dangerColor),
+      prefixIconColor: accent,
+      suffixIconColor: theme.textSecondaryColor,
+      filled: useFill,
+      fillColor:
+          theme.compBackgroundGrayColor ??
+          theme.backgroundSecondaryColor ??
+          theme.cardColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: useFill ? border(Colors.transparent, 0) : border(hairline),
+      focusedBorder: border(accent, 1.5),
+      disabledBorder: useFill
+          ? border(Colors.transparent, 0)
+          : border(theme.textTertiaryColor.withValues(alpha: 0.2)),
+      errorBorder: border(theme.dangerColor, 1.5),
+      focusedErrorBorder: border(theme.dangerColor, 1.5),
     );
   }
 }

@@ -34,6 +34,15 @@ class DisplayPage extends StatelessWidget {
           ),
         ),
         const DemoSection(
+          title: '墨主题 OhosThemeData.ink（墨水屏）',
+          description:
+              '纯黑 + 纯白、去掉中间调：分隔线是 1px 纯黑（light 预设的 10% 黑在 16 级灰上'
+              '等于没有），水波纹 / 悬停 / 阴影全关，三级色留 #767676 给占位文字。'
+              'brightness 仍是 light，组件要用 monochrome 判断而不是 isDark；'
+              'OhosLightMaterial 在该主题下退化成纯色，不再做每帧全屏模糊。',
+          child: _InkThemeDemo(),
+        ),
+        const DemoSection(
           title: '子标题 OhosSubheader',
           description: '区块标题，可带尾部链接。',
           child: DemoCard(
@@ -49,17 +58,19 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '分隔器 OhosDivider',
-          description: '列表分隔线，支持缩进控制。',
+          description:
+              '发丝线，支持缩进。默认 indent 为 0（与 Material Divider 一致，'
+              '替换时版式不变）；列表项自己传 16，让线与文字左对齐。',
           child: DemoCard(
             padding: EdgeInsets.zero,
             child: Column(
               children: <Widget>[
-                OhosListTile(title: Text('默认缩进 16')),
-                OhosListTile(title: Text('自定义缩进 56')),
+                OhosListTile(title: Text('列表项：线与文字对齐（indent 16）')),
+                OhosListTile(title: Text('第二条列表项')),
                 OhosDivider(indent: 8, endIndent: 8, height: 16),
                 Padding(
                   padding: EdgeInsets.all(12),
-                  child: OhosDivider(indent: 0, endIndent: 0),
+                  child: OhosDivider(),
                 ),
               ],
             ),
@@ -414,4 +425,73 @@ class _PlaceholderImage extends StatelessWidget {
       ),
     );
   }
+}
+/// 墨主题下的几种典型组件：纯色分层、1px 黑线、无模糊无阴影。
+class _InkThemeDemo extends StatelessWidget {
+  const _InkThemeDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return OhosTheme(
+      data: OhosThemeData.ink(),
+      child: Builder(
+        builder: (BuildContext context) {
+          final OhosThemeData ink = OhosTheme.of(context);
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ink.backgroundColor,
+              border: Border.all(color: ink.dividerColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '纯黑正文，纯白底',
+                  style: TextStyle(color: ink.textPrimaryColor, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '提示文字 #767676：仍明显淡于正文',
+                  style: TextStyle(color: ink.textTertiaryColor, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                // 窄窗口放不下一行：用 Wrap 让它自动换行，而不是溢出
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    OhosButton(onPressed: () {}, child: const Text('主要按钮')),
+                    OhosButton(
+                      style: OhosButtonStyle.outlined,
+                      onPressed: () {},
+                      child: const Text('次要按钮'),
+                    ),
+                    const OhosSwitch(value: true, onChanged: _noop),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OhosDivider(color: ink.dividerColor, indent: 0, thickness: 1),
+                const SizedBox(height: 8),
+                OhosLightMaterial(
+                  level: OhosLightMaterialLevel.ultraThick,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'ULTRA_THICK 在这里是一块纯色，不是磨砂玻璃',
+                      style: TextStyle(color: ink.textPrimaryColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  static void _noop(bool value) {}
 }

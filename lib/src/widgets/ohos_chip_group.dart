@@ -83,7 +83,14 @@ class OhosChipGroup extends StatelessWidget {
   /// oversized gaps, so the default is a compact 8vp.
   final double spacing;
 
-  /// Whether the capsule strip scrolls horizontally when it overflows.
+  /// Whether the strip is *always* horizontally scrollable.
+  ///
+  /// `false` (default) means "don't add a scroll view when the chips fit";
+  /// a strip wider than its parent **still** scrolls horizontally instead of
+  /// overflowing (0.3.0 changed this: previously it produced a `RenderFlex`
+  /// overflow). Note that a non-scrolling strip that is cut off gives no visual
+  /// affordance — on a narrow screen the trailing chips need a swipe to reach.
+  /// If you want wrapping instead, build a `Wrap` of [OhosChip]s yourself.
   final bool scrollable;
 
   /// Overrides the active (brand) fill color.
@@ -104,7 +111,22 @@ class OhosChipGroup extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return _strip(context);
+        // 被放进 Row / 无界宽度里时保持原来的自然宽度（滚动视图拿不到无界宽度）
+        if (!constraints.hasBoundedWidth) {
+          return _strip(context);
+        }
+        // 不滚动模式原来直接把 Row 塞进约束里，窄屏放不下就出斑马线。
+        // 这里仍然整行展示，但超出部分改为横向滚动，内容窄时保持原来的左对齐。
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _strip(context),
+            ),
+          ),
+        );
       },
     );
   }

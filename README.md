@@ -73,6 +73,13 @@ fvm flutter pub add harmony_ui \
 
 ## 快速开始
 
+> **沉浸式布局**：`OhosAppBar` 默认 `primary: true`，会自己吃掉
+> `MediaQuery.padding.top`（背景仍铺到屏幕最顶端，标题/动作下移到系统状态栏下面），
+> 与 Material `AppBar` 的 `SafeArea(bottom: false)` 一致，直接放进 `Scaffold.appBar`
+> 即可。若你已经在外层套过 `SafeArea`，或这条栏不在屏幕顶部，传 `primary: false`。
+> `preferredSize` 保持 `height` —— `Scaffold` 的 `appBarMaxHeight` 已含状态栏高度，
+> 重复加会多出一条空白。
+
 ```dart
 import 'package:flutter/material.dart';
 import 'package:harmony_ui/harmony_ui.dart';
