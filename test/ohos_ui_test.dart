@@ -13,6 +13,17 @@ Widget wrap(Widget child) {
   );
 }
 
+/// 实际绘制用的颜色：`Text` 会把 `DefaultTextStyle` 合并进自己的 `RichText`，
+/// 只查 `Text.style` 会漏掉「靠主题字阶上色」的场合（AppBar 标题等）。
+Color? paintedColor(WidgetTester tester, String label) {
+  final RichText rich = tester.widget<RichText>(
+    find.descendant(of: find.text(label), matching: find.byType(RichText)),
+  );
+  return (rich.text as TextSpan).style?.color;
+}
+
+void _noop() {}
+
 void main() {
   group('OhosTheme', () {
     testWidgets('of() provides the theme to descendants', (
@@ -82,6 +93,38 @@ void main() {
         OhosThemeData.ink().copyWith(highlightColor: Colors.grey).monochrome,
         isTrue,
       );
+    });
+
+    test('ink 字阶是纯黑：light 的 90% 黑在 16 级灰上会淡成中灰', () {
+      final OhosTypography ink = OhosThemeData.ink().typography;
+      expect(ink.bodyMedium?.color, Colors.black);
+      expect(ink.titleMedium?.color, Colors.black);
+      expect(ink.labelSmall?.color, Colors.black);
+      expect(ink.headlineMedium?.color, Colors.black);
+      // 彩屏仍用官方字阶（90% / 85% 黑）
+      expect(
+        OhosThemeData.light().typography.bodyMedium?.color,
+        OhosTypography.textPrimary,
+      );
+    });
+
+    testWidgets('ink 下没自己指定颜色的 AppBar 标题 / OhosText 渲染成纯黑', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: const MaterialApp(
+            home: Scaffold(
+              appBar: OhosAppBar(title: Text('标题')),
+              body: Center(child: OhosText('正文')),
+            ),
+          ),
+        ),
+      );
+
+      expect(paintedColor(tester, '标题'), Colors.black);
+      expect(paintedColor(tester, '正文'), Colors.black);
     });
 
     // `MaterialApp` 提供 Directionality / Navigator，组件本身不再包一层。
@@ -291,6 +334,121 @@ void main() {
       await tester.tap(find.text('我的'));
       await tester.pump();
       expect(index, 1);
+    });
+
+    testWidgets('平铺栏标签默认钳到 1.15x，maxTextScaleFactor: null 时跟随系统', (
+      WidgetTester tester,
+    ) async {
+      Widget host(OhosNavigationBar bar) {
+        return MaterialApp(
+          builder: (BuildContext context, Widget? child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          ),
+          home: OhosTheme(
+            data: OhosThemeData.light(),
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(width: 360, child: bar),
+              ),
+            ),
+          ),
+        );
+      }
+
+      const List<OhosNavigationDestination> destinations =
+          <OhosNavigationDestination>[
+            OhosNavigationDestination(icon: Icon(Icons.home), label: '首页'),
+            OhosNavigationDestination(icon: Icon(Icons.person), label: '我的'),
+          ];
+
+      TextScaler scalerOf(String label) => tester
+          .widget<RichText>(
+            find.descendant(
+              of: find.text(label),
+              matching: find.byType(RichText),
+            ),
+          )
+          .textScaler;
+
+      await tester.pumpWidget(
+        host(
+          OhosNavigationBar(
+            currentIndex: 0,
+            onDestinationSelected: (_) {},
+            destinations: destinations,
+          ),
+        ),
+      );
+      // 48vp 栏高装不下 1.3x，默认钳制到 1.15x
+      expect(scalerOf('首页').scale(10), moreOrLessEquals(11.5));
+
+      // 关掉钳制 + 抬高栏高：低视力用户能真的拿到 1.3x
+      await tester.pumpWidget(
+        host(
+          OhosNavigationBar(
+            currentIndex: 0,
+            height: 64,
+            maxTextScaleFactor: null,
+            onDestinationSelected: (_) {},
+            destinations: destinations,
+          ),
+        ),
+      );
+      expect(scalerOf('首页').scale(10), moreOrLessEquals(13));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('OhosDataPanel', () {
+    Widget host({required double textScale, required double width}) {
+      return MaterialApp(
+        builder: (BuildContext context, Widget? child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: OhosTheme(
+          data: OhosThemeData.light(),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: width,
+                child: const OhosDataPanel(
+                  title: '统计',
+                  entries: <String, num>{'这是一个很长很长会溢出的标签': 12345, '短标签': 1},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('长标签在 1.3x 字号下：标签仍被放大并省略，不是整格缩小', (
+      WidgetTester tester,
+    ) async {
+      const String label = '这是一个很长很长会溢出的标签';
+
+      await tester.pumpWidget(host(textScale: 1, width: 320));
+      final double labelAt1x = tester.getSize(find.text(label)).height;
+      final double valueAt1x = tester.getSize(find.text('12345')).height;
+      // 标签被约束在单元内并省略，而不是拿无界宽度（那样省略号根本不生效）
+      expect(tester.getSize(find.text(label)).width, lessThanOrEqualTo(155));
+
+      await tester.pumpWidget(host(textScale: 1.3, width: 320));
+      expect(tester.takeException(), isNull);
+
+      final double labelAt13x = tester.getSize(find.text(label)).height;
+      final double valueAt13x = tester.getSize(find.text('12345')).height;
+
+      // 整格塞进 FittedBox 时这两项都会被缩回（0.68x 甚至更小）
+      expect(labelAt13x, greaterThan(labelAt1x * 1.2));
+      expect(valueAt13x, greaterThan(valueAt1x * 1.2));
     });
   });
 
@@ -532,6 +690,97 @@ void main() {
       expect(controller.text, isEmpty);
       expect(cancelled, 1);
     });
+
+    testWidgets('换 focusNode 后「取消」按新节点的真实焦点显示', (
+      WidgetTester tester,
+    ) async {
+      final FocusNode first = FocusNode();
+      final FocusNode second = FocusNode();
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      Widget host(FocusNode node) => wrap(
+        SizedBox(
+          width: 360,
+          child: OhosSearchBar(focusNode: node, onCancel: () {}),
+        ),
+      );
+
+      await tester.pumpWidget(host(first));
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      expect(find.text('取消'), findsOneWidget);
+
+      // 换到未聚焦的新节点：按钮必须立刻消失。
+      // 原来 didUpdateWidget 只换节点、不重算 _focused，按钮会一直挂着。
+      await tester.pumpWidget(host(second));
+      expect(second.hasFocus, isFalse);
+      expect(find.text('取消'), findsNothing);
+    });
+
+    testWidgets('新节点带着焦点请求换进来时，「取消」自动出现', (
+      WidgetTester tester,
+    ) async {
+      final FocusNode first = FocusNode();
+      final FocusNode second = FocusNode();
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      // 换入前就请求焦点：挂到树上时立即生效
+      second.requestFocus();
+
+      Widget host(FocusNode node) => wrap(
+        SizedBox(
+          width: 360,
+          child: OhosSearchBar(focusNode: node, onCancel: () {}),
+        ),
+      );
+
+      await tester.pumpWidget(host(first));
+      expect(find.text('取消'), findsNothing);
+
+      await tester.pumpWidget(host(second));
+      await tester.pump();
+      expect(second.hasFocus, isTrue);
+      expect(find.text('取消'), findsOneWidget);
+    });
+
+    testWidgets('「取消」是按钮：够大的命中区 + button 语义', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 360,
+            child: OhosSearchBar(
+              autofocus: true,
+              onCancel: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.getSemantics(find.text('取消')),
+        matchesSemantics(
+          isButton: true,
+          // TextButton 同时可聚焦、有 enabled 状态（键盘 / 无障碍都能激活）
+          isFocusable: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+          label: '取消',
+        ),
+      );
+      final Size size = tester.getSize(find.byType(TextButton));
+      // 裸 GestureDetector 只有文字那么大；按钮至少 40vp 高、48vp 宽
+      expect(size.height, greaterThanOrEqualTo(40));
+      expect(size.width, greaterThanOrEqualTo(48));
+      handle.dispose();
+    });
   });
 
   group('OhosAlertDialog', () {
@@ -598,6 +847,58 @@ void main() {
 
       expect(find.byType(OhosTextField), findsOneWidget);
       expect(find.text('这段文字应被忽略'), findsNothing);
+    });
+
+    testWidgets('窄屏 + 大字号下，多字段表单的 contentWidget 改为滚动而不是溢出', (
+      WidgetTester tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (BuildContext context, Widget? child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          ),
+          home: OhosTheme(
+            data: OhosThemeData.light(),
+            child: Scaffold(
+              body: Center(
+                child: OhosAlertDialog(
+                  title: '编辑信息',
+                  contentWidget: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (int i = 0; i < 8; i++)
+                        OhosTextField(hintText: '字段 $i'),
+                    ],
+                  ),
+                  actions: const <OhosDialogAction>[
+                    OhosDialogAction(label: '取消', onPressed: _noop),
+                    OhosDialogAction(label: '保存', onPressed: _noop),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.descendant(
+          of: find.byType(OhosAlertDialog),
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSize(find.byType(OhosAlertDialog)).height,
+        lessThanOrEqualTo(640),
+      );
     });
   });
 
@@ -670,6 +971,88 @@ void main() {
 
       expect(find.text('分享'), findsOneWidget);
       expect(find.byType(BackdropFilter), findsNothing);
+    });
+
+    testWidgets('lightMaterial: false 时彩屏也不铺光感', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: Builder(
+                  builder: (BuildContext context) {
+                    return OhosButton(
+                      onPressed: () => showOhosBottomSheet(
+                        context: context,
+                        title: '分享',
+                        lightMaterial: false,
+                        content: const SizedBox(height: 120),
+                      ),
+                      child: const Text('打开面板'),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('打开面板'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('分享'), findsOneWidget);
+      expect(find.byType(BackdropFilter), findsNothing);
+    });
+  });
+
+  group('showOhosSnackBar', () {
+    testWidgets('customMessenger 决定提示挂在哪一层', (WidgetTester tester) async {
+      final GlobalKey<ScaffoldMessengerState> innerMessenger =
+          GlobalKey<ScaffoldMessengerState>();
+
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: ScaffoldMessenger(
+              key: innerMessenger,
+              child: OhosScaffold(
+                body: Center(
+                  child: Builder(
+                    builder: (BuildContext context) {
+                      return OhosButton(
+                        onPressed: () => showOhosSnackBar(
+                          context,
+                          message: '已删除 1 个文件',
+                          customMessenger: innerMessenger.currentState,
+                        ),
+                        child: const Text('删除'),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('删除'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // 提示挂在内层 messenger 的子树里，而不是就近/外层的 Scaffold
+      expect(
+        find.descendant(
+          of: find.byKey(innerMessenger),
+          matching: find.text('已删除 1 个文件'),
+        ),
+        findsOneWidget,
+      );
     });
   });
 

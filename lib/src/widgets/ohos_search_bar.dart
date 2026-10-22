@@ -78,15 +78,38 @@ class OhosSearchBar extends StatefulWidget {
 class _OhosSearchBarState extends State<OhosSearchBar> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
+
+  /// 只有自己创建的实例才由本组件 dispose，外部传入的归调用方所有。
+  bool _ownsController = false;
+  bool _ownsFocusNode = false;
   bool _focused = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = widget.controller ?? TextEditingController();
-    _focusNode = widget.focusNode ?? FocusNode();
+    _useController(widget.controller);
+    _useFocusNode(widget.focusNode);
+  }
+
+  void _useController(TextEditingController? controller) {
+    _controller = controller ?? TextEditingController();
+    _ownsController = controller == null;
+  }
+
+  void _useFocusNode(FocusNode? focusNode) {
+    _focusNode = focusNode ?? FocusNode();
+    _ownsFocusNode = focusNode == null;
     _focusNode.addListener(_onFocus);
+    // 新节点可能已经处于聚焦态：不同步的话「取消」按钮要等下一次焦点变化
+    // 才出现（旧节点聚焦时换到未聚焦节点则恰好相反，一直挂着）。
     _focused = _focusNode.hasFocus;
+  }
+
+  void _releaseFocusNode() {
+    _focusNode.removeListener(_onFocus);
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
   }
 
   void _onFocus() {
@@ -98,29 +121,32 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
   @override
   void didUpdateWidget(OhosSearchBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.controller != null && widget.controller != _controller) {
-      _controller = widget.controller!;
+    if (widget.controller != oldWidget.controller) {
+      if (_ownsController) {
+        _controller.dispose();
+      }
+      _useController(widget.controller);
     }
     if (widget.focusNode != oldWidget.focusNode) {
-      _focusNode.removeListener(_onFocus);
-      if (oldWidget.focusNode == null) {
-        _focusNode.dispose();
-      }
-      _focusNode = widget.focusNode ?? FocusNode();
-      _focusNode.addListener(_onFocus);
+      _releaseFocusNode();
+      _useFocusNode(widget.focusNode);
     }
   }
 
   @override
   void dispose() {
-    _focusNode.removeListener(_onFocus);
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
-    if (widget.controller == null) {
+    _releaseFocusNode();
+    if (_ownsController) {
       _controller.dispose();
     }
     super.dispose();
+  }
+
+  void _handleCancel() {
+    _controller.clear();
+    widget.onChanged?.call('');
+    _focusNode.unfocus();
+    widget.onCancel?.call();
   }
 
   @override
@@ -189,23 +215,25 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
                 },
               ),
               if (_focused && widget.onCancel != null)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    _controller.clear();
-                    widget.onChanged?.call('');
-                    _focusNode.unfocus();
-                    widget.onCancel?.call();
-                  },
-                  child: Padding(
+                // 取消是「按钮」而不是一块可点区域：TextButton 自带 button 语义、
+                // 焦点与回车/空格激活，命中区也够 40vp（裸 GestureDetector 三者都没有）。
+                TextButton(
+                  onPressed: _handleCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.highlightColor,
+                    textStyle:
+                        theme.typography.bodyMedium ??
+                        const TextStyle(fontSize: 15),
+                    // 命中区至少 48×40：`visualDensity` 不压（compact 会再砍 8vp，
+                    // 高 40 的栏里就只剩 32 了），`shrinkWrap` 则是不额外加水波纹余量。
+                    minimumSize: const Size(48, 40),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      widget.cancelText,
-                      style: (theme.typography.bodyMedium ??
-                              const TextStyle(fontSize: 15))
-                          .copyWith(color: theme.highlightColor),
-                    ),
+                    visualDensity: VisualDensity.standard,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    // 墨水屏：点按时不要半透明灰块（与主题里 interactive* 全透明一致）
+                    overlayColor: theme.monochrome ? Colors.transparent : null,
                   ),
+                  child: Text(widget.cancelText),
                 ),
               const SizedBox(width: 4),
             ],

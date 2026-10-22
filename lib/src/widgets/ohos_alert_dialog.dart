@@ -35,7 +35,10 @@ class OhosAlertDialog extends StatelessWidget {
   /// Rich body, for text fields / lists that [content] cannot express.
   ///
   /// Takes precedence over [content]; the widget is laid out in the same
-  /// centered slot, so a form dialog keeps the ArkUI spacing.
+  /// centered slot, so a form dialog keeps the ArkUI spacing. The slot scrolls
+  /// vertically when the content is taller than the space left by the title and
+  /// the actions, so a multi-field form on a narrow screen (or with a large
+  /// system font) does not overflow the dialog.
   final Widget? contentWidget;
 
   /// Action buttons laid out vertically (ArkUI style).
@@ -75,9 +78,13 @@ class OhosAlertDialog extends StatelessWidget {
                       .copyWith(color: theme.textPrimaryColor),
             ),
             if (contentWidget != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: contentWidget!,
+              // 表单 / 列表可能比弹窗剩余空间高（320vp 窄屏 + 1.3x 字号下几个
+              // 输入框就够）：Flexible + 滚动，宁可滚也不纵向溢出。
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SingleChildScrollView(child: contentWidget!),
+                ),
               )
             else if (content != null)
               Padding(

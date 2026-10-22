@@ -259,7 +259,10 @@ class OhosThemeData with Diagnosticable {
       // 关键：light 预设用 10% 黑做分隔线，墨水屏上等于没有。
       dividerColor: OhosColors.inkForeground,
       scrimColor: const Color(0x80000000),
-      typography: OhosTypography.light(fontFamily: fontFamily),
+      // light 的字阶是 90% 黑（0xE6000000），在 16 级灰上会淡成中灰，与「纯黑
+      // + 纯白」的目标不符 —— 凡是没自己 copyWith 颜色的地方（AppBar 标题、
+      // 裸 OhosText）都会露出来，所以这里换纯黑字阶。
+      typography: OhosTypography.monochrome(fontFamily: fontFamily),
     );
   }
 
