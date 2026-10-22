@@ -377,6 +377,93 @@ void main() {
       await tester.pump();
       expect(node.hasFocus, isTrue);
     });
+
+    testWidgets('换 focusNode 后立刻用新节点，旧的外部节点不被销毁', (
+      WidgetTester tester,
+    ) async {
+      final FocusNode first = FocusNode();
+      final FocusNode second = FocusNode();
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      await tester.pumpWidget(
+        wrap(OhosTextField(hintText: '姓名', focusNode: first)),
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode,
+        same(first),
+      );
+
+      await tester.pumpWidget(
+        wrap(OhosTextField(hintText: '姓名', focusNode: second)),
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode,
+        same(second),
+      );
+      // 换下来的外部节点仍归调用方：还能继续挂监听（抛异常即说明被误 dispose）
+      first.addListener(() {});
+    });
+
+    testWidgets('外部节点换成 null 后再销毁组件，不 dispose 外部节点', (
+      WidgetTester tester,
+    ) async {
+      final FocusNode external = FocusNode();
+      addTearDown(external.dispose);
+
+      await tester.pumpWidget(
+        wrap(OhosTextField(hintText: '姓名', focusNode: external)),
+      );
+      await tester.pumpWidget(wrap(const OhosTextField(hintText: '姓名')));
+      await tester.pumpWidget(wrap(const SizedBox.shrink()));
+
+      // 原来按 `widget.focusNode == null` 判断所有权，会把外部节点一并 dispose，
+      // 调用方随后 addListener 会抛 "A FocusNode was used after being disposed"。
+      external.addListener(() {});
+    });
+
+    testWidgets('内部创建的节点在换成外部节点时被销毁（不泄漏）', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(wrap(const OhosTextField(hintText: '姓名')));
+      final FocusNode internal = tester
+          .widget<TextField>(find.byType(TextField))
+          .focusNode!;
+
+      final FocusNode external = FocusNode();
+      addTearDown(external.dispose);
+      await tester.pumpWidget(
+        wrap(OhosTextField(hintText: '姓名', focusNode: external)),
+      );
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode,
+        same(external),
+      );
+      expect(() => internal.addListener(() {}), throwsFlutterError);
+    });
+
+    testWidgets('换 controller 后组件用新实例，外部 controller 不被销毁', (
+      WidgetTester tester,
+    ) async {
+      final TextEditingController external = TextEditingController(text: 'a');
+      addTearDown(external.dispose);
+
+      await tester.pumpWidget(
+        wrap(OhosTextField(hintText: '姓名', controller: external)),
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller,
+        same(external),
+      );
+
+      await tester.pumpWidget(wrap(const OhosTextField(hintText: '姓名')));
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller,
+        isNot(same(external)),
+      );
+      external.addListener(() {});
+    });
   });
 
   group('OhosSearchBar', () {

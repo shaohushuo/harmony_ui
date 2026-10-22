@@ -48,12 +48,16 @@ class OhosTextField extends StatefulWidget {
 
   /// Controller for the text; if null an internal one is created from
   /// [initialValue].
+  ///
+  /// Swapping the controller later (including back to null) is supported: only
+  /// an internal one is disposed by the widget.
   final TextEditingController? controller;
 
   /// External focus node, e.g. to focus the field from a button.
   ///
   /// When null the field owns one internally; a supplied node is never disposed
-  /// by the widget.
+  /// by the widget. Swapping the node later is supported — the Field moves to
+  /// the new node and only an internally created one is disposed.
   final FocusNode? focusNode;
 
   /// Hint shown when empty.
@@ -106,19 +110,58 @@ class OhosTextField extends StatefulWidget {
 }
 
 class _OhosTextFieldState extends State<OhosTextField> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  /// 只有自己创建的实例才由本组件 dispose：外部传入的归调用方所有。
+  /// 用独立的 owner 标记（而不是读 `widget.controller == null`）是必须的 ——
+  /// 后者在 didUpdateWidget 里已经指向新 widget，判不出旧实例是谁创建的。
+  bool _ownsController = false;
+  bool _ownsFocusNode = false;
   bool _focused = false;
 
   @override
   void initState() {
     super.initState();
+    _useController(widget.controller);
+    _useFocusNode(widget.focusNode);
+  }
+
+  void _useController(TextEditingController? controller) {
     _controller =
-        widget.controller ??
-        TextEditingController(text: widget.initialValue ?? '');
-    _focusNode = widget.focusNode ?? FocusNode();
+        controller ?? TextEditingController(text: widget.initialValue ?? '');
+    _ownsController = controller == null;
+  }
+
+  void _useFocusNode(FocusNode? focusNode) {
+    _focusNode = focusNode ?? FocusNode();
+    _ownsFocusNode = focusNode == null;
     _focusNode.addListener(_onFocus);
     _focused = _focusNode.hasFocus;
+  }
+
+  void _releaseFocusNode() {
+    _focusNode.removeListener(_onFocus);
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
+  }
+
+  @override
+  void didUpdateWidget(OhosTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 控制器 / 焦点节点可以中途换（含换成 null）：只处理自己那份，
+    // 并同步监听器与焦点态，否则换了节点后「聚焦高亮 / 取消按钮」会停在旧状态。
+    if (widget.controller != oldWidget.controller) {
+      if (_ownsController) {
+        _controller.dispose();
+      }
+      _useController(widget.controller);
+    }
+    if (widget.focusNode != oldWidget.focusNode) {
+      _releaseFocusNode();
+      _useFocusNode(widget.focusNode);
+    }
   }
 
   void _onFocus() {
@@ -129,11 +172,8 @@ class _OhosTextFieldState extends State<OhosTextField> {
 
   @override
   void dispose() {
-    _focusNode.removeListener(_onFocus);
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
-    if (widget.controller == null) {
+    _releaseFocusNode();
+    if (_ownsController) {
       _controller.dispose();
     }
     super.dispose();
