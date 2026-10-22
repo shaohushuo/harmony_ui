@@ -83,7 +83,14 @@ class OhosChipGroup extends StatelessWidget {
   /// oversized gaps, so the default is a compact 8vp.
   final double spacing;
 
-  /// Whether the capsule strip scrolls horizontally when it overflows.
+  /// Whether the strip is *always* horizontally scrollable.
+  ///
+  /// `false` (default) means "don't add a scroll view when the chips fit";
+  /// a strip wider than its parent **still** scrolls horizontally instead of
+  /// overflowing (0.3.0 changed this: previously it produced a `RenderFlex`
+  /// overflow). Note that a non-scrolling strip that is cut off gives no visual
+  /// affordance — on a narrow screen the trailing chips need a swipe to reach.
+  /// If you want wrapping instead, build a `Wrap` of [OhosChip]s yourself.
   final bool scrollable;
 
   /// Overrides the active (brand) fill color.

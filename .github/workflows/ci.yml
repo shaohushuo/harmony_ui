@@ -40,3 +40,9 @@ jobs:
       - name: Analyze (example)
         working-directory: example
         run: flutter analyze
+
+      # 示例页的溢出矩阵（8 页 × 3 宽度 × 3 字号）必须真的跑，否则组件在窄屏 /
+      # 大字号下的回归没人兜底。
+      - name: Test (example)
+        working-directory: example
+        run: flutter test

@@ -223,7 +223,19 @@ class OhosThemeData with Diagnosticable {
   /// Colors are copied from the reference implementation in issue feedback:
   /// tertiary text keeps `#767676` because it also drives hint text — pure
   /// black would make "not yet typed" look identical to "typed", while
-  /// `#767676` still sits on level 9 of 16.
+  /// `#767676` still sits on level 9 of 16. The type scale is
+  /// [OhosTypography.monochrome] (pure black) instead of the light preset's
+  /// `90%` black, so component defaults that do not pick a color themselves
+  /// (app bar titles, plain `OhosText`) stay on level 16.
+  ///
+  /// **Coverage** — this preset only changes what the components already
+  /// branch on [monochrome] for: light material (blur → solid), dialog /
+  /// snack bar / popup / slider chrome (1px black outline), the filled text
+  /// field (fill → 1px outline), dividers, shadows and ripples. Surfaces whose
+  /// `cardColor` is the page background keep no outline, so a white
+  /// `OhosCard` or a white `OhosSearchBar` capsule on a white page reads as
+  /// one block: pass `OhosCard.color` (or wrap it) when you need a boundary —
+  /// `OhosSearchBar` has no color parameter yet, so give it a bordered parent.
   factory OhosThemeData.ink({String? fontFamily}) {
     return OhosThemeData(
       brightness: Brightness.light,
