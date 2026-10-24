@@ -1165,6 +1165,123 @@ void main() {
     });
   });
 
+  group('OhosMagnifier', () {
+    const Size screen = Size(400, 800);
+    const Size bubble = Size.square(48);
+
+    OhosMagnifierPlacement place(
+      Offset anchor, {
+      OhosMagnifierSide side = OhosMagnifierSide.auto,
+      EdgeInsets safe = EdgeInsets.zero,
+      Size screenSize = screen,
+      Size bubbleSize = bubble,
+      double gap = 8,
+    }) {
+      return OhosMagnifierPosition.resolve(
+        anchor: anchor,
+        bubble: bubbleSize,
+        safe: safe,
+        screen: screenSize,
+        side: side,
+        gap: gap,
+      );
+    }
+
+    test('默认落在手指的右上角：纵向、横向各留一个 gap', () {
+      final OhosMagnifierPlacement p = place(const Offset(100, 300));
+      expect(p.offset, const Offset(108, 244));
+      expect(p.side, OhosMagnifierSide.aboveRight);
+      // 底边距手指 8vp、左边距手指 8vp —— 是「右上角」，不是「正上方」
+      expect(300 - (p.offset.dy + p.size.height), 8);
+      expect(p.offset.dx - 100, 8);
+    });
+
+    test('右半屏落左上：横向在手指左侧留 gap', () {
+      final OhosMagnifierPlacement p = place(const Offset(350, 300));
+      expect(p.offset, const Offset(294, 244));
+      expect(p.side, OhosMagnifierSide.aboveLeft);
+      expect(350 - (p.offset.dx + p.size.width), 8);
+    });
+
+    test('顶部放不下时掉到下面一行（左下/右下）', () {
+      final OhosMagnifierPlacement p = place(const Offset(100, 20));
+      expect(p.offset, const Offset(108, 28));
+      expect(p.side, OhosMagnifierSide.belowRight);
+    });
+
+    test('贴左边缘时翻到同一个角的另一侧', () {
+      // 左上：5 - 8 - 48 = -51 放不下 → 右上：13
+      final OhosMagnifierPlacement p = place(
+        const Offset(5, 300),
+        side: OhosMagnifierSide.aboveLeft,
+      );
+      expect(p.offset, const Offset(13, 244));
+      expect(p.side, OhosMagnifierSide.aboveRight);
+    });
+
+    test('贴右边缘时翻到同一个角的另一侧', () {
+      // 右上：380 + 8 = 388 → +48 越界 → 左上：324
+      final OhosMagnifierPlacement p = place(
+        const Offset(380, 300),
+        side: OhosMagnifierSide.aboveRight,
+      );
+      expect(p.offset, const Offset(324, 244));
+      expect(p.side, OhosMagnifierSide.aboveLeft);
+    });
+
+    test('显式角落优先于 auto', () {
+      expect(
+        place(const Offset(300, 300), side: OhosMagnifierSide.aboveRight).offset,
+        const Offset(308, 244),
+      );
+      expect(place(const Offset(300, 300)).offset, const Offset(244, 244));
+    });
+
+    test('四个角都放不下时夹进安全区', () {
+      // 100vp 宽的屏放不下「gap + 48vp 泡泡」：退到首选角后硬夹到屏幕边
+      // 指定左侧：50 - 8 - 48 = -6 → 夹到 0
+      final OhosMagnifierPlacement left = place(
+        const Offset(50, 300),
+        side: OhosMagnifierSide.aboveLeft,
+        screenSize: const Size(100, 800),
+      );
+      expect(left.offset, const Offset(0, 244));
+      expect(left.side, OhosMagnifierSide.aboveLeft);
+      // 指定右侧：50 + 8 = 58 → 右边留 48 只剩 52
+      final OhosMagnifierPlacement right = place(
+        const Offset(50, 300),
+        side: OhosMagnifierSide.aboveRight,
+        screenSize: const Size(100, 800),
+      );
+      expect(right.offset, const Offset(52, 244));
+      expect(right.side, OhosMagnifierSide.aboveRight);
+      // 夹紧后仍不盖住手指
+      expect(right.offset.dx >= 50, isTrue);
+      expect(left.offset.dx + left.size.width <= 50, isTrue);
+    });
+
+    test('窄屏把宽度压到可用宽度的一半以内', () {
+      final OhosMagnifierPlacement p = place(
+        const Offset(100, 300),
+        screenSize: const Size(300, 800),
+        bubbleSize: const Size(200, 48),
+      );
+      expect(p.size.width, 150);
+    });
+
+    test('泡泡比可用高度还高时压进安全区', () {
+      final OhosMagnifierPlacement p = place(
+        const Offset(100, 100),
+        screenSize: const Size(400, 200),
+        bubbleSize: const Size(48, 300),
+        safe: const EdgeInsets.only(top: 24, bottom: 16),
+      );
+      expect(p.size.height, 160);
+      expect(p.offset.dy, 24);
+    });
+
+  });
+
   group('OhosAppBar', () {
     /// OpenHarmony 上应用基本都是沉浸式（edge-to-edge），状态栏直接压在顶栏上。
     /// `Scaffold` 给 `appBar` 槽位预留的高度是
