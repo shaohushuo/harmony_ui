@@ -49,6 +49,7 @@ export 'src/widgets/ohos_icon_button.dart';
 export 'src/widgets/ohos_image.dart';
 export 'src/widgets/ohos_list.dart';
 export 'src/widgets/ohos_list_tile.dart';
+export 'src/widgets/ohos_magnifier.dart';
 export 'src/widgets/ohos_magnifier_position.dart';
 export 'src/widgets/ohos_menu.dart';
 export 'src/widgets/ohos_navigation_bar.dart';

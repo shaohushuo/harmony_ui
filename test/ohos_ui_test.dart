@@ -1280,6 +1280,125 @@ void main() {
       expect(p.offset.dy, 24);
     });
 
+
+    testWidgets('泡泡按默认口径绘制：48vp 圆 + 卡片底色 + hairline 描边', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(const Center(child: OhosMagnifier(text: 'A', animate: false))),
+      );
+      expect(
+        tester.getSize(find.byType(OhosMagnifier)),
+        const Size.square(48),
+      );
+      expect(find.text('A'), findsOneWidget);
+      final Container box = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.byType(Container),
+        ),
+      );
+      final BoxDecoration decoration = box.decoration! as BoxDecoration;
+      final OhosThemeData theme = OhosThemeData.light();
+      expect(decoration.color, theme.cardColor);
+      expect(
+        (decoration.border! as Border).top.color,
+        theme.textTertiaryColor.withValues(alpha: 0.3),
+      );
+    });
+
+    testWidgets('show / update / hide：泡泡进 Overlay 并跟随锚点', (
+      WidgetTester tester,
+    ) async {
+      late BuildContext host;
+      final OhosMagnifierController controller = OhosMagnifierController();
+      await tester.pumpWidget(
+        wrap(
+          Builder(
+            builder: (BuildContext context) {
+              host = context;
+              return const SizedBox(width: 10, height: 10);
+            },
+          ),
+        ),
+      );
+
+      expect(
+        controller.show(host, anchor: const Offset(200, 300), text: 'A'),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsOneWidget);
+      final Offset before = tester.getTopLeft(find.byType(OhosMagnifier));
+
+      controller.update(const Offset(200, 340), text: 'B');
+      await tester.pumpAndSettle();
+      expect(find.text('B'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byType(OhosMagnifier)).dy,
+        before.dy + 40,
+        reason: '泡泡跟着锚点下移',
+      );
+
+      controller.hide();
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsNothing);
+      controller.dispose();
+    });
+
+    testWidgets('没有 Overlay 时不显示也不抛（show 返回 false）', (
+      WidgetTester tester,
+    ) async {
+      bool? shown;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Builder(
+              builder: (BuildContext context) {
+                shown = OhosMagnifierController().show(
+                  context,
+                  anchor: const Offset(10, 10),
+                  text: 'A',
+                );
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+      expect(shown, isFalse);
+      expect(find.byType(OhosMagnifier), findsNothing);
+    });
+
+    testWidgets('墨水屏：1px 纯黑描边，且不做入场动画', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: const MaterialApp(
+            home: Center(child: OhosMagnifier(text: 'A')),
+          ),
+        ),
+      );
+      final Container box = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.byType(Container),
+        ),
+      );
+      final BoxDecoration decoration = box.decoration! as BoxDecoration;
+      expect((decoration.border! as Border).top.color, Colors.black);
+      expect(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
+    });
   });
 
   group('OhosAppBar', () {
