@@ -324,7 +324,6 @@ class _IndexerDemo extends StatelessWidget {
             '#',
           ],
           size: const Size(24, 270),
-          itemHeight: 10,
           onSelected: (String c) => showOhosToast(
             context,
             '选中 $c',

@@ -1401,6 +1401,393 @@ void main() {
     });
   });
 
+  group('OhosAlphabetIndexer', () {
+    const List<String> letters = <String>['#', 'A', 'B', 'C', 'D'];
+
+    Widget host(ValueChanged<String> onSelected) {
+      return wrap(
+        OhosAlphabetIndexer(
+          indexer: letters,
+          size: const Size(24, 160),
+          onSelected: onSelected,
+        ),
+      );
+    }
+
+    testWidgets('点当前高亮的字母也会回调（不再「点不动」）', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      // 初值就是 indexer[0]，这一下以前被 `index != _current` 吞掉了。
+      await tester.tap(find.text('#'));
+      await tester.pump();
+      expect(picked, <String>['#']);
+    });
+
+    testWidgets('连点同一个字母，每次都回调', (WidgetTester tester) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      await tester.tap(find.text('#'));
+      await tester.pump();
+      await tester.tap(find.text('#'));
+      await tester.pump();
+      expect(picked, <String>['#', '#']);
+    });
+
+    testWidgets('条内留白也参与命中，不再漏给下层', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      // x=2 落在字形之外（24vp 的条，字形约 12vp 居中），以前直接漏掉。
+      await tester.tapAt(topLeft + const Offset(2, 10));
+      await tester.pump();
+      expect(picked, <String>['#']);
+    });
+
+    testWidgets('selectedIndex 变化写回内部高亮（代码定位）', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData theme = OhosThemeData.light();
+      Widget controlled(int? index) {
+        return wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: index,
+            onSelected: (String _) {},
+          ),
+        );
+      }
+
+      await tester.pumpWidget(controlled(4));
+      expect(paintedColor(tester, 'D'), theme.highlightColor);
+      expect(paintedColor(tester, '#'), theme.textSecondaryColor);
+
+      // 代码定位到别处后重算高亮：不需要手指碰过索引条。
+      await tester.pumpWidget(controlled(1));
+      expect(paintedColor(tester, 'A'), theme.highlightColor);
+      expect(paintedColor(tester, 'D'), theme.textSecondaryColor);
+    });
+
+    testWidgets('受控高亮下点同一个字母，回调照旧触发', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 4,
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      // 外部高亮 = D（已回写 `_current`）：点它仍要回调，不能被"没变化"吞掉。
+      await tester.tap(find.text('D'));
+      await tester.pump();
+      expect(picked, <String>['D']);
+    });
+
+    testWidgets('受控高亮下拖动，画面跟着手指走', (WidgetTester tester) async {
+      final OhosThemeData theme = OhosThemeData.light();
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 0,
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      // 槽位 32：y = 16 + 20 + 40 = 76 → 第 2 格（B）。
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      // 外部 selectedIndex 一直是 0，但画面必须跟随手指：绘制只读 `_current`。
+      expect(paintedColor(tester, 'B'), theme.highlightColor);
+      expect(paintedColor(tester, '#'), theme.textSecondaryColor);
+      await gesture.up();
+      await tester.pump();
+      expect(picked, contains('B'));
+    });
+
+    testWidgets('selectedIndex 越界在 debug 下断言', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 99,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      expect(tester.takeException(), isAssertionError);
+    });
+
+    testWidgets('槽位与命中同源：点渲染出来的字母就是它自己', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: const <String>['#', 'A', 'B', 'C'],
+            size: const Size(24, 160),
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      // 修复前命中用默认 itemHeight = 20：点 A 会报 B（floor(55 / 20) = 2）。
+      for (final String letter in <String>['#', 'A', 'B', 'C']) {
+        picked.clear();
+        await tester.tap(find.text(letter));
+        await tester.pump();
+        expect(picked, <String>[letter]);
+      }
+    });
+
+    testWidgets('按 size.height 平摊槽位（每格等高）', (WidgetTester tester) async {
+      await tester.pumpWidget(host((String _) {}));
+      // 5 个字母摊在 160vp 上 → 每格 32vp
+      final double top = tester.getCenter(find.text('A')).dy;
+      final double next = tester.getCenter(find.text('B')).dy;
+      expect(next - top, 32);
+    });
+
+    testWidgets('父级压到 size.height 以下时跟着缩，不溢出', (WidgetTester tester) async {
+      const List<String> many = <String>[
+        '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', //
+        'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+      ];
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            height: 130,
+            child: OhosAlphabetIndexer(
+              indexer: many,
+              size: const Size(24, 420),
+              onSelected: picked.add,
+            ),
+          ),
+        ),
+      );
+      // 修复前按 size.height 算槽位：22 × 19 = 418 > 130，直接
+      // `RenderFlex overflowed by 290 pixels`（0.3.0 靠约束现算字号能缩进去）。
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(OhosAlphabetIndexer)).height, 130);
+      // 命中映射同样来自约束：点渲染出来的字母还是它自己。
+      picked.clear();
+      await tester.tap(find.text('A'));
+      await tester.pump();
+      expect(picked, <String>['A']);
+    });
+
+    testWidgets('高度无界时退回 size.height', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 360),
+                onSelected: (String _) {},
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(OhosAlphabetIndexer)).height, 360);
+    });
+
+    testWidgets('字母继承外层字体家族（golden 里不再画成实心方块）', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          DefaultTextStyle(
+            style: const TextStyle(fontFamily: 'ProbeFamily'),
+            child: OhosAlphabetIndexer(
+              indexer: letters,
+              size: const Size(24, 160),
+              onSelected: (String _) {},
+            ),
+          ),
+        ),
+      );
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text('A'), matching: find.byType(RichText)),
+      );
+      // 修复前是 null：flutter_tester 的 null 家族 = Ahem，整列实心块。
+      expect((rich.text as TextSpan).style?.fontFamily, 'ProbeFamily');
+    });
+
+    testWidgets('外层没有字体家族时退到主题口径', (WidgetTester tester) async {
+      const List<String> letters = <String>['#', 'A', 'B', 'C', 'D'];
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(fontFamily: 'ThemeFamily'),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: DefaultTextStyle(
+                  // 只有字号、没有家族：组件要自己兜住（修复前 fontFamily 为 null）。
+                  style: const TextStyle(fontSize: 14),
+                  child: OhosAlphabetIndexer(
+                    indexer: letters,
+                    size: const Size(24, 160),
+                    onSelected: (String _) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text('A'), matching: find.byType(RichText)),
+      );
+      expect((rich.text as TextSpan).style?.fontFamily, 'ThemeFamily');
+    });
+
+    testWidgets('高度缩小后字号立刻生效，不再等 200ms 追上来', (
+      WidgetTester tester,
+    ) async {
+      const List<String> many = <String>[
+        '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', //
+        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+      ];
+      final ValueNotifier<double> height = ValueNotifier<double>(420);
+      await tester.pumpWidget(
+        wrap(
+          ValueListenableBuilder<double>(
+            valueListenable: height,
+            builder: (BuildContext _, double h, Widget? __) {
+              return OhosAlphabetIndexer(
+                indexer: many,
+                size: Size(24, h),
+                onSelected: (String _) {},
+              );
+            },
+          ),
+        ),
+      );
+      // 模拟拖分隔条缩到最矮：420 → 130，只推一帧。
+      height.value = 130;
+      await tester.pump(const Duration(milliseconds: 16));
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text('A'), matching: find.byType(RichText)),
+      );
+      // 130 / 22 × 0.95 ≈ 5.61。修复前字号走 200ms 动画，此时还停在 11.vp 上，
+      // 22 个字母互相压住（0.3.0 里更是直接 `RenderFlex overflowed`）。
+      expect((rich.text as TextSpan).style?.fontSize, closeTo(5.61, 0.01));
+    });
+
+    testWidgets('默认拖动：途中每跨一格回调，抬手不再多报', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 88));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      expect(picked.last, 'D');
+    });
+
+    testWidgets('同一格内拖动不重复回调，跨格才回调', (WidgetTester tester) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      // 第一次移动只越过 slop → drag start，还没有 drag update。
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      // 两次小位移都停在 A 的槽位（32..64）里：drag update 有两帧，回调只该有一次。
+      await gesture.moveBy(const Offset(0, 4));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 4));
+      await tester.pump();
+      expect(
+        picked.where((String l) => l == 'A').length,
+        1,
+        reason: '逐帧 update ≠ 逐帧回调',
+      );
+      // 跨到下一格（64..96 = B）才再通知一次。
+      await gesture.moveBy(const Offset(0, 32));
+      await tester.pump();
+      expect(picked.last, 'B');
+      await gesture.up();
+      await tester.pump();
+    });
+
+    testWidgets('从留白处按下去也能拖动整条', (WidgetTester tester) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(2, 10),
+      );
+      await gesture.moveBy(const Offset(0, 50));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 80));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      // 以前命不中字形，手势根本进不了 GestureDetector，picked 为空。
+      expect(picked, isNotEmpty);
+      expect(picked.last, 'D');
+    });
+  });
+
   group('OhosAppBar', () {
     /// OpenHarmony 上应用基本都是沉浸式（edge-to-edge），状态栏直接压在顶栏上。
     /// `Scaffold` 给 `appBar` 槽位预留的高度是
