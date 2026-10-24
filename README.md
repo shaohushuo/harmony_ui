@@ -144,7 +144,7 @@ class MyApp extends StatelessWidget {
 | 分隔器 | `OhosDivider` |
 | 进度条 | `OhosProgressIndicator`（圆形 / 线性）|
 | 新事件标记 | `OhosBadge`（数字 / 红点）|
-| 索引条 | `OhosAlphabetIndexer` |
+| 索引条 | `OhosAlphabetIndexer`（拖动时手指旁出现放大镜）|
 | 放大镜 | `OhosMagnifier`（跟随手指的浮层，也可用于文本选择）|
 | 滚动条 | `OhosScrollbar` |
 | 即时反馈 / 即时操作 | `showOhosToast` / `showOhosSnackBar` |

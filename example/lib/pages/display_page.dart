@@ -83,7 +83,7 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '索引条 OhosAlphabetIndexer',
-          description: '右侧字母索引，点击 / 拖动快速定位。',
+          description: '右侧字母索引，点击 / 拖动快速定位；拖动时手指旁出现放大镜。',
           child: DemoCard(child: _IndexerDemo()),
         ),
         const DemoSection(

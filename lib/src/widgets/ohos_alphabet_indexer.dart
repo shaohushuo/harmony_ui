@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
+import 'ohos_magnifier.dart';
 
 /// A vertical alphabetical index strip (索引条 in the HarmonyOS guideline)
 /// used to jump through long lists. Tap or drag to select a letter.
@@ -21,6 +22,8 @@ class OhosAlphabetIndexer extends StatefulWidget {
     this.size = const Size(24, 360),
     this.selectedIndex,
     this.onSelectEnd,
+    this.showMagnifier = true,
+    this.magnifierBuilder,
   });
 
   /// The letters to display, e.g. `A-Z`, `#`.
@@ -69,6 +72,19 @@ class OhosAlphabetIndexer extends StatefulWidget {
   /// here and need not remember the last [onSelected] value.
   final ValueChanged<String>? onSelectEnd;
 
+  /// Whether a magnifier bubble follows the finger while dragging.
+  ///
+  /// Taps do not show it: the finger is already lifting, so a flash is more
+  /// noise than help. The bubble is drawn in the nearest [Overlay] (supplied by
+  /// `MaterialApp` / `WidgetsApp`), which lets it paint outside the strip; a
+  /// tree without one simply shows nothing.
+  final bool showMagnifier;
+
+  /// Replaces the bubble content for [letter] — for example a capsule with an
+  /// arrow, or a plain colour block. Null keeps the default [OhosMagnifier]
+  /// with the letter set large.
+  final Widget Function(BuildContext context, String letter)? magnifierBuilder;
+
   @override
   State<OhosAlphabetIndexer> createState() => _OhosAlphabetIndexerState();
 }
@@ -76,6 +92,13 @@ class OhosAlphabetIndexer extends StatefulWidget {
 class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
   int _current = 0;
   bool _dragging = false;
+  OhosMagnifierController? _magnifier;
+
+  /// 泡泡与手指之间的留白，按「指肚接触半径」估：约 10mm 的接触面在手机
+  /// 上折合 30vp 上下，再留一点余量取 32vp —— 否则泡泡的两个近边会被
+  /// 指肚遮掉一部分（16vp 实测仍压手）。两个轴都要留，泡泡才真正落在
+  /// 手指的左上/右上「角」上。
+  static const double _magnifierGap = 32;
 
   /// `selectedIndex` 只在**变化**时回写内部状态：绘制、命中、气泡都读
   /// [_current] 一个来源。若改成"绘制优先外部值"，受控期间手指拖动就看不到
@@ -124,8 +147,46 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     }
   }
 
-  void _startDrag(DragStartDetails _) {
+  void _startDrag(DragStartDetails details, double slot) {
     _dragging = true;
+    // 越过 slop 的位置往往已经不是落指那一点：先按当前位置更新一次，泡泡
+    // 才不会先闪一个上一个字母。
+    _selectAt(details.localPosition.dy, slot);
+    _showMagnifier(details.globalPosition);
+  }
+
+  void _showMagnifier(Offset anchor) {
+    if (!widget.showMagnifier) {
+      return;
+    }
+    final OhosMagnifierController controller = _magnifier ??=
+        OhosMagnifierController();
+    final String letter = widget.indexer[_current];
+    controller.show(
+      context,
+      anchor: anchor,
+      text: widget.magnifierBuilder == null ? letter : null,
+      child: widget.magnifierBuilder?.call(context, letter),
+      gap: _magnifierGap,
+    );
+  }
+
+  /// 先算新字母、再更新泡泡：否则会出现「泡泡还停在上一个字母、列表已跳走」。
+  void _updateMagnifier(Offset anchor) {
+    final OhosMagnifierController? controller = _magnifier;
+    if (controller == null || !controller.isShowing) {
+      return;
+    }
+    final String letter = widget.indexer[_current];
+    controller.update(
+      anchor,
+      text: widget.magnifierBuilder == null ? letter : null,
+      child: widget.magnifierBuilder?.call(context, letter),
+    );
+  }
+
+  void _hideMagnifier() {
+    _magnifier?.hide();
   }
 
   void _selectEnd() {
@@ -135,6 +196,7 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
   /// 抬手 / 中途取消时收尾。`onVerticalDragCancel` 在「点按被 tap 抢走」
   /// 时同样会触发，所以用 `_dragging` 挡掉从未真正开始的拖动。
   void _finishDrag() {
+    _hideMagnifier();
     if (!_dragging) {
       return;
     }
@@ -170,6 +232,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
       ),
       child: Text(widget.indexer[index]),
     );
+  }
+
+  @override
+  void dispose() {
+    _magnifier?.dispose();
+    super.dispose();
   }
 
   @override
@@ -209,9 +277,11 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
             // tap 也要有收尾：`onSelected` 是过程（落指即报），`onSelectEnd`
             // 是结果（抬手一次），两者并存调用方才会只订阅一个通道。
             onTapUp: (TapUpDetails _) => _selectEnd(),
-            onVerticalDragUpdate: (DragUpdateDetails d) =>
-                _selectAt(d.localPosition.dy, slot),
-            onVerticalDragStart: _startDrag,
+            onVerticalDragUpdate: (DragUpdateDetails d) {
+              _selectAt(d.localPosition.dy, slot);
+              _updateMagnifier(d.globalPosition);
+            },
+              onVerticalDragStart: (DragStartDetails d) => _startDrag(d, slot),
             onVerticalDragEnd: (DragEndDetails _) => _finishDrag(),
             onVerticalDragCancel: _finishDrag,
             child: Column(
