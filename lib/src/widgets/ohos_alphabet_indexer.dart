@@ -20,6 +20,7 @@ class OhosAlphabetIndexer extends StatefulWidget {
     required this.onSelected,
     this.size = const Size(24, 360),
     this.selectedIndex,
+    this.onSelectEnd,
   });
 
   /// The letters to display, e.g. `A-Z`, `#`.
@@ -59,12 +60,22 @@ class OhosAlphabetIndexer extends StatefulWidget {
   /// Out-of-range values assert in debug and are clamped in release.
   final int? selectedIndex;
 
+  /// Called once when the interaction settles: tap up, drag up, or drag
+  /// cancel — always with the letter that ended up highlighted.
+  ///
+  /// Division of labour with [onSelected]: that one is the process (a tap fires
+  /// once immediately; a drag fires once per letter crossed), this one is the
+  /// result (exactly once). Callers who want "locate only on release" subscribe
+  /// here and need not remember the last [onSelected] value.
+  final ValueChanged<String>? onSelectEnd;
+
   @override
   State<OhosAlphabetIndexer> createState() => _OhosAlphabetIndexerState();
 }
 
 class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
   int _current = 0;
+  bool _dragging = false;
 
   /// `selectedIndex` 只在**变化**时回写内部状态：绘制、命中、气泡都读
   /// [_current] 一个来源。若改成"绘制优先外部值"，受控期间手指拖动就看不到
@@ -111,6 +122,24 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     if (force || changed) {
       widget.onSelected(widget.indexer[index]);
     }
+  }
+
+  void _startDrag(DragStartDetails _) {
+    _dragging = true;
+  }
+
+  void _selectEnd() {
+    widget.onSelectEnd?.call(widget.indexer[_current]);
+  }
+
+  /// 抬手 / 中途取消时收尾。`onVerticalDragCancel` 在「点按被 tap 抢走」
+  /// 时同样会触发，所以用 `_dragging` 挡掉从未真正开始的拖动。
+  void _finishDrag() {
+    if (!_dragging) {
+      return;
+    }
+    _dragging = false;
+    _selectEnd();
   }
 
   Widget _letter(
@@ -177,9 +206,14 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
             behavior: HitTestBehavior.opaque,
             onTapDown: (TapDownDetails d) =>
                 _selectAt(d.localPosition.dy, slot, force: true),
+            // tap 也要有收尾：`onSelected` 是过程（落指即报），`onSelectEnd`
+            // 是结果（抬手一次），两者并存调用方才会只订阅一个通道。
+            onTapUp: (TapUpDetails _) => _selectEnd(),
             onVerticalDragUpdate: (DragUpdateDetails d) =>
                 _selectAt(d.localPosition.dy, slot),
-
+            onVerticalDragStart: _startDrag,
+            onVerticalDragEnd: (DragEndDetails _) => _finishDrag(),
+            onVerticalDragCancel: _finishDrag,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
