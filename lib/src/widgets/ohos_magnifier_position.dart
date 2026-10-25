@@ -42,7 +42,10 @@ class OhosMagnifierPlacement {
   /// Size actually used: the requested size clamped to what fits on screen.
   final Size size;
 
-  /// Corner that was finally used; never [OhosMagnifierSide.auto].
+  /// Corner the bubble ends up at, derived from the final rect; never
+  /// [OhosMagnifierSide.auto]. Callers use it to point an arrow/tail at the
+  /// anchor, so it stays truthful even when clamping moved the bubble to the
+  /// other side of the touch point.
   final OhosMagnifierSide side;
 
   @override
@@ -135,14 +138,29 @@ class OhosMagnifierPosition {
     );
     final double maxLeft = screen.width - safe.right - size.width;
     final double maxTop = screen.height - safe.bottom - size.height;
-    return OhosMagnifierPlacement(
-      offset: Offset(
-        math.min(math.max(fallback.dx, safe.left), math.max(safe.left, maxLeft)),
-        math.min(math.max(fallback.dy, safe.top), math.max(safe.top, maxTop)),
-      ),
-      size: size,
-      side: _sideOf(rows.first, columns.first),
+    final Offset clamped = Offset(
+      math.min(math.max(fallback.dx, safe.left), math.max(safe.left, maxLeft)),
+      math.min(math.max(fallback.dy, safe.top), math.max(safe.top, maxTop)),
     );
+    return OhosMagnifierPlacement(
+      offset: clamped,
+      size: size,
+      // 夹紧会改变泡泡相对手指的位置：按**最终矩形**重算，别沿用首选角
+      // （窄屏下方 requested belowLeft 被压到手指上方，side 仍报 belowLeft
+      // 会让调用方按错误方向画箭头/尾巴）。
+      side: _sideOfPosition(clamped, size, anchor),
+    );
+  }
+
+  /// 按最终矩形与手指的相对位置判定落点：用中心点比较，夹紧后即使泡泡
+  /// 盖住手指也有确定答案。
+  static OhosMagnifierSide _sideOfPosition(
+    Offset offset,
+    Size size,
+    Offset anchor,
+  ) {
+    final Offset center = offset + Offset(size.width / 2, size.height / 2);
+    return _sideOf(center.dy <= anchor.dy, center.dx < anchor.dx);
   }
 
   static Offset _corner(

@@ -1260,6 +1260,20 @@ void main() {
       expect(left.offset.dx + left.size.width <= 50, isTrue);
     });
 
+    test('夹紧改变了落点方向时 side 跟着最终矩形走', () {
+      // 请求「手指下方」，但底部放不下 → 夹到安全区内后被压到手指上方，
+      // 此时 side 必须报 aboveLeft，否则调用方会朝错误方向画箭头/尾巴。
+      final OhosMagnifierPlacement p = place(
+        const Offset(50, 380),
+        side: OhosMagnifierSide.belowLeft,
+        screenSize: const Size(100, 400),
+      );
+      expect(p.offset, const Offset(0, 352));
+      expect(p.side, OhosMagnifierSide.aboveLeft);
+      // 换行是被夹出来的，泡泡此时确实盖住手指（气泡底边贴屏幕底）
+      expect(p.offset.dy + p.size.height, 400);
+    });
+
     test('窄屏把宽度压到可用宽度的一半以内', () {
       final OhosMagnifierPlacement p = place(
         const Offset(100, 300),
