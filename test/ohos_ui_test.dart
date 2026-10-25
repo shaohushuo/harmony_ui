@@ -1056,6 +1056,80 @@ void main() {
     });
   });
 
+  group('挂在根 Overlay 上的提示文本', () {
+    /// `OverlayEntry` 的祖先链里没有 `Material`，`MaterialApp` 会给这种位置
+    /// 兜底一个带 `TextDecorationStyle.double`（两道横线）的 `DefaultTextStyle`。
+    /// 提示自己只覆盖了颜色/字号，`decoration` 会漏下来，文字下面于是多两条线。
+    TextStyle? painted(WidgetTester tester, String label) {
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text(label), matching: find.byType(RichText)),
+      );
+      return (rich.text as TextSpan).style;
+    }
+
+    testWidgets('Toast 用主题字体，不带兜底双下划线', (WidgetTester tester) async {
+      late BuildContext host;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(fontFamily: 'HarmonyOS Sans'),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: Builder(
+                  builder: (BuildContext context) {
+                    host = context;
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      showOhosToast(host, '选中 I');
+      await tester.pump();
+      expect(painted(tester, '选中 I')?.decoration, TextDecoration.none);
+      // 之前这里漏成兜底的 `monospace`（真机上 `I` 是上下两横的等宽字形）。
+      expect(painted(tester, '选中 I')?.fontFamily, 'HarmonyOS Sans');
+
+      // 让 toast 自己摘掉，别把 2s 定时器留给下一条用例。
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('气泡提示不带兜底双下划线', (WidgetTester tester) async {
+      final GlobalKey target = GlobalKey();
+      late BuildContext host;
+      await tester.pumpWidget(
+        wrap(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Builder(
+                builder: (BuildContext context) {
+                  host = context;
+                  return const SizedBox(width: 40, height: 40);
+                },
+              ),
+              SizedBox(key: target, width: 40, height: 40),
+            ],
+          ),
+        ),
+      );
+
+      showOhosPopup(
+        context: host,
+        content: '长按扫码支付',
+        targetKey: target,
+      );
+      await tester.pump();
+      expect(painted(tester, '长按扫码支付')?.decoration, TextDecoration.none);
+      expect(painted(tester, '长按扫码支付')?.fontFamily, isNot('monospace'));
+
+      await tester.pump(const Duration(seconds: 2));
+    });
+  });
+
   group('OhosChipGroup', () {
     testWidgets('single-select mode reports tapped index', (
       WidgetTester tester,
@@ -1318,6 +1392,53 @@ void main() {
         (decoration.border! as Border).top.color,
         theme.textTertiaryColor.withValues(alpha: 0.3),
       );
+    });
+
+    testWidgets('挂在根 Overlay 里（无 Material 祖先）时字母不带双下划线', (
+      WidgetTester tester,
+    ) async {
+      // `MaterialApp` 在没有 `Material` 的祖先处把 `_errorTextStyle`（黄色
+      // `TextDecorationStyle.double`）当 `DefaultTextStyle`。气泡正是挂在那里，
+      // 之前字母下面会多出两条线 —— 这条用例钉住 `decoration`。
+      late BuildContext host;
+      final OhosMagnifierController controller = OhosMagnifierController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        wrap(
+          Builder(
+            builder: (BuildContext context) {
+              host = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      TextStyle? painted() {
+        final RichText rich = tester.widget<RichText>(
+          find.descendant(
+            of: find.byType(OhosMagnifier),
+            matching: find.byType(RichText),
+          ),
+        );
+        return (rich.text as TextSpan).style;
+      }
+
+      controller.show(host, anchor: const Offset(200, 300), text: 'A');
+      await tester.pumpAndSettle();
+      expect(painted()?.decoration, TextDecoration.none);
+      // 兜底样式同时带 `fontFamily: 'monospace'`，也是从外层继承下来的。
+      expect(painted()?.fontFamily, isNot('monospace'));
+
+      // `child` 分支同样可能塞进裸 `Text`，一并钉住。
+      controller.update(
+        const Offset(200, 300),
+        child: const Text('B'),
+      );
+      await tester.pumpAndSettle();
+      expect(painted()?.decoration, TextDecoration.none);
+      expect(painted()?.decorationStyle, isNot(TextDecorationStyle.double));
+      expect(painted()?.fontFamily, isNot('monospace'));
     });
 
     testWidgets('show / update / hide：泡泡进 Overlay 并跟随锚点', (

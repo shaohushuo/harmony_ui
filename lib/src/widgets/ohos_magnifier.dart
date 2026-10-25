@@ -82,6 +82,17 @@ class OhosMagnifier extends StatelessWidget {
           maxLines: 1,
           textAlign: TextAlign.center,
         );
+    // 气泡挂在根 `Overlay` 上，祖先链里没有 `Material`：`MaterialApp` 在这种
+    // 位置把 `_errorTextStyle`（红字 mono + **黄色双下划线**）当
+    // `DefaultTextStyle`。只覆盖字号/字重/颜色，`decoration` 和 `fontFamily`
+    // 会一起漏下来 —— 字母下面多出两条线，字形还变成等宽；`FittedBox` 再把
+    // 它们一起放大。`inherit: false` 断掉整条继承链：主题给了字体族就用，
+    // 没给就用引擎默认，不会退回 monospace。调用方显式给了 decoration 时
+    // 照旧尊重。
+    final TextStyle contentStyle = style.copyWith(
+      inherit: false,
+      decoration: style.decoration ?? TextDecoration.none,
+    );
     final Widget bubble = Container(
       width: size.width,
       height: size.height,
@@ -102,7 +113,10 @@ class OhosMagnifier extends StatelessWidget {
         ),
       ),
       // 大字号（textScale 1.3）时内容会比泡泡高，缩下来而不是溢出。
-      child: FittedBox(fit: BoxFit.scaleDown, child: content),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: DefaultTextStyle(style: contentStyle, child: content),
+      ),
     );
     final Widget body = animate && !ink
         ? TweenAnimationBuilder<double>(

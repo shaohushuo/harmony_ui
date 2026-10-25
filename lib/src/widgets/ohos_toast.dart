@@ -92,9 +92,18 @@ class _OhosToastOverlay extends StatelessWidget {
                           message,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          // 这个 Text 走的是根 Overlay，祖先里没有 `Material`：
+                          // `MaterialApp` 给这种位置兜底的 `_errorTextStyle` 是
+                          // 「红色 + monospace + 黄色双下划线」。只覆盖 color /
+                          // fontSize 会把字体族和双线一起漏进来（截图里 `I` 是
+                          // 上下两横的等宽字形）+ 字下面两条线。`inherit: false`
+                          // 一次断掉；字体族仍跟随主题，主题没设就用引擎默认。
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
+                            fontFamily: theme.typography.fontFamily,
+                            decoration: TextDecoration.none,
+                            inherit: false,
                           ),
                         ),
                       ),
