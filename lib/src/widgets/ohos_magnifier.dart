@@ -218,7 +218,10 @@ class OhosMagnifierController {
     if (request == null) {
       return const SizedBox.shrink();
     }
-    final MediaQueryData media = MediaQuery.of(context);
+    // `Overlay` 只要求 `Directionality`，不要求 `MediaQuery`：裸树里自建
+    // `Overlay` 时 `show()` 也会真的插 entry，这里用 `maybeOf` 兜底，
+    // 不然构建气泡时直接抛「context does not contain a MediaQuery」。
+    final MediaQueryData? media = MediaQuery.maybeOf(context);
     // `anchor` 是全局坐标，`Positioned` 却按 Overlay 的局部坐标摆：只在根
     // Overlay 正好铺满窗口时两者才同源，所以显式换算一次，宿主被嵌进非全屏
     // 区域时也不会整体偏移；夹紧边界同样改用 Overlay 自己的尺寸。
@@ -227,13 +230,19 @@ class OhosMagnifierController {
     final Offset origin = overlayBox == null
         ? Offset.zero
         : overlayBox.localToGlobal(Offset.zero);
-    final Size screen = overlayBox?.size ?? media.size;
-    final EdgeInsets safe = media.padding + request.safeInset;
+    final Size screen = overlayBox?.size ?? media?.size ?? request.bubble;
+    // 没有 MediaQuery 时把窗口按 Overlay 自身尺寸算，否则「窗口比 Overlay
+    // 多出来的边」会被算成一大块安全区，把泡泡夹到角落。
+    final Size window = media != null && !media.size.isEmpty
+        ? media.size
+        : screen;
+    final EdgeInsets safe =
+        (media?.padding ?? EdgeInsets.zero) + request.safeInset;
     final EdgeInsets safeInOverlay = EdgeInsets.fromLTRB(
       math.max(0, safe.left - origin.dx),
       math.max(0, safe.top - origin.dy),
-      math.max(0, safe.right - (media.size.width - origin.dx - screen.width)),
-      math.max(0, safe.bottom - (media.size.height - origin.dy - screen.height)),
+      math.max(0, safe.right - (window.width - origin.dx - screen.width)),
+      math.max(0, safe.bottom - (window.height - origin.dy - screen.height)),
     );
     final OhosMagnifierPlacement placement = OhosMagnifierPosition.resolve(
       anchor: request.anchor - origin,

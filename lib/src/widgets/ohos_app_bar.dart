@@ -369,7 +369,14 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
             height: topInset,
             child: ColoredBox(color: bandColor),
           ),
-          result,
+          // `Column` 给非 flex 子节点的是**无界**高度约束，栏体内部件原本靠
+          // 外层给的高度只能用 `constraints.maxHeight`（`OhosLightMaterial`
+          // 就是 `isFinite ? maxHeight : 0`，无界时整层光感直接缩成 0）。
+          // 这里按 `preferredSize` 把它还回去，控件内部看到的还是确定高度。
+          SizedBox(
+            height: preferredSize.height,
+            child: result,
+          ),
         ],
       );
     }

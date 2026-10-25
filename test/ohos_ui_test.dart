@@ -1433,6 +1433,42 @@ void main() {
       expect(find.byType(OhosMagnifier), findsNothing);
     });
 
+    testWidgets('自建 Overlay 但没有 MediaQuery 时也不抛（裸树可优雅退让）', (
+      WidgetTester tester,
+    ) async {
+      late BuildContext inner;
+      // 裸树：只有 Directionality + Overlay（`Overlay` 不要求 MediaQuery）。
+      // 注：flutter_test 的宿主总会注入一个 MediaQuery，所以这条用例锁的是
+      // 「裸树可用、不抛」这条契约，而不是复现 `MediaQuery.of` 的崩溃。
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Overlay(
+              initialEntries: <OverlayEntry>[
+                OverlayEntry(
+                  builder: (BuildContext context) {
+                    inner = context;
+                    return const SizedBox(width: 300, height: 400);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final OhosMagnifierController controller = OhosMagnifierController();
+      addTearDown(controller.dispose);
+      expect(
+        controller.show(inner, anchor: const Offset(150, 200), text: 'A'),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(OhosMagnifier), findsOneWidget);
+    });
+
     testWidgets('墨水屏：1px 纯黑描边，且不做入场动画', (
       WidgetTester tester,
     ) async {
@@ -2411,6 +2447,26 @@ void main() {
       // (width/2, 0)）：注解若只盖住工具栏，那一点采不到样式，等同于没传。
       expect(tester.getRect(region).top, 0);
       expect(tester.getSize(region).height, 56 + 24);
+    });
+
+    testWidgets('带色带 + lightMaterial 时栏体仍有确定高度', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(
+            title: Text('标题'),
+            lightMaterial: true,
+            statusBarBackgroundColor: Color(0xFF102030),
+          ),
+        ),
+      );
+      final Finder glow = find.byType(OhosLightMaterial);
+      expect(glow, findsOneWidget);
+      // 包色带的 `Column` 给子节点的是无界高度约束；这里钉住栏体（现在由
+      // `SizedBox(height: preferredSize.height)` 定高）尺寸不被压成 0。
+      expect(tester.getSize(glow), const Size(360, 56));
     });
 
     testWidgets('toolbarHeight 是 height 的别名（对齐 kToolbarHeight 命名）',
