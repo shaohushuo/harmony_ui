@@ -355,13 +355,6 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: result,
       );
     }
-    final SystemUiOverlayStyle? overlay = systemOverlayStyle;
-    if (overlay != null) {
-      result = AnnotatedRegion<SystemUiOverlayStyle>(
-        value: overlay,
-        child: result,
-      );
-    }
     if (bandColor != null) {
       // 状态栏段放在最外层：不参与 scrollEffect 的颜色过渡，也不会被
       // lightMaterial 的顶部渐隐压住。总高仍是 inset + height + bottom。
@@ -378,6 +371,16 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           result,
         ],
+      );
+    }
+    final SystemUiOverlayStyle? overlay = systemOverlayStyle;
+    if (overlay != null) {
+      // 注解要**包住整条栏**（含状态栏那一段）：系统取状态栏图标明暗时是在
+      // 屏幕顶端中点采样 `AnnotatedRegion`，色带若画在注解外面，那里采不到
+      // 样式，等同于没传 `systemOverlayStyle`。
+      result = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlay,
+        child: result,
       );
     }
     return result;

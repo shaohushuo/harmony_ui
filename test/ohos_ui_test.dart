@@ -2392,6 +2392,27 @@ void main() {
       expect(region.value, SystemUiOverlayStyle.light);
     });
 
+    testWidgets('带状态栏色带时 systemOverlayStyle 仍然覆盖到状态栏那一段', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(
+            title: Text('标题'),
+            statusBarBackgroundColor: Color(0xFF102030),
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+          ),
+        ),
+      );
+      final Finder region = find.byType(AnnotatedRegion<SystemUiOverlayStyle>);
+      expect(region, findsOneWidget);
+      // 系统在**屏幕顶端中点**采样状态栏图标明暗（`findAnnotations` at
+      // (width/2, 0)）：注解若只盖住工具栏，那一点采不到样式，等同于没传。
+      expect(tester.getRect(region).top, 0);
+      expect(tester.getSize(region).height, 56 + 24);
+    });
+
     testWidgets('toolbarHeight 是 height 的别名（对齐 kToolbarHeight 命名）',
         (WidgetTester tester) async {
       const OhosAppBar bar = OhosAppBar(title: Text('t'), height: 48);
