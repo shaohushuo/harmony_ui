@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
@@ -127,17 +129,24 @@ class OhosMagnifier extends StatelessWidget {
 /// finger.
 ///
 /// Typical use is a drag: [show] on drag start, [update] on every move, [hide]
-/// on release. The bubble lives in the nearest [Overlay], so it can paint
+/// on release. The bubble lives in the root [Overlay], so it can paint
 /// outside its host's bounds — an index strip inside a clipping list, for
 /// instance — and it never takes part in hit testing.
 class OhosMagnifierController {
   _MagnifierRequest? _request;
   OverlayEntry? _entry;
+  OverlayState? _overlay;
 
   /// Whether the bubble is currently mounted.
   bool get isShowing => _entry != null;
 
   /// Shows the bubble at [anchor] (global coordinates).
+  ///
+  /// The entry goes into the **root** [Overlay], not the nearest one. A
+  /// `Positioned` inside an overlay is in that overlay's local space, so a
+  /// nested overlay (split view, a sub-region of the page) would shift the
+  /// bubble by its own origin while the caller keeps handing in global
+  /// coordinates.
   ///
   /// Returns false when there is no [Overlay] above [context] — a bare widget
   /// tree outside `MaterialApp` / `WidgetsApp`; nothing is shown then.
@@ -152,7 +161,7 @@ class OhosMagnifierController {
     double gap = 12,
   }) {
     assert(text != null || child != null, 'OhosMagnifierController 需要 text 或 child');
-    final OverlayState? overlay = Overlay.maybeOf(context);
+    final OverlayState? overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) {
       debugPrint(
         'OhosMagnifierController: 当前树没有 Overlay（MaterialApp / WidgetsApp '
@@ -160,6 +169,7 @@ class OhosMagnifierController {
       );
       return false;
     }
+    _overlay = overlay;
     _request = _MagnifierRequest(
       anchor: anchor,
       text: text,
@@ -209,11 +219,27 @@ class OhosMagnifierController {
       return const SizedBox.shrink();
     }
     final MediaQueryData media = MediaQuery.of(context);
+    // `anchor` 是全局坐标，`Positioned` 却按 Overlay 的局部坐标摆：只在根
+    // Overlay 正好铺满窗口时两者才同源，所以显式换算一次，宿主被嵌进非全屏
+    // 区域时也不会整体偏移；夹紧边界同样改用 Overlay 自己的尺寸。
+    final RenderBox? overlayBox =
+        _overlay?.context.findRenderObject() as RenderBox?;
+    final Offset origin = overlayBox == null
+        ? Offset.zero
+        : overlayBox.localToGlobal(Offset.zero);
+    final Size screen = overlayBox?.size ?? media.size;
+    final EdgeInsets safe = media.padding + request.safeInset;
+    final EdgeInsets safeInOverlay = EdgeInsets.fromLTRB(
+      math.max(0, safe.left - origin.dx),
+      math.max(0, safe.top - origin.dy),
+      math.max(0, safe.right - (media.size.width - origin.dx - screen.width)),
+      math.max(0, safe.bottom - (media.size.height - origin.dy - screen.height)),
+    );
     final OhosMagnifierPlacement placement = OhosMagnifierPosition.resolve(
-      anchor: request.anchor,
+      anchor: request.anchor - origin,
       bubble: request.bubble,
-      safe: media.padding + request.safeInset,
-      screen: media.size,
+      safe: safeInOverlay,
+      screen: screen,
       side: request.side,
       gap: request.gap,
     );

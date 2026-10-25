@@ -1359,6 +1359,54 @@ void main() {
       controller.dispose();
     });
 
+    testWidgets('anchor 是全局坐标：嵌套 Overlay 的原点不参与平移', (
+      WidgetTester tester,
+    ) async {
+      late BuildContext inner;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: Align(
+              alignment: Alignment.topLeft,
+              // 原点不在 (0,0) 的嵌套 Overlay：取「最近的 Overlay」会把全局
+              // anchor 当成它的局部坐标，泡泡整体偏移 (100,120)。
+              child: Padding(
+                padding: const EdgeInsets.only(left: 100, top: 120),
+                child: SizedBox(
+                  width: 200,
+                  height: 300,
+                  child: Overlay(
+                    initialEntries: <OverlayEntry>[
+                      OverlayEntry(
+                        builder: (BuildContext context) {
+                          inner = context;
+                          return const SizedBox.expand();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final OhosMagnifierController controller = OhosMagnifierController();
+      addTearDown(controller.dispose);
+      // 手指在全局 (150,200) = 该 Overlay 局部 (50,80)；泡泡落在右上角，
+      // 全局左上角 = (100 + 50 + 12, 120 + 80 - 12 - 48) = (162,140)。
+      expect(
+        controller.show(inner, anchor: const Offset(150, 200), text: 'A'),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byType(OhosMagnifier)),
+        const Offset(162, 140),
+      );
+    });
+
     testWidgets('没有 Overlay 时不显示也不抛（show 返回 false）', (
       WidgetTester tester,
     ) async {
