@@ -367,6 +367,10 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
       // lightMaterial 的顶部渐隐压住。总高仍是 inset + height + bottom。
       result = Column(
         mainAxisSize: MainAxisSize.min,
+        // `center`（默认值）给子节点的是**松**宽度约束，没有 child 的
+        // `ColoredBox` 会缩成 `constraints.smallest`（宽 0）→ 色带整条不可见。
+        // 撑满才能铺到屏幕左右两端。
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           SizedBox(
             height: topInset,

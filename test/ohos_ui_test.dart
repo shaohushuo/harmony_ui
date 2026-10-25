@@ -2085,6 +2085,9 @@ void main() {
         matching: find.byType(ColoredBox),
       );
       expect(tester.getSize(band).height, 24);
+      // 宽度也得铺满：`Column` 默认 `center` 给子节点松约束，无 child 的
+      // `ColoredBox` 会缩成 `constraints.smallest`（宽 0），色带整条看不见。
+      expect(tester.getSize(band).width, 360);
       expect(tester.widget<ColoredBox>(band).color, const Color(0xFF102030));
     });
 
