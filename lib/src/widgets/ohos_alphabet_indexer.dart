@@ -137,11 +137,14 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
       return;
     }
     final int count = widget.indexer.length;
-    assert(
-      selected >= 0 && selected < count,
-      'selectedIndex $selected 超出 0..${count - 1}',
-    );
-    _current = count == 0 ? 0 : selected.clamp(0, count - 1);
+    // 空字母表没有合法下标可指：此处只归零，不参与越界断言 —— 否则
+    // 「先给了 selectedIndex、随后分组切换把 indexer 清空」会在 debug 下崩。
+    if (count == 0) {
+      _current = 0;
+      return;
+    }
+    assert(selected >= 0 && selected < count, 'selectedIndex $selected 超出 0..${count - 1}');
+    _current = selected.clamp(0, count - 1);
   }
 
   /// 命中一格。`slot` 来自 `build` 里同一个约束（布局、字号、命中同源）。

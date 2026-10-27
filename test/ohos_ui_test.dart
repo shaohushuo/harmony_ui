@@ -1786,6 +1786,46 @@ void main() {
       expect(tester.takeException(), isAssertionError);
     });
 
+    testWidgets('无字母表 + 非空 selectedIndex 不崩（没有合法下标可断言）', (
+      WidgetTester tester,
+    ) async {
+      // 分组切换把 indexer 清空、而父级仍拿着上一次的 selectedIndex 重建：
+      // 修复前 `selected >= 0 && selected < 0` 恒假，debug 下必崩。
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: const <String>[],
+            size: const Size(24, 160),
+            selectedIndex: 3,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('字母表被换成空表时不崩，恢复后高亮夹回合法位置', (
+      WidgetTester tester,
+    ) async {
+      Widget controlled(List<String> indexer, int index) {
+        return wrap(
+          OhosAlphabetIndexer(
+            indexer: indexer,
+            size: const Size(24, 160),
+            selectedIndex: index,
+            onSelected: (String _) {},
+          ),
+        );
+      }
+
+      await tester.pumpWidget(controlled(letters, 4));
+      await tester.pumpWidget(controlled(const <String>[], 4));
+      expect(tester.takeException(), isNull);
+      // 空表期间把高亮留在一个不存在的下标上，恢复时就会越界取字母。
+      await tester.pumpWidget(controlled(letters, 4));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('槽位与命中同源：点渲染出来的字母就是它自己', (
       WidgetTester tester,
     ) async {
