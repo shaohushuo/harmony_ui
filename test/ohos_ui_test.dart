@@ -2579,6 +2579,32 @@ void main() {
       expect(body.bottom, nav.top, reason: 'body 底部紧贴导航，不叠第二层留白');
     });
 
+    testWidgets('primary: false 的 AppBar 在 OhosScaffold 里仍让出状态栏', (
+      WidgetTester tester,
+    ) async {
+      // `primary: false` 表示栏自己不吃状态栏内边距，页面级容器得替它让一次；
+      // AppBar 移出外层 `SafeArea` 之后这里一度无人消费，标题直接顶到状态栏。
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(360, 800),
+                padding: EdgeInsets.only(top: 24),
+              ),
+              child: const OhosScaffold(
+                appBar: OhosAppBar(primary: false, title: Text('标题')),
+                body: SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.getRect(find.byType(OhosAppBar)).top, 24);
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56);
+    });
+
     testWidgets('heightOf 与 Scaffold 预留的高度一致（bottom + 状态栏内边距）', (
       WidgetTester tester,
     ) async {

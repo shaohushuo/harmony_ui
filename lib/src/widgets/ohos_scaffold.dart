@@ -55,12 +55,19 @@ class OhosScaffold extends StatelessWidget {
           Positioned.fill(
             child: Column(
               children: <Widget>[
-                // AppBar 自己吸收状态栏内边距（`primary` 默认 true），所以不能
-                // 被 `SafeArea` 包住：`SafeArea` 会把 `MediaQuery.padding.top`
-                // 从子树里摘掉，栏里的 `topInset` 变成 0，
-                // `statusBarBackgroundColor` 的色带随之退化成 0 高 —— README
-                // 推荐的 `OhosScaffold + OhosAppBar` 组合下该功能整个不可见。
-                if (appBar != null) appBar!,
+                // `primary: true`（默认）的 AppBar 自己吸收状态栏内边距，所以
+                // 不能包 `SafeArea`：SafeArea 会把 `MediaQuery.padding.top` 从
+                // 子树里摘掉，栏里的 `topInset` 变成 0，`statusBarBackgroundColor`
+                // 的色带随之退化成 0 高 —— README 推荐的
+                // `OhosScaffold + OhosAppBar` 组合下该功能整个不可见。
+                //
+                // `primary: false` 的 AppBar 明确不吸收内边距（留给「不在屏幕
+                // 顶部 / 调用方自己处理」的场景），页面级容器得替它让一次，
+                // 否则内容直接顶到状态栏下面。
+                if (appBar != null)
+                  appBar!.primary
+                      ? appBar!
+                      : SafeArea(bottom: false, child: appBar!),
                 Expanded(
                   child: SafeArea(
                     // 有 AppBar 时状态栏那一段已经被它占掉，body 再让一次就是
