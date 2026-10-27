@@ -1953,6 +1953,57 @@ void main() {
       expect(ended, <String>['D']);
     });
 
+    testWidgets('拖动中字母表变短：抬手不越界，回调落在新表内', (
+      WidgetTester tester,
+    ) async {
+      // 拖到末格（_current = 25）后把表缩到 10 个字母，父级 selectedIndex
+      // 没变 —— 旧实现在 didUpdateWidget 里会早退，_current 停在 25，
+      // 抬手走到 _selectEnd 的 widget.indexer[25] 直接 RangeError。
+      List<String> current = List<String>.generate(
+        26,
+        (int i) => String.fromCharCode(65 + i),
+      );
+      final List<String> ended = <String>[];
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        wrap(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              rebuild = setState;
+              return OhosAlphabetIndexer(
+                indexer: current,
+                size: const Size(24, 260),
+                onSelected: (_) {},
+                onSelectEnd: ended.add,
+              );
+            },
+          ),
+        ),
+      );
+
+      final Rect rect = tester.getRect(find.byType(OhosAlphabetIndexer));
+      final TestGesture gesture = await tester.startGesture(rect.center);
+      await gesture.moveTo(Offset(rect.center.dx, rect.bottom - 2));
+      await tester.pump();
+      expect(find.text('Z'), findsWidgets, reason: '已经拖到末格');
+
+      rebuild(() {
+        current = List<String>.generate(
+          10,
+          (int i) => String.fromCharCode(65 + i),
+        );
+      });
+      await tester.pump();
+
+      // 夹紧不只防越界：高亮也得落到新表的末格，否则整列都没有高亮。
+      expect(paintedColor(tester, 'J'), OhosThemeData.light().highlightColor);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(ended.single, 'J', reason: '夹到新表的末格，而不是越界');
+    });
+
     testWidgets('同一格内拖动不重复回调，跨格才回调', (WidgetTester tester) async {
       final List<String> picked = <String>[];
       await tester.pumpWidget(

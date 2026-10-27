@@ -113,6 +113,14 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
   void didUpdateWidget(OhosAlphabetIndexer oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncSelected(widget.selectedIndex, oldWidget.selectedIndex);
+    // 字母表可能在运行中变短（切换分组 / 数据刷新）：上面只在外部
+    // `selectedIndex` 变化时才重算，父级换了个更短的 `indexer` 而
+    // `selectedIndex` 没变时 `_current` 会停在旧位置 —— 高亮错位、命中错格，
+    // 而三个回调都拿它当 `indexer` 的下标。
+    final int count = widget.indexer.length;
+    if (count > 0 && _current >= count) {
+      _current = count - 1;
+    }
   }
 
   void _syncSelected(int? selected, int? previous) {
@@ -159,9 +167,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     if (!widget.showMagnifier) {
       return;
     }
+    final String? letter = _currentLetter;
+    if (letter == null) {
+      return;
+    }
     final OhosMagnifierController controller = _magnifier ??=
         OhosMagnifierController();
-    final String letter = widget.indexer[_current];
     controller.show(
       context,
       anchor: anchor,
@@ -177,7 +188,10 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     if (controller == null || !controller.isShowing) {
       return;
     }
-    final String letter = widget.indexer[_current];
+    final String? letter = _currentLetter;
+    if (letter == null) {
+      return;
+    }
     controller.update(
       anchor,
       text: widget.magnifierBuilder == null ? letter : null,
@@ -189,8 +203,25 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     _magnifier?.hide();
   }
 
+  /// 当前生效的字母；空表时返回 null。
+  ///
+  /// 放大镜的显示 / 跟随与 [OhosAlphabetIndexer.onSelectEnd] 都把它当
+  /// `indexer` 的下标：[didUpdateWidget] 的夹紧只在 `count > 0` 时成立，字母表
+  /// 被父级换成空表时没有任何合法下标，这里统一兜住 —— 否则「拖动中列表刷新」
+  /// 这条路径抬手就会 `RangeError`。
+  String? get _currentLetter {
+    final List<String> letters = widget.indexer;
+    if (letters.isEmpty) {
+      return null;
+    }
+    return letters[_current.clamp(0, letters.length - 1)];
+  }
+
   void _selectEnd() {
-    widget.onSelectEnd?.call(widget.indexer[_current]);
+    final String? letter = _currentLetter;
+    if (letter != null) {
+      widget.onSelectEnd?.call(letter);
+    }
   }
 
   /// 抬手 / 中途取消时收尾。`onVerticalDragCancel` 在「点按被 tap 抢走」
