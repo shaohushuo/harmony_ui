@@ -1618,6 +1618,31 @@ void main() {
       );
     });
 
+    testWidgets('只覆盖字号的 textStyle 也让字母颜色跟随主题', (
+      WidgetTester tester,
+    ) async {
+      // `inherit: false` 断掉继承后没有祖先可以取色：调用方只传
+      // `fontSize` / `fontWeight`（dartdoc 允许的用法）时，颜色必须在组件里
+      // 兜住，否则深色 / 墨主题下是黑字压深底。
+      final OhosThemeData dark = OhosThemeData.dark();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: dark,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosMagnifier(
+                  text: 'A',
+                  animate: false,
+                  textStyle: const TextStyle(fontSize: 20),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(paintedColor(tester, 'A'), dark.highlightColor);
+    });
   });
 
   group('OhosAlphabetIndexer', () {

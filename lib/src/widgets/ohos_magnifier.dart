@@ -89,9 +89,13 @@ class OhosMagnifier extends StatelessWidget {
     // 它们一起放大。`inherit: false` 断掉整条继承链：主题给了字体族就用，
     // 没给就用引擎默认，不会退回 monospace。调用方显式给了 decoration 时
     // 照旧尊重。
+    // 颜色同样要兜住：调用方只传 `fontSize` / `fontWeight` 的 `textStyle`
+    // 是文档允许的用法，断链后没有祖先可继承，深色 / 墨主题下会退化成黑字
+    // 压深底（几乎不可见）。
     final TextStyle contentStyle = style.copyWith(
       inherit: false,
       decoration: style.decoration ?? TextDecoration.none,
+      color: style.color ?? (ink ? theme.textPrimaryColor : theme.highlightColor),
     );
     final Widget bubble = Container(
       width: size.width,
