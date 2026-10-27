@@ -2062,6 +2062,42 @@ void main() {
       expect(ended.single, 'J', reason: '夹到新表的末格，而不是越界');
     });
 
+    testWidgets('受控：外部 selectedIndex 没变时，重建也能把高亮纠回来', (
+      WidgetTester tester,
+    ) async {
+      // 受控写法是「外部值说了算」：手指点过之后内部高亮先跟手，父级用同一个
+      // selectedIndex 重建时应该纠回受控值。旧实现只在 selected != previous
+      // 时回写，重建一次就再也纠不回来了。
+      const int controlled = 1; // 'A'
+      final OhosThemeData theme = OhosThemeData.light();
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        wrap(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              rebuild = setState;
+              return OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 160),
+                selectedIndex: controlled,
+                onSelected: (_) {},
+              );
+            },
+          ),
+        ),
+      );
+      expect(paintedColor(tester, 'A'), theme.highlightColor);
+
+      await tester.tap(find.text('D'));
+      await tester.pump();
+      expect(paintedColor(tester, 'D'), theme.highlightColor, reason: '点完先跟手');
+
+      rebuild(() {});
+      await tester.pump();
+      expect(paintedColor(tester, 'A'), theme.highlightColor, reason: '纠回受控值');
+      expect(paintedColor(tester, 'D'), theme.textSecondaryColor);
+    });
+
     testWidgets('同一格内拖动不重复回调，跨格才回调', (WidgetTester tester) async {
       final List<String> picked = <String>[];
       await tester.pumpWidget(
