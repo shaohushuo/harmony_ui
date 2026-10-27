@@ -2605,6 +2605,36 @@ void main() {
       expect(tester.getSize(find.byType(OhosAppBar)).height, 56);
     });
 
+    testWidgets('横屏刘海下 AppBar 仍让出左右安全区（primary 两种取值一致）', (
+      WidgetTester tester,
+    ) async {
+      // AppBar 移出外层 SafeArea 后，primary: true 的分支曾被裸放 —— 顶部由栏
+      // 自己吸收没问题，但 left / right（横屏刘海、挖孔）就没人让了，内容压到
+      // 屏幕边缘；primary: false 的分支反倒让了，两者不一致。
+      for (final bool primary in <bool>[true, false]) {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: OhosThemeData.light(),
+            child: MaterialApp(
+              home: MediaQuery(
+                data: const MediaQueryData(
+                  size: Size(800, 360),
+                  padding: EdgeInsets.only(left: 44, right: 44),
+                ),
+                child: OhosScaffold(
+                  appBar: OhosAppBar(primary: primary, title: const Text('标题')),
+                  body: const SizedBox.expand(),
+                ),
+              ),
+            ),
+          ),
+        );
+        final Rect bar = tester.getRect(find.byType(OhosAppBar));
+        expect(bar.left, 44, reason: 'primary=$primary 时左侧安全区要让出');
+        expect(bar.right, 800 - 44, reason: 'primary=$primary 时右侧安全区要让出');
+      }
+    });
+
     testWidgets('heightOf 与 Scaffold 预留的高度一致（bottom + 状态栏内边距）', (
       WidgetTester tester,
     ) async {
