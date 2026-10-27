@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
@@ -278,10 +276,13 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     final int count = widget.indexer.length;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        // 条高：默认 size.height，但父级更矮时以父级为准 —— 可拖分隔条的
-        // 面板会把可用高度压到 size.height 以下，按 size 算就会溢出。
+        // 条高：默认 size.height，父级的约束优先 —— 可拖分隔条的面板会把可用
+        // 高度压到 size.height 以下，按 size 算就会溢出；反过来父级给的是比
+        // size.height **更高**的紧约束时，`SizedBox` 会被 minHeight 抬上去，
+        // 只按 maxHeight 算会让字母挤在顶部、命中区却铺满整条（点空白跳末格）。
+        // `constrainHeight` 同时看 min 与 max，命中格与视觉格才重合。
         final double height = constraints.hasBoundedHeight
-            ? math.min(widget.size.height, constraints.maxHeight)
+            ? constraints.constrainHeight(widget.size.height)
             : widget.size.height;
         if (count == 0 || height <= 0) {
           return SizedBox(width: widget.size.width, height: 0);

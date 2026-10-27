@@ -1820,6 +1820,38 @@ void main() {
       expect(picked, <String>['A']);
     });
 
+    testWidgets('父级给更高的紧约束时，视觉格与命中格一起铺满', (
+      WidgetTester tester,
+    ) async {
+      // 父级紧约束 500 > size.height 360：`SizedBox` 会被 minHeight 抬到 500，
+      // 但槽位若只按 `min(size.height, maxHeight)` 算仍是 360 —— 字母挤在顶部
+      // 360vp、底部 140vp 空白却照样接管手势，点它会夹成末格。
+      final List<String> picked = <String>[];
+      final List<String> many = List<String>.generate(
+        26,
+        (int i) => String.fromCharCode(65 + i),
+      );
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            height: 500,
+            child: OhosAlphabetIndexer(
+              indexer: many,
+              size: const Size(24, 360),
+              onSelected: picked.add,
+            ),
+          ),
+        ),
+      );
+      final Rect rect = tester.getRect(find.byType(OhosAlphabetIndexer));
+      expect(rect.height, 500);
+      // 500 / 26 ≈ 19.23：y = 370 落在第 20 格（索引 19 = 'T'）。
+      // 按 360 算槽位时这里会被夹成 'Z'。
+      await tester.tapAt(Offset(rect.center.dx, rect.top + 370));
+      await tester.pump();
+      expect(picked.last, 'T');
+    });
+
     testWidgets('高度无界时退回 size.height', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
