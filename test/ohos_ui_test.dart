@@ -1165,6 +1165,304 @@ void main() {
     });
   });
 
+  group('OhosMagnifier', () {
+    const Size screen = Size(400, 800);
+    const Size bubble = Size.square(48);
+
+    OhosMagnifierPlacement place(
+      Offset anchor, {
+      OhosMagnifierSide side = OhosMagnifierSide.auto,
+      EdgeInsets safe = EdgeInsets.zero,
+      Size screenSize = screen,
+      Size bubbleSize = bubble,
+      double gap = 8,
+    }) {
+      return OhosMagnifierPosition.resolve(
+        anchor: anchor,
+        bubble: bubbleSize,
+        safe: safe,
+        screen: screenSize,
+        side: side,
+        gap: gap,
+      );
+    }
+
+    test('默认落在手指的右上角：纵向、横向各留一个 gap', () {
+      final OhosMagnifierPlacement p = place(const Offset(100, 300));
+      expect(p.offset, const Offset(108, 244));
+      expect(p.side, OhosMagnifierSide.aboveRight);
+      // 底边距手指 8vp、左边距手指 8vp —— 是「右上角」，不是「正上方」
+      expect(300 - (p.offset.dy + p.size.height), 8);
+      expect(p.offset.dx - 100, 8);
+    });
+
+    test('右半屏落左上：横向在手指左侧留 gap', () {
+      final OhosMagnifierPlacement p = place(const Offset(350, 300));
+      expect(p.offset, const Offset(294, 244));
+      expect(p.side, OhosMagnifierSide.aboveLeft);
+      expect(350 - (p.offset.dx + p.size.width), 8);
+    });
+
+    test('顶部放不下时掉到下面一行（左下/右下）', () {
+      final OhosMagnifierPlacement p = place(const Offset(100, 20));
+      expect(p.offset, const Offset(108, 28));
+      expect(p.side, OhosMagnifierSide.belowRight);
+    });
+
+    test('贴左边缘时翻到同一个角的另一侧', () {
+      // 左上：5 - 8 - 48 = -51 放不下 → 右上：13
+      final OhosMagnifierPlacement p = place(
+        const Offset(5, 300),
+        side: OhosMagnifierSide.aboveLeft,
+      );
+      expect(p.offset, const Offset(13, 244));
+      expect(p.side, OhosMagnifierSide.aboveRight);
+    });
+
+    test('贴右边缘时翻到同一个角的另一侧', () {
+      // 右上：380 + 8 = 388 → +48 越界 → 左上：324
+      final OhosMagnifierPlacement p = place(
+        const Offset(380, 300),
+        side: OhosMagnifierSide.aboveRight,
+      );
+      expect(p.offset, const Offset(324, 244));
+      expect(p.side, OhosMagnifierSide.aboveLeft);
+    });
+
+    test('显式角落优先于 auto', () {
+      expect(
+        place(const Offset(300, 300), side: OhosMagnifierSide.aboveRight).offset,
+        const Offset(308, 244),
+      );
+      expect(place(const Offset(300, 300)).offset, const Offset(244, 244));
+    });
+
+    test('四个角都放不下时夹进安全区', () {
+      // 100vp 宽的屏放不下「gap + 48vp 泡泡」：退到首选角后硬夹到屏幕边
+      // 指定左侧：50 - 8 - 48 = -6 → 夹到 0
+      final OhosMagnifierPlacement left = place(
+        const Offset(50, 300),
+        side: OhosMagnifierSide.aboveLeft,
+        screenSize: const Size(100, 800),
+      );
+      expect(left.offset, const Offset(0, 244));
+      expect(left.side, OhosMagnifierSide.aboveLeft);
+      // 指定右侧：50 + 8 = 58 → 右边留 48 只剩 52
+      final OhosMagnifierPlacement right = place(
+        const Offset(50, 300),
+        side: OhosMagnifierSide.aboveRight,
+        screenSize: const Size(100, 800),
+      );
+      expect(right.offset, const Offset(52, 244));
+      expect(right.side, OhosMagnifierSide.aboveRight);
+      // 夹紧后仍不盖住手指
+      expect(right.offset.dx >= 50, isTrue);
+      expect(left.offset.dx + left.size.width <= 50, isTrue);
+    });
+
+    test('夹紧改变了落点方向时 side 跟着最终矩形走', () {
+      // 请求「手指下方」，但底部放不下 → 夹到安全区内后被压到手指上方，
+      // 此时 side 必须报 aboveLeft，否则调用方会朝错误方向画箭头/尾巴。
+      final OhosMagnifierPlacement p = place(
+        const Offset(50, 380),
+        side: OhosMagnifierSide.belowLeft,
+        screenSize: const Size(100, 400),
+      );
+      expect(p.offset, const Offset(0, 352));
+      expect(p.side, OhosMagnifierSide.aboveLeft);
+      // 换行是被夹出来的，泡泡此时确实盖住手指（气泡底边贴屏幕底）
+      expect(p.offset.dy + p.size.height, 400);
+    });
+
+    test('窄屏把宽度压到可用宽度的一半以内', () {
+      final OhosMagnifierPlacement p = place(
+        const Offset(100, 300),
+        screenSize: const Size(300, 800),
+        bubbleSize: const Size(200, 48),
+      );
+      expect(p.size.width, 150);
+    });
+
+    test('泡泡比可用高度还高时压进安全区', () {
+      final OhosMagnifierPlacement p = place(
+        const Offset(100, 100),
+        screenSize: const Size(400, 200),
+        bubbleSize: const Size(48, 300),
+        safe: const EdgeInsets.only(top: 24, bottom: 16),
+      );
+      expect(p.size.height, 160);
+      expect(p.offset.dy, 24);
+    });
+
+
+    testWidgets('泡泡按默认口径绘制：48vp 圆 + 卡片底色 + hairline 描边', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(const Center(child: OhosMagnifier(text: 'A', animate: false))),
+      );
+      expect(
+        tester.getSize(find.byType(OhosMagnifier)),
+        const Size.square(48),
+      );
+      expect(find.text('A'), findsOneWidget);
+      final Container box = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.byType(Container),
+        ),
+      );
+      final BoxDecoration decoration = box.decoration! as BoxDecoration;
+      final OhosThemeData theme = OhosThemeData.light();
+      expect(decoration.color, theme.cardColor);
+      expect(
+        (decoration.border! as Border).top.color,
+        theme.textTertiaryColor.withValues(alpha: 0.3),
+      );
+    });
+
+    testWidgets('show / update / hide：泡泡进 Overlay 并跟随锚点', (
+      WidgetTester tester,
+    ) async {
+      late BuildContext host;
+      final OhosMagnifierController controller = OhosMagnifierController();
+      await tester.pumpWidget(
+        wrap(
+          Builder(
+            builder: (BuildContext context) {
+              host = context;
+              return const SizedBox(width: 10, height: 10);
+            },
+          ),
+        ),
+      );
+
+      expect(
+        controller.show(host, anchor: const Offset(200, 300), text: 'A'),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsOneWidget);
+      final Offset before = tester.getTopLeft(find.byType(OhosMagnifier));
+
+      controller.update(const Offset(200, 340), text: 'B');
+      await tester.pumpAndSettle();
+      expect(find.text('B'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byType(OhosMagnifier)).dy,
+        before.dy + 40,
+        reason: '泡泡跟着锚点下移',
+      );
+
+      controller.hide();
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsNothing);
+      controller.dispose();
+    });
+
+    testWidgets('anchor 是全局坐标：嵌套 Overlay 的原点不参与平移', (
+      WidgetTester tester,
+    ) async {
+      late BuildContext inner;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: Align(
+              alignment: Alignment.topLeft,
+              // 原点不在 (0,0) 的嵌套 Overlay：取「最近的 Overlay」会把全局
+              // anchor 当成它的局部坐标，泡泡整体偏移 (100,120)。
+              child: Padding(
+                padding: const EdgeInsets.only(left: 100, top: 120),
+                child: SizedBox(
+                  width: 200,
+                  height: 300,
+                  child: Overlay(
+                    initialEntries: <OverlayEntry>[
+                      OverlayEntry(
+                        builder: (BuildContext context) {
+                          inner = context;
+                          return const SizedBox.expand();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final OhosMagnifierController controller = OhosMagnifierController();
+      addTearDown(controller.dispose);
+      // 手指在全局 (150,200) = 该 Overlay 局部 (50,80)；泡泡落在右上角，
+      // 全局左上角 = (100 + 50 + 12, 120 + 80 - 12 - 48) = (162,140)。
+      expect(
+        controller.show(inner, anchor: const Offset(150, 200), text: 'A'),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byType(OhosMagnifier)),
+        const Offset(162, 140),
+      );
+    });
+
+    testWidgets('没有 Overlay 时不显示也不抛（show 返回 false）', (
+      WidgetTester tester,
+    ) async {
+      bool? shown;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Builder(
+              builder: (BuildContext context) {
+                shown = OhosMagnifierController().show(
+                  context,
+                  anchor: const Offset(10, 10),
+                  text: 'A',
+                );
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+      expect(shown, isFalse);
+      expect(find.byType(OhosMagnifier), findsNothing);
+    });
+
+    testWidgets('墨水屏：1px 纯黑描边，且不做入场动画', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: const MaterialApp(
+            home: Center(child: OhosMagnifier(text: 'A')),
+          ),
+        ),
+      );
+      final Container box = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.byType(Container),
+        ),
+      );
+      final BoxDecoration decoration = box.decoration! as BoxDecoration;
+      expect((decoration.border! as Border).top.color, Colors.black);
+      expect(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
+    });
+  });
+
   group('OhosAppBar', () {
     /// OpenHarmony 上应用基本都是沉浸式（edge-to-edge），状态栏直接压在顶栏上。
     /// `Scaffold` 给 `appBar` 槽位预留的高度是
