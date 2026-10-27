@@ -110,19 +110,23 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
   @override
   void didUpdateWidget(OhosAlphabetIndexer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncSelected(widget.selectedIndex, oldWidget.selectedIndex);
     final int count = widget.indexer.length;
-    // 受控语义：外部值没变也要回写 —— 拖动 / 点击会改内部 [_current]，父级
-    // 用同一个 `selectedIndex` 重建时得能把高亮纠回受控值，否则「受控」只在
-    // 外部值变化的那一刻成立。拖动中不打断（否则高亮会卡在父级的旧值上）。
-    final int? controlled = widget.selectedIndex;
-    if (controlled != null && !_dragging && count > 0) {
-      _current = controlled.clamp(0, count - 1);
+    // 拖动中先不理会外部值：手指的即时高亮优先，否则父级一 setState 就会把
+    // 高亮从指下拽回旧位置。抬手后的下一次重建再对齐受控值。
+    if (!_dragging) {
+      _syncSelected(widget.selectedIndex, oldWidget.selectedIndex);
+      // 受控语义：外部值没变也要回写 —— 拖动 / 点击会改内部 [_current]，父级
+      // 用同一个 `selectedIndex` 重建时得能把高亮纠回受控值，否则「受控」只在
+      // 外部值变化的那一刻成立。
+      final int? controlled = widget.selectedIndex;
+      if (controlled != null && count > 0) {
+        _current = controlled.clamp(0, count - 1);
+      }
     }
     // 字母表可能在运行中变短（切换分组 / 数据刷新）：上面只在外部
     // `selectedIndex` 变化时才重算，父级换了个更短的 `indexer` 而
     // `selectedIndex` 没变时 `_current` 会停在旧位置 —— 高亮错位、命中错格，
-    // 而三个回调都拿它当 `indexer` 的下标。
+    // 而三个回调都拿它当 `indexer` 的下标。拖动中同样要夹，否则抬手就越界。
     if (count > 0 && _current >= count) {
       _current = count - 1;
     }

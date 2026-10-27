@@ -2098,6 +2098,56 @@ void main() {
       expect(paintedColor(tester, 'D'), theme.textSecondaryColor);
     });
 
+    testWidgets('拖动中父级改 selectedIndex 不会把高亮从指下拽走', (
+      WidgetTester tester,
+    ) async {
+      // `_syncSelected` 原本在 `didUpdateWidget` 里无条件执行：拖动过程中父级
+      // 一 setState（改 selectedIndex），高亮就会从指下跳回旧位置。
+      int controlled = 0; // '#'
+      final OhosThemeData theme = OhosThemeData.light();
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        wrap(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              rebuild = setState;
+              return OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 160),
+                selectedIndex: controlled,
+                // 这里只盯高亮：关掉放大镜，免得它在 Overlay 里也渲染一份
+                // 同名文字，`find.text('C')` 落到两个 widget 上。
+                showMagnifier: false,
+                onSelected: (_) {},
+              );
+            },
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 60)); // slot 32 → 'C'
+      await tester.pump();
+      expect(paintedColor(tester, 'C'), theme.highlightColor);
+
+      rebuild(() => controlled = 1); // 'A'
+      await tester.pump();
+      expect(
+        paintedColor(tester, 'C'),
+        theme.highlightColor,
+        reason: '拖动中保持跟手，不被外部值拽回',
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('同一格内拖动不重复回调，跨格才回调', (WidgetTester tester) async {
       final List<String> picked = <String>[];
       await tester.pumpWidget(
