@@ -2463,6 +2463,36 @@ void main() {
       );
     });
 
+    testWidgets('底部导航存在时 body 不再重复让出底部内边距', (
+      WidgetTester tester,
+    ) async {
+      // body 的 `SafeArea` 若同时让 bottom，会与底部导航那层 `SafeArea`
+      // 叠成两条 padding.bottom：内容与导航之间多出一条空白，列表末项被顶起。
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(360, 800),
+                padding: EdgeInsets.only(bottom: 24),
+              ),
+              child: OhosScaffold(
+                body: const SizedBox.expand(key: Key('body')),
+                bottomNavigationBar: const SizedBox(key: Key('nav'), height: 48),
+              ),
+            ),
+          ),
+        ),
+      );
+      final Rect scaffold = tester.getRect(find.byType(Scaffold));
+      final Rect body = tester.getRect(find.byKey(const Key('body')));
+      final Rect nav = tester.getRect(find.byKey(const Key('nav')));
+      expect(nav.height, 48);
+      expect(nav.bottom, scaffold.bottom - 24, reason: '底部导航自己让出安全区');
+      expect(body.bottom, nav.top, reason: 'body 底部紧贴导航，不叠第二层留白');
+    });
+
     testWidgets('heightOf 与 Scaffold 预留的高度一致（bottom + 状态栏内边距）', (
       WidgetTester tester,
     ) async {

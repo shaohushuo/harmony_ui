@@ -66,6 +66,9 @@ class OhosScaffold extends StatelessWidget {
                     // 有 AppBar 时状态栏那一段已经被它占掉，body 再让一次就是
                     // 双倍留白；没有 AppBar 时才由这里让。
                     top: appBar == null,
+                    // 同理：底部导航自带 `SafeArea`，body 再让一次同样会多出
+                    // 一条 padding.bottom 的缝（列表末项被整体顶起）。
+                    bottom: bottomNavigationBar == null,
                     child: body ?? const SizedBox.shrink(),
                   ),
                 ),
