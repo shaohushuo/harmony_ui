@@ -1617,6 +1617,7 @@ void main() {
         findsNothing,
       );
     });
+
   });
 
   group('OhosAlphabetIndexer', () {
@@ -2360,6 +2361,48 @@ void main() {
           matching: find.byType(ColoredBox),
         ),
         findsNothing,
+      );
+    });
+
+    testWidgets('OhosScaffold 下状态栏色带仍有高度（不再被 SafeArea 清零）', (
+      WidgetTester tester,
+    ) async {
+      // `OhosScaffold` 曾把整棵 `Stack`（含 appBar）包进 `SafeArea`，后代的
+      // `MediaQuery.padding.top` 被摘成 0，栏里的 topInset 随之变 0 —— README
+      // 推荐的 `OhosScaffold + OhosAppBar` 组合下 `statusBarBackgroundColor`
+      // 的色带永远是 0 高。既有用例都挂在 Material `Scaffold` 的 `appBar`
+      // 槽位上，所以没抓到。
+      const Color band = Color(0xFF102030);
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(360, 800),
+                padding: EdgeInsets.only(top: 24),
+              ),
+              child: OhosScaffold(
+                appBar: const OhosAppBar(
+                  statusBarBackgroundColor: band,
+                  title: Text('标题'),
+                ),
+                body: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Finder bandBox = find.byWidgetPredicate(
+        (Widget w) => w is ColoredBox && w.color == band,
+      );
+      expect(bandBox, findsOneWidget, reason: '色带仍然存在');
+      expect(tester.getSize(bandBox).height, 24, reason: '色带高度 = 状态栏内边距');
+      expect(
+        tester.getSize(find.byType(OhosAppBar)).height,
+        24 + 56,
+        reason: '总高 = 内边距 + 栏高',
       );
     });
 

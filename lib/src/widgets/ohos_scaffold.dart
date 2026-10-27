@@ -50,28 +50,41 @@ class OhosScaffold extends StatelessWidget {
     // present in, and drawers are wired up.
     return Scaffold(
       backgroundColor: background,
-      body: SafeArea(
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: Column(
-                children: <Widget>[
-                  if (appBar != null) appBar!,
-                  Expanded(child: body ?? const SizedBox.shrink()),
-                  if (bottomNavigationBar != null) bottomNavigationBar!,
-                ],
-              ),
+      body: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: Column(
+              children: <Widget>[
+                // AppBar 自己吸收状态栏内边距（`primary` 默认 true），所以不能
+                // 被 `SafeArea` 包住：`SafeArea` 会把 `MediaQuery.padding.top`
+                // 从子树里摘掉，栏里的 `topInset` 变成 0，
+                // `statusBarBackgroundColor` 的色带随之退化成 0 高 —— README
+                // 推荐的 `OhosScaffold + OhosAppBar` 组合下该功能整个不可见。
+                if (appBar != null) appBar!,
+                Expanded(
+                  child: SafeArea(
+                    // 有 AppBar 时状态栏那一段已经被它占掉，body 再让一次就是
+                    // 双倍留白；没有 AppBar 时才由这里让。
+                    top: appBar == null,
+                    child: body ?? const SizedBox.shrink(),
+                  ),
+                ),
+                if (bottomNavigationBar != null)
+                  SafeArea(top: false, child: bottomNavigationBar!),
+              ],
             ),
-            if (floatingActionButton != null)
-              Align(
-                alignment: Alignment.bottomRight,
+          ),
+          if (floatingActionButton != null)
+            Align(
+              alignment: Alignment.bottomRight,
+              child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: floatingActionButton,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
       drawer: drawer,
       endDrawer: endDrawer,
