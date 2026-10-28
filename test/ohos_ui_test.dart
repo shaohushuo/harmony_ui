@@ -1772,6 +1772,52 @@ void main() {
       expect(picked, contains('B'));
     });
 
+    testWidgets('拖动期间父级改了 selectedIndex，抬手后高亮回到受控值', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData theme = OhosThemeData.light();
+      final ValueNotifier<int?> controlled = ValueNotifier<int?>(0);
+      addTearDown(controlled.dispose);
+      await tester.pumpWidget(
+        wrap(
+          ValueListenableBuilder<int?>(
+            valueListenable: controlled,
+            builder: (BuildContext context, int? value, Widget? child) {
+              return OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 160),
+                selectedIndex: value,
+                showMagnifier: false,
+                onSelected: (String _) {},
+              );
+            },
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      expect(paintedColor(tester, 'B'), theme.highlightColor);
+
+      // 拖动中挂起受控值：父级改成 A（1）也不许把高亮从指下拽走。
+      controlled.value = 1;
+      await tester.pump();
+      expect(paintedColor(tester, 'B'), theme.highlightColor);
+
+      // 抬手后没有新的父级重建，收尾时自己对齐受控值。
+      await gesture.up();
+      await tester.pump();
+      expect(paintedColor(tester, 'A'), theme.highlightColor);
+      expect(paintedColor(tester, 'B'), theme.textSecondaryColor);
+    });
+
     testWidgets('selectedIndex 越界在 debug 下断言', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
@@ -1912,6 +1958,39 @@ void main() {
       expect(rect.height, 500);
       // 500 / 26 ≈ 19.23：y = 370 落在第 20 格（索引 19 = 'T'）。
       // 按 360 算槽位时这里会被夹成 'Z'。
+      await tester.tapAt(Offset(rect.center.dx, rect.top + 370));
+      await tester.pump();
+      expect(picked.last, 'T');
+    });
+
+    testWidgets('高度无界时也吃 minHeight（scroll 里套 ConstrainedBox）', (
+      WidgetTester tester,
+    ) async {
+      // `hasBoundedHeight == false` 时曾被直接当成「用 size.height」：父级用
+      // ConstrainedBox(minHeight: 500) 把它撑到 500，槽位仍按 360 算，字母挤在
+      // 上方，底部空白却接管手势 —— 点 y=370 会跳末格 'Z'。
+      final List<String> picked = <String>[];
+      final List<String> many = List<String>.generate(
+        26,
+        (int i) => String.fromCharCode(65 + i),
+      );
+      await tester.pumpWidget(
+        wrap(
+          SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 500),
+              child: OhosAlphabetIndexer(
+                indexer: many,
+                size: const Size(24, 360),
+                onSelected: picked.add,
+              ),
+            ),
+          ),
+        ),
+      );
+      final Rect rect = tester.getRect(find.byType(OhosAlphabetIndexer));
+      expect(rect.height, 500);
+      // 500 / 26 ≈ 19.23：y = 370 落在第 20 格（索引 19 = 'T'）。
       await tester.tapAt(Offset(rect.center.dx, rect.top + 370));
       await tester.pump();
       expect(picked.last, 'T');

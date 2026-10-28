@@ -143,7 +143,10 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
       _current = 0;
       return;
     }
-    assert(selected >= 0 && selected < count, 'selectedIndex $selected 超出 0..${count - 1}');
+    assert(
+      selected >= 0 && selected < count,
+      'selectedIndex $selected 超出 0..${count - 1}',
+    );
     _current = selected.clamp(0, count - 1);
   }
 
@@ -244,7 +247,31 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
       return;
     }
     _dragging = false;
+    // 先报结果：调用方要的是「手指最后停在哪」，此刻 [_current] 还是指下那个字母。
     _selectEnd();
+    // 拖动期间刻意挂起了受控值（见 [didUpdateWidget]），抬手时自己补回来 ——
+    // 父级在拖动中改过 `selectedIndex` 未必会再来一次重建。
+    _applyControlled();
+  }
+
+  /// 把外部 `selectedIndex` 回写到内部高亮。没有受控值、或字母表为空时不动。
+  ///
+  /// 与 [_syncSelected] 的分工：[didUpdateWidget] 里那样「值变了才处理」的场合
+  /// 走前者（带越界断言），这里是「无条件对齐」——外部值没变、但内部被手势改过，
+  /// 仍然要回到受控值。
+  void _applyControlled() {
+    final int? controlled = widget.selectedIndex;
+    if (controlled == null) {
+      return;
+    }
+    final int count = widget.indexer.length;
+    if (count == 0) {
+      return;
+    }
+    final int target = controlled.clamp(0, count - 1);
+    if (target != _current) {
+      setState(() => _current = target);
+    }
   }
 
   Widget _letter(
@@ -290,14 +317,14 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     final int count = widget.indexer.length;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        // 条高：默认 size.height，父级的约束优先 —— 可拖分隔条的面板会把可用
-        // 高度压到 size.height 以下，按 size 算就会溢出；反过来父级给的是比
-        // size.height **更高**的紧约束时，`SizedBox` 会被 minHeight 抬上去，
-        // 只按 maxHeight 算会让字母挤在顶部、命中区却铺满整条（点空白跳末格）。
-        // `constrainHeight` 同时看 min 与 max，命中格与视觉格才重合。
-        final double height = constraints.hasBoundedHeight
-            ? constraints.constrainHeight(widget.size.height)
-            : widget.size.height;
+        // 条高：以 size.height 为基准，父级约束优先 —— 可拖分隔条的面板会把可用
+        // 高度压到 size.height 以下，按 size 算就会溢出；反过来父级把组件撑得比
+        // size.height **更高**，只按 maxHeight 算会让字母挤在顶部、命中区却铺满
+        // 整条（点空白跳末格）。`constrainHeight` 同时看 min 与 max，命中格与
+        // 视觉格才重合；高度无界（`SingleChildScrollView` 里）时它会只吃
+        // minHeight，这正是「scroll 里再套 ConstrainedBox(minHeight)」的场景，
+        // 那时 hasBoundedHeight 为 false，绕过约束就会退回 size.height 而错位。
+        final double height = constraints.constrainHeight(widget.size.height);
         if (count == 0 || height <= 0) {
           return SizedBox(width: widget.size.width, height: 0);
         }
