@@ -72,7 +72,22 @@ class OhosScaffold extends StatelessWidget {
                     // 同理：底部导航自带 `SafeArea`，body 再让一次同样会多出
                     // 一条 padding.bottom 的缝（列表末项被整体顶起）。
                     bottom: bottomNavigationBar == null,
-                    child: body ?? const SizedBox.shrink(),
+                    // 只让几何还不够：`SafeArea` 只把**自己让过的那几个边**从子树
+                    // 的 `MediaQuery` 里摘掉，`top: false` / `bottom: false` 的那
+                    // 一边仍原样留给后代。于是调用方在 body 里按最常见写法再包一层
+                    // `SafeArea`（或自己读 `padding` 做偏移）就会叠出第二份 ——
+                    // 有 AppBar 时凭空多一条状态栏高度的空白。
+                    // 四个边到这里都已经由本页（栏 / 页面容器 / 底部导航）认领完毕，
+                    // 统一摘干净，与 Flutter `Scaffold` 的 body 槽位一致（它也是
+                    // `removeTopPadding: appBar != null` 那套）。
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeLeft: true,
+                      removeTop: true,
+                      removeRight: true,
+                      removeBottom: true,
+                      child: body ?? const SizedBox.shrink(),
+                    ),
                   ),
                 ),
                 if (bottomNavigationBar != null)
