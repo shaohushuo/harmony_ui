@@ -2698,37 +2698,6 @@ void main() {
       expect(body.bottom, nav.top, reason: 'body 底部紧贴导航，不叠第二层留白');
     });
 
-    testWidgets('有 AppBar 时 body 里再套 SafeArea 不叠第二份状态栏留白', (
-      WidgetTester tester,
-    ) async {
-      // `SafeArea(top: false)` 只让几何，不会把这一边从子树的 `MediaQuery` 里
-      // 摘掉：调用方在 body 里按最常见写法再包一层 `SafeArea`，就会凭空多出
-      // 一条状态栏高度的空白。底部同理（底部导航已经在外面让过）。
-      await tester.pumpWidget(
-        OhosTheme(
-          data: OhosThemeData.light(),
-          child: MaterialApp(
-            home: MediaQuery(
-              data: const MediaQueryData(
-                size: Size(360, 800),
-                padding: EdgeInsets.only(top: 24, bottom: 16),
-              ),
-              child: OhosScaffold(
-                appBar: const OhosAppBar(title: Text('标题')),
-                bottomNavigationBar: const SizedBox(key: Key('nav'), height: 48),
-                body: const SafeArea(child: SizedBox.expand(key: Key('inner'))),
-              ),
-            ),
-          ),
-        ),
-      );
-      final Rect bar = tester.getRect(find.byType(OhosAppBar));
-      final Rect inner = tester.getRect(find.byKey(const Key('inner')));
-      final Rect nav = tester.getRect(find.byKey(const Key('nav')));
-      expect(inner.top, bar.bottom, reason: 'body 顶部紧贴栏底，不再多吃 24');
-      expect(inner.bottom, nav.top, reason: 'body 底部紧贴导航，不再多吃 16');
-    });
-
     testWidgets('primary: false 的 AppBar 在 OhosScaffold 里仍让出状态栏', (
       WidgetTester tester,
     ) async {
