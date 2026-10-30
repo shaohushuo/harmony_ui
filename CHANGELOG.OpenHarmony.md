@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## Unreleased
+
+### Features
+
+- 拖动放大镜：`OhosMagnifier`（48vp 圆泡，内容用 `text` 或 `child`；`monochrome` 下换 1px 纯黑描边并关掉入场动画）、`OhosMagnifierController`（`show` / `update` / `hide`，泡泡进根 `Overlay`，可画在宿主之外，`IgnorePointer` 不抢手势）、`OhosMagnifierPosition.resolve`（纯函数落点：手指四角各留 `gap`，放不下自动换角 / 换行）
+- 索引条增强：`OhosAlphabetIndexer` 新增 `selectedIndex`（代码发起的定位与手指点亮同一个字母，受控期间拖动仍即时高亮）、`onSelectEnd`（交互结束恰好一次，带回最终字母）、`showMagnifier`（默认 `true`，仅拖动时显示）与 `magnifierBuilder`（自定义泡泡内容）
+- 标题栏增强：`OhosAppBar.statusBarBackgroundColor` 把背景拆成「状态栏段 + 工具栏段」（沉浸式页面常见的「状态栏 = 页面底色、工具栏 = 卡片色」），内边距仍由组件吸收、总高不变，与 `scrollEffect` / `lightMaterial` 叠加时该段保持纯色；新增静态 `OhosAppBar.heightOf` 给出含状态栏内边距的总高，`toolbarHeight` 作为 `height` 的别名
+- 示例：展示类新增「放大镜 OhosMagnifier」章节，索引条演示补齐拖动放大镜 / 自定义泡泡 / `selectedIndex` 代码定位；导航类新增「状态栏分段着色 / heightOf」章节
+
+### Bugfix
+
+- 修复 `OhosAlphabetIndexer` 点「当前已高亮的字母」被静默忽略：改为 tap 一律回调、drag 只在跨格时回调（逐帧通知会把调用方的 `jumpTo` 打成连续滚动）
+- 修复索引条命中区只有字形那一条窄缝：改为 `HitTestBehavior.opaque` 整条命中，两侧留白与字间空隙不再把事件漏给下层列表
+- 修复父级高度小于 `size.height` 时索引条 `RenderFlex overflowed`：整条与字号跟随父级约束缩小，并去掉切换时会闪黄黑条纹的 200ms 隐式动画
+
+### Breaking changes
+
+- 删除 `OhosAlphabetIndexer.itemHeight`：槽位高度改由父级约束决定（无界时退回 `size.height`），同一个 slot 同时供布局、字号与 `dy → 字母` 命中使用；旧写法 `itemHeight: perLetter` + `size` 高 `perLetter × 字母数` 结果不变，删掉这个实参即可
+
 ## v0.3.0
 
 Release date: 2026-10-22

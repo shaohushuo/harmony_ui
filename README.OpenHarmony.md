@@ -137,14 +137,14 @@ Control list (mapping to the 42 controls in the official "Controls Overview"):
 
 | Category | Control | Implementation |
 | --- | --- | --- |
-| Navigation | App bar | `OhosAppBar` (light material / dynamic blur) |
+| Navigation | App bar | `OhosAppBar` (light material / dynamic blur / status bar band) |
 | Navigation | Tab bar | `OhosTabBar` (underline / capsule, follow-scroll divider) |
 | Navigation | Bottom navigation | `OhosNavigationBar` (tile / float, glow pool, badge) |
 | Navigation | Page indicator / Swiper | `OhosPageIndicator` / `OhosSwiper` |
 | Display | Text / Subheader | `OhosText` (13-level type scale) / `OhosSubheader` |
 | Display | Image | `OhosImage` (selection stroke / placeholder) |
 | Display | Divider / Progress | `OhosDivider` / `OhosProgressIndicator` |
-| Display | Badge / Alphabet indexer | `OhosBadge` / `OhosAlphabetIndexer` |
+| Display | Badge / Alphabet indexer | `OhosBadge` / `OhosAlphabetIndexer` (equal slots / controlled highlight / drag magnifier) |
 | Display | Scrollbar / Toast | `OhosScrollbar` / `showOhosToast` |
 | Display | Popup / Data panel | `showOhosPopup` / `OhosDataPanel` |
 | Display | QR code / Blank / Text clock | `OhosQrCode` / `OhosBlank` / `OhosTextClock` |
@@ -190,10 +190,13 @@ theme.typography.bodyLarge;  // text style
 | Immersive light material | `OhosLightMaterial` (5 levels + `OhosLightEffectTuning`) |
 | Responsive layout | `OhosResponsiveBuilder` / `OhosGrid` / `OhosGridItem` |
 | Transition motion | `OhosGeometry` (spring/easeOut/sharedElement) |
+| Magnifier | `OhosMagnifier` + `OhosMagnifierController` (placement via `OhosMagnifierPosition.resolve`) |
 
 ## New Features
 
-v0.3.0 adds an e-ink theme, app bar layout and parameter enhancements, input/container widget additions, plus narrow-screen, large-text and focusNode lifecycle fixes. See [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md) for details.
+v0.3.0 adds an e-ink theme, app bar layout and parameter enhancements, input/container widget additions, plus narrow-screen, large-text and focusNode lifecycle fixes.
+
+The current development build completes the alphabet indexer and magnifier: `OhosAlphabetIndexer` now uses equal-height slots and gains `selectedIndex` / `onSelectEnd` / `showMagnifier` / `magnifierBuilder` (**breaking**: `itemHeight` removed, slot height now comes from the parent constraints); new `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`; `OhosAppBar` gains `statusBarBackgroundColor` and the static `heightOf`. See the gallery pages "Display → Alphabet indexer / Magnifier" and "Navigation → Status bar band". See [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md) for details.
 
 ## FAQ
 
