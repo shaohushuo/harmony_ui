@@ -1,4 +1,7 @@
-## Unreleased
+## 0.4.0
+
+Release date: 2026-10-30
+
 - 修复：`OhosAlphabetIndexer` 点「当前高亮的字母」被静默忽略 —— `_selectAt` 里 `index != _current` 的短路把 `onSelected` 一起吞了；索引条不知道列表被 `jumpTo` 到了哪里，于是"点列表此刻所在的字母"变成静默无操作（`#` 在点过别的字母之前永远点不动）。修法是按手势来源分流：**tap 一律回调**，**drag 只在跨格时回调**（`onVerticalDragUpdate` 每帧都来，逐帧通知会把调用方的 `jumpTo` 打成连续滚动）
 - 新增：拖动放大镜 —— `OhosMagnifier`（48vp 圆形泡泡，内容用 `text` 或 `child`；`monochrome` 下换纯黑描边并关掉入场动画）、`OhosMagnifierController`（`show` / `update` / `hide`，泡泡进根 `Overlay`，可画在宿主 `SizedBox` 之外，`IgnorePointer` 不抢手势；没有 `Overlay` 时 `show` 返回 `false`）、`OhosMagnifierPosition.resolve`（纯函数定位：泡泡落在手指的四个「角」上——纵向、横向各留 `gap`，默认偏内侧；该角放不下就翻到同角另一侧、再换到另一行；宽度上限为可用宽度一半，四个角都放不下才夹进安全区，此时 `side` 按夹紧后的最终矩形重算 —— 夹紧可能把泡泡挪到手指的另一侧，沿用首选角会让调用方把箭头/尾巴画反）
 - 新增：`OhosAlphabetIndexer.showMagnifier`（默认 `true`，仅拖动时显示，点击不显示）与 `magnifierBuilder`（自定义泡泡内容）；泡泡字母与高亮同源（读内部生效值）。泡泡与手指留白按「指肚接触半径」取 32vp（16vp 实测仍被指肚压住一角），两个轴都留。需要祖先有 `Overlay`（`MaterialApp` / `WidgetsApp` 提供），没有时不显示
@@ -12,6 +15,7 @@
 - 新增：`OhosAlphabetIndexer.onSelectEnd` —— 交互结束的一次性回调（tap up / drag end / drag cancel），带回最终字母。与 `onSelected` 分工：后者是过程（tap 落指一次、drag 每跨一格一次），前者是结果（恰好一次）。想"松手才定位"的调用方只订阅这个通道即可，不必再记 `onSelected` 的最后一次（原计划的 `jumpOnDragEnd` 开关不再需要）
 - 新增：`OhosAppBar.statusBarBackgroundColor` —— `primary: true` 时把背景拆成「状态栏段 + 工具栏段」，状态栏那条可以单独着色（沉浸式页面常见的「状态栏 = 页面底色、工具栏 = 卡片色」），内边距仍由组件吸收、总高不变；与 `scrollEffect` / `lightMaterial` 叠加时该段保持纯色。名字刻意不叫 `statusBarColor`：那个是 `SystemUiOverlayStyle` 控制图标明暗的字段，容易混
 - 新增：`OhosAppBar.heightOf(context, {height, bottom, primary})` —— 返回 `height + bottom + 状态栏内边距`，对标 `AppBar.preferredHeightFor`；`preferredSize` 拿不到 `BuildContext`，需要自己包一层顶栏时用它，不必手算
+- 修复：`OhosScaffold` 的 body 子树仍会读到**已被认领**的 `MediaQuery.padding` —— `SafeArea` 只把**自己让过的那几条边**从子树里摘掉，`top: false` / `bottom: false` 的那一边原样留给后代，于是调用方在 body 里按最常见写法再包一层 `SafeArea`（或自己读 `padding` 做偏移）就叠出第二份：有 `appBar` 时凭空多一条状态栏高度的空白。现在四条边都已由「栏 / 页面容器 / 底部导航」认领完毕，统一从 body 子树摘干净，与 Flutter `Scaffold` 的 `body` 槽位口径一致；要在 body 里贴边绘制时改读 `View.of(context).padding`（`MediaQuery.viewPaddingOf` 会被同一处一起摘掉，不可靠）。示例：导航类新增「安全区：body 里再套 SafeArea 不叠第二份」对照页
 
 ## 0.3.0
 

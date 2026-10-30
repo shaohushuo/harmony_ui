@@ -480,7 +480,7 @@ OhosAlphabetIndexer(
 )
 ```
 
-> **从 0.3.0 迁移**：`itemHeight` 已删除，槽位高度改由父级约束决定。旧写法
+> **从 0.3.0 升级到 0.4.0**：`itemHeight` 已删除，槽位高度改由父级约束决定。旧写法
 > `itemHeight: perLetter` + `size` 高 `perLetter × 字母数` 的结果不变，删掉这个
 > 实参即可。
 

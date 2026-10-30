@@ -1,6 +1,8 @@
 # CHANGELOG
 
-## Unreleased
+## v0.4.0
+
+Release date: 2026-10-30
 
 ### Features
 
@@ -14,6 +16,7 @@
 - 修复 `OhosAlphabetIndexer` 点「当前已高亮的字母」被静默忽略：改为 tap 一律回调、drag 只在跨格时回调（逐帧通知会把调用方的 `jumpTo` 打成连续滚动）
 - 修复索引条命中区只有字形那一条窄缝：改为 `HitTestBehavior.opaque` 整条命中，两侧留白与字间空隙不再把事件漏给下层列表
 - 修复父级高度小于 `size.height` 时索引条 `RenderFlex overflowed`：整条与字号跟随父级约束缩小，并去掉切换时会闪黄黑条纹的 200ms 隐式动画
+- 修复 `OhosScaffold` 的 body 子树仍读到已被认领的 `MediaQuery.padding`：四条边统一从 body 子树摘掉，body 里再包 `SafeArea` 不再叠出第二份内边距（有 `appBar` 时凭空多一条状态栏高度的空白）；需要贴边绘制时改读 `View.of(context).padding`
 
 ### Breaking changes
 

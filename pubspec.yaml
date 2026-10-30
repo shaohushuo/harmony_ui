@@ -1,6 +1,6 @@
 name: harmony_ui
 description: "Material/Cupertino-style widget library that implements the HarmonyOS design language for Flutter."
-version: 0.3.0
+version: 0.4.0
 repository: https://atomgit.com/oh-flutter/harmony_ui
 topics:
   - ui
