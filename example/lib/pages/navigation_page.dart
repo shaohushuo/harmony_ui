@@ -45,6 +45,15 @@ class NavigationPage extends StatelessWidget {
           child: _AppBarSlotsDemo(),
         ),
         const DemoSection(
+          title: '标题栏 OhosAppBar（状态栏分段着色 / heightOf）',
+          description:
+              'statusBarBackgroundColor 把背景拆成「状态栏段 + 工具栏段」：沉浸式页面'
+              '常见的「状态栏 = 页面底色、工具栏 = 卡片色」。内边距仍由组件吸收，'
+              'preferredSize 与总高都不变；heightOf 给出含状态栏内边距的总高，'
+              '自己包顶栏时不必再手算。',
+          child: _StatusBarColorDemo(),
+        ),
+        const DemoSection(
           title: '子页签 OhosTabBar（下划线样式）',
           description: '指示条 24x3vp，激活项品牌色，底部背景色填充与页面一致。',
           child: _TabBarDemo(type: OhosTabBarType.underline),
@@ -167,6 +176,96 @@ class _StatusBarInsetDemo extends StatelessWidget {
               onPressed: () {},
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// [OhosAppBar.statusBarBackgroundColor] 与 [OhosAppBar.heightOf]。
+///
+/// 和 [_StatusBarInsetDemo] 一样注入 24vp 模拟状态栏：真机上这个内边距由系统
+/// 给出，gallery 的示例卡片不在屏幕顶部，不注入就看不见那条色带。
+class _StatusBarColorDemo extends StatelessWidget {
+  const _StatusBarColorDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        padding: const EdgeInsets.only(top: 24),
+      ),
+      child: const _StatusBarColorDemoBody(),
+    );
+  }
+}
+
+/// 顶栏本体。放在 `MediaQuery` 之下是因为 [OhosAppBar.heightOf] 要读同一条
+/// 内边距 —— 用外层 context 调它只会拿到注入前的 0。
+class _StatusBarColorDemoBody extends StatelessWidget {
+  const _StatusBarColorDemoBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final double total = OhosAppBar.heightOf(context, height: 56);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _framed(
+          context,
+          caption: '默认：一段式背景，状态栏那条与工具栏同色',
+          bar: const OhosAppBar(
+            title: Text('消息'),
+            backgroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _framed(
+          context,
+          caption: 'statusBarBackgroundColor：状态栏 = 页面底色，工具栏 = 卡片色',
+          bar: const OhosAppBar(
+            title: Text('消息'),
+            backgroundColor: Colors.white,
+            statusBarBackgroundColor: Color(0xFFE8EBF0),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'heightOf(context, height: 56) = ${total.toStringAsFixed(0)}vp'
+          '（56 工具栏 + ${(total - 56).toStringAsFixed(0)} 状态栏内边距），'
+          'preferredSize 仍是 56vp',
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textSecondaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _framed(BuildContext context, {required String caption, required OhosAppBar bar}) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          caption,
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textSecondaryColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: theme.textTertiaryColor.withValues(alpha: 0.4),
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: bar,
+          ),
         ),
       ],
     );

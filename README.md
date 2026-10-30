@@ -48,6 +48,7 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 - **零平台依赖**：纯 Dart / Flutter 实现，唯一第三方依赖为二维码生成 `qr` 包。
 - **完整控件覆盖**：官方「控件概览」6 大类 42 个控件全部实现，见下方清单。
 - **UI Design Kit 增强能力**：点光源、按压阴影、侧边栏/侧边菜单、横滑列表项、常驻通知、动态模糊标题栏、可展开操作栏、分层图标、应用内多窗入口等，对照华为「UI Design Kit 能力」文档实现。
+- **索引与放大镜**：`OhosAlphabetIndexer` 等高槽位（布局 / 字号 / 命中同源，父级压高度时整条跟着缩），拖动时手指旁出现放大镜；`OhosMagnifier` + `OhosMagnifierController` + `OhosMagnifierPosition` 也能独立用于文本选择等「跟随手指」的场景。
 
 ## 安装
 
@@ -144,8 +145,8 @@ class MyApp extends StatelessWidget {
 | 分隔器 | `OhosDivider` |
 | 进度条 | `OhosProgressIndicator`（圆形 / 线性）|
 | 新事件标记 | `OhosBadge`（数字 / 红点）|
-| 索引条 | `OhosAlphabetIndexer`（拖动时手指旁出现放大镜）|
-| 放大镜 | `OhosMagnifier`（跟随手指的浮层，也可用于文本选择）|
+| 索引条 | `OhosAlphabetIndexer`（等高槽位 · 拖动放大镜 · `selectedIndex` 受控高亮 · `onSelectEnd`）|
+| 放大镜 | `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`（跟随手指的浮层，也可用于文本选择）|
 | 滚动条 | `OhosScrollbar` |
 | 即时反馈 / 即时操作 | `showOhosToast` / `showOhosSnackBar` |
 | 气泡提示 | `showOhosPopup` |
@@ -435,6 +436,142 @@ OhosAppBar(
 - `OhosLayeredIcon`：背景板 + 前景图标合成，支持缩放与描边。
 - `OhosMultiWindowEntry`：应用内多窗入口，无多窗能力设备自动禁用（灰化、不可点）。
 
+## 索引与放大镜（AlphabetIndexer / Magnifier）
+
+索引条改为**等高槽位**并支持受控高亮，拖动时手指旁出现放大镜；标题栏可以把状态栏
+那一段单独着色。示例见 `example/lib/pages/display_page.dart`（展示类 →「索引条
+OhosAlphabetIndexer」「放大镜 OhosMagnifier」）与
+`example/lib/pages/navigation_page.dart`（导航类 →「状态栏分段着色」）。
+
+<p align="center">
+  <img src="doc/screenshots/mag_01_indexer_drag.png" alt="索引条拖动放大镜" width="230"/>
+  <img src="doc/screenshots/mag_02_indexer_custom_bubble.png" alt="自定义泡泡 magnifierBuilder" width="230"/>
+  <img src="doc/screenshots/mag_03_magnifier_strip.png" alt="放大镜跟随色带" width="230"/>
+  <img src="doc/screenshots/appbar_01_statusbar_band.png" alt="状态栏分段着色" width="230"/>
+</p>
+
+### 索引条 OhosAlphabetIndexer
+
+- **等高槽位**：布局、字号与「`dy → 字母`」命中用同一个 slot 高度，视觉格与命中格
+  完全重合；槽位高度取自父级约束（`LayoutBuilder` 的 `constraints.maxHeight`，无界
+  时退回 `size.height`）。调用方不再需要按 `size` 手算第二套几何。
+- **`size` 只是上限**：宽度按原值使用，高度是期望值 —— 父级给的高度更小时整条跟着
+  缩、字号同步缩小（可拖分隔条的面板把 22 字母压到 130 高时不再 `overflowed`）。
+- **整条都是命中区**（`HitTestBehavior.opaque`）：24vp 宽的条只有中间约 12vp 可点的
+  日子过去了，字间空隙与两侧留白不再把事件漏给 `Stack` 下层的列表。
+
+三条通道各司其职：
+
+| 通道 | 触发时机 | 典型用途 |
+| --- | --- | --- |
+| `onSelected` | **过程**：点按落指必报（含当前已高亮的字母）；拖动只在跨格时报，逐帧不通知 | 列表 `jumpTo` 跟手 |
+| `onSelectEnd` | **结果**：tap up / drag end / drag cancel，恰好一次，带回最终字母 | 「松手才定位」、Toast |
+| `selectedIndex` | 代码发起的定位（恢复上次位置 / 索引与列表互跳） | 受控高亮，不必订阅滚动 |
+
+```dart
+OhosAlphabetIndexer(
+  indexer: const <String>['A', 'B', /* … */ 'Y', 'Z'],
+  size: const Size(24, 220),
+  selectedIndex: _selected,        // 代码定位到 M 也点亮 M
+  showMagnifier: true,             // 拖动时手指旁的泡泡（点按不显示）
+  magnifierBuilder: (BuildContext context, String letter) => myBubble(letter),
+  onSelected: _jumpTo,             // 过程：跨一格定位一次
+  onSelectEnd: (String letter) => showOhosToast(context, '定位到 $letter'),
+)
+```
+
+> **从 0.3.0 迁移**：`itemHeight` 已删除，槽位高度改由父级约束决定。旧写法
+> `itemHeight: perLetter` + `size` 高 `perLetter × 字母数` 的结果不变，删掉这个
+> 实参即可。
+
+### 放大镜 OhosMagnifier
+
+三个角色分开：**画什么**（`OhosMagnifier`）、**挂在哪**（`OhosMagnifierController`）、
+**放在哪**（`OhosMagnifierPosition`）。
+
+```dart
+// 泡泡本体：text 放一个字符，child 放任意内容（child 优先）
+const OhosMagnifier(text: 'M');
+const OhosMagnifier(text: 'Z', size: Size.square(60));
+OhosMagnifier(child: myCapsule, size: const Size(112, 44));
+```
+
+```dart
+// 跟随手指：拖动的三段分别对应 show / update / hide
+final OhosMagnifierController _magnifier = OhosMagnifierController();
+
+void _onDragStart(DragStartDetails details) => _magnifier.show(
+      context,
+      anchor: details.globalPosition, // 全局坐标
+      text: _valueAt(details.localPosition),
+      bubble: const Size(112, 44),
+      gap: 16,
+    );
+
+void _onDragUpdate(DragUpdateDetails details) => _magnifier.update(
+      details.globalPosition,
+      text: _valueAt(details.localPosition),
+    );
+
+void _onDragEnd(DragEndDetails details) => _magnifier.hide();
+
+@override
+void dispose() {
+  _magnifier.dispose(); // 释放 OverlayEntry，State.dispose 里必须调
+  super.dispose();
+}
+```
+
+- 泡泡进的是**根 `Overlay`**（`MaterialApp` / `WidgetsApp` 提供），所以能画在宿主
+  `SizedBox` 之外；整颗 `IgnorePointer`，不抢宿主手势。祖先没有 `Overlay` 时 `show`
+  返回 `false` 并打一条 `debugPrint`，不显示也不崩。
+- 落点是纯函数 `OhosMagnifierPosition.resolve`（无 RenderObject，边界情况可直接单测）：
+  泡泡落在手指的**四个角**之一，纵横向各留 `gap`；该角放不下就翻到同行另一个角、
+  再换到另一行；四个角都放不下才夹进安全区，此时 `placement.side` 按**夹紧后的最终
+  矩形**重算 —— 沿用首选角会让调用方把箭头 / 尾巴画到反方向。
+- `OhosMagnifierSide.auto`（默认）取离屏幕内侧更近的那个角；宽度上限为可用宽度的
+  一半，避免泡泡把整条索引条盖住。
+- 墨水屏（`OhosThemeData.ink()`，即 `monochrome`）下自动换成纯黑描边并关掉入场动画。
+
+### 标题栏状态栏分段着色
+
+```dart
+OhosAppBar(
+  title: const Text('消息'),
+  backgroundColor: theme.cardColor,               // 工具栏段
+  statusBarBackgroundColor: theme.backgroundColor, // 状态栏段（MediaQuery.padding.top）
+)
+
+// 自己包顶栏时用 heightOf 拿含状态栏内边距的总高，不必手算
+final double total = OhosAppBar.heightOf(context, height: 56, bottom: tabBar);
+```
+
+- `primary: true`（默认）时背景被拆成两段，内边距仍由组件吸收：布局与总高不变。
+  `preferredSize` 恒为 `height + bottom.preferredSize.height`（不含内边距，因为
+  `Scaffold` 的 `appBarMaxHeight` 已经加过一次，重复加会多出一条空白）。
+- 名字刻意不叫 `statusBarColor`：那是 `SystemUiOverlayStyle` 里控制图标明暗的字段。
+- 与 `scrollEffect` / `lightMaterial` 叠加时，这一段保持纯色，不参与滚动驱动的
+  重着色。
+
+### 安全区只让一次
+
+`OhosScaffold` 与 `OhosAppBar` 对 `MediaQuery.padding` 的认领口径：
+
+| 场景 | 顶部内边距由谁让 | 底部内边距由谁让 |
+| --- | --- | --- |
+| `appBar: OhosAppBar(primary: true)` | 标题栏自己（背景铺到屏幕顶端，标题下移） | 有 `bottomNavigationBar` 时由它让，body 不再让 |
+| `appBar: OhosAppBar(primary: false)` | `OhosScaffold` 替它让一次 | 同上 |
+| 没有 `appBar` | `OhosScaffold` 的 body | 同上 |
+
+- 四条边到这里都已由「栏 / 页面容器 / 底部导航」认领完毕，`OhosScaffold` 会把它们
+  一并从 body 子树的 `MediaQuery` 里摘掉：body 里再包一层 `SafeArea` 是空操作，
+  `MediaQuery.paddingOf(context)` 读到的四边都是 0。对照演示见导航类「安全区：
+  body 里再套 SafeArea 不叠第二份」。
+- 需要贴着屏幕边缘绘制（背景要铺到状态栏底下）时，原始内边距读
+  `View.of(context).padding`；`MediaQuery.viewPaddingOf` 会被同一处一起摘掉，不可靠。
+- 同一条内边距让两次 = 多出一条空白；一次都不让 = 内容压进状态栏。`primary: false`
+  只用于「这条栏不在屏幕顶部」，或栏被放在 `OhosScaffold` 之外、调用方已自己让过。
+
 ## 使用示例
 
 
@@ -718,6 +855,10 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 | 半模态面板（交互）| `doc/screenshots/gallery_bottom_sheet.png` |
 | 气泡提示（交互）| `doc/screenshots/gallery_popup.png` |
 | 菜单（交互）| `doc/screenshots/gallery_menu.png` |
+| 展示类（交互）：索引条拖动，手指旁出放大镜 | `doc/screenshots/mag_01_indexer_drag.png` |
+| 展示类（交互）：`magnifierBuilder` 自定义泡泡 | `doc/screenshots/mag_02_indexer_custom_bubble.png` |
+| 展示类（交互）：独立放大镜跟随色带报色值 | `doc/screenshots/mag_03_magnifier_strip.png` |
+| 导航类：标题栏状态栏分段着色 / `heightOf` | `doc/screenshots/appbar_01_statusbar_band.png` |
 
 ## 设计来源
 
