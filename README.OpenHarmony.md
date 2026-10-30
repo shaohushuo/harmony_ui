@@ -38,7 +38,8 @@ Current version and branch mapping:
 
 | Library version | Branch / TAG | Flutter version |
 | --- | --- | --- |
-| 0.3.0 | `main` / `v0.3.0` | oh-3.35.7-release |
+| 0.4.0 | `main` / `v0.4.0` | oh-3.35.7-release |
+| 0.3.0 | `v0.3.0` | oh-3.35.7-release |
 | 0.2.0 | historical commit | oh-3.35.7-release |
 | 0.1.0 | historical commit | oh-3.35.7-release |
 
@@ -196,7 +197,7 @@ theme.typography.bodyLarge;  // text style
 
 v0.3.0 adds an e-ink theme, app bar layout and parameter enhancements, input/container widget additions, plus narrow-screen, large-text and focusNode lifecycle fixes.
 
-The current development build completes the alphabet indexer and magnifier: `OhosAlphabetIndexer` now uses equal-height slots and gains `selectedIndex` / `onSelectEnd` / `showMagnifier` / `magnifierBuilder` (**breaking**: `itemHeight` removed, slot height now comes from the parent constraints); new `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`; `OhosAppBar` gains `statusBarBackgroundColor` and the static `heightOf`. See the gallery pages "Display → Alphabet indexer / Magnifier" and "Navigation → Status bar band". See [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md) for details.
+v0.4.0 completes the alphabet indexer and magnifier: `OhosAlphabetIndexer` now uses equal-height slots and gains `selectedIndex` / `onSelectEnd` / `showMagnifier` / `magnifierBuilder` (**breaking**: `itemHeight` removed, slot height now comes from the parent constraints); new `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`; `OhosAppBar` gains `statusBarBackgroundColor` and the static `heightOf`; `OhosScaffold` no longer exposes already-consumed insets to its `body` subtree. See the gallery pages "Display → Alphabet indexer / Magnifier" and "Navigation → Status bar band". See [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md) for details.
 
 ## FAQ
 

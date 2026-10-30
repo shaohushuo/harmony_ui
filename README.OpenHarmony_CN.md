@@ -38,7 +38,8 @@ flutter pub get
 
 | 库版本 | 分支 / TAG | Flutter 版本 |
 | --- | --- | --- |
-| 0.3.0 | `main` / `v0.3.0` | oh-3.35.7-release |
+| 0.4.0 | `main` / `v0.4.0` | oh-3.35.7-release |
+| 0.3.0 | `v0.3.0` | oh-3.35.7-release |
 | 0.2.0 | 历史提交 | oh-3.35.7-release |
 | 0.1.0 | 历史提交 | oh-3.35.7-release |
 
@@ -196,7 +197,7 @@ theme.typography.bodyLarge;  // 文字样式
 
 v0.3.0 新增墨水屏主题、标题栏布局与参数增强、输入 / 容器组件补齐，并完成窄屏 / 大字号适配与 focusNode 生命周期修复。
 
-当前开发版（未发版）补齐索引条与放大镜一整套：`OhosAlphabetIndexer` 改为等高槽位并新增 `selectedIndex` / `onSelectEnd` / `showMagnifier` / `magnifierBuilder`（**破坏性变更**：删除 `itemHeight`，槽位高度改由父级约束决定）；新增 `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`；`OhosAppBar` 新增 `statusBarBackgroundColor` 与静态 `heightOf`。示例见 gallery「展示类 → 索引条 / 放大镜」「导航类 → 状态栏分段着色」。详见 [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)。
+v0.4.0 补齐索引条与放大镜一整套：`OhosAlphabetIndexer` 改为等高槽位并新增 `selectedIndex` / `onSelectEnd` / `showMagnifier` / `magnifierBuilder`（**破坏性变更**：删除 `itemHeight`，槽位高度改由父级约束决定）；新增 `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`；`OhosAppBar` 新增 `statusBarBackgroundColor` 与静态 `heightOf`；`OhosScaffold` 不再把已被认领的内边距暴露给 `body` 子树。示例见 gallery「展示类 → 索引条 / 放大镜」「导航类 → 状态栏分段着色」。详见 [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)。
 
 ## 常见问题
 
