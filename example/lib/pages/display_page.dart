@@ -83,8 +83,19 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '索引条 OhosAlphabetIndexer',
-          description: '右侧字母索引，点击 / 拖动快速定位；拖动时手指旁出现放大镜。',
+          description:
+              '等高槽位：布局、字号与命中同一套几何，父级压高度时整条跟着缩。'
+              'onSelected 是过程（跨格才报）、onSelectEnd 是结果（抬手一次）、'
+              'selectedIndex 让代码定位与手指点亮同一个字母；拖动时手指旁出放大镜。',
           child: DemoCard(child: _IndexerDemo()),
+        ),
+        const DemoSection(
+          title: '放大镜 OhosMagnifier',
+          description:
+              '跟随手指的浮层泡泡：text 放一个字符，child 放任意内容；落点由 '
+              'OhosMagnifierPosition 求解，放不下自动换角 / 换行。泡泡进根 Overlay，'
+              '画在宿主之外也不抢手势。',
+          child: DemoCard(child: _MagnifierDemo()),
         ),
         const DemoSection(
           title: '滚动条 OhosScrollbar',
@@ -274,67 +285,446 @@ class _ProgressDemoState extends State<_ProgressDemo> {
   }
 }
 
-class _IndexerDemo extends StatelessWidget {
+/// 索引条 + 放大镜 + 受控高亮。
+///
+/// 三条通道各司其职：`onSelected` 是过程（拖动每跨一格一次，用来滚列表），
+/// `onSelectEnd` 是结果（抬手恰好一次，用来提示），`selectedIndex` 让代码发起
+/// 的定位（那颗「跳到 M」）与手指拖动点亮同一个字母。
+class _IndexerDemo extends StatefulWidget {
   const _IndexerDemo();
+
+  @override
+  State<_IndexerDemo> createState() => _IndexerDemoState();
+}
+
+class _IndexerDemoState extends State<_IndexerDemo> {
+  static const double _rowExtent = 30;
+  static const List<String> _letters = <String>[
+    'A',
+    'B',
+    'C',
+    'D',
+    'F',
+    'G',
+    'H',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'P',
+    'Q',
+    'S',
+    'T',
+    'W',
+    'X',
+    'Y',
+    'Z',
+  ];
+  static const Map<String, List<String>> _cities = <String, List<String>>{
+    'A': <String>['鞍山', '安庆', '安顺'],
+    'B': <String>['北京', '保定', '北海'],
+    'C': <String>['成都', '长沙', '长春'],
+    'D': <String>['大连', '东莞', '大理'],
+    'F': <String>['福州', '佛山', '阜阳'],
+    'G': <String>['广州', '贵阳', '桂林'],
+    'H': <String>['杭州', '哈尔滨', '海口'],
+    'J': <String>['济南', '嘉兴', '九江'],
+    'K': <String>['昆明', '喀什', '开封'],
+    'L': <String>['兰州', '洛阳', '丽江'],
+    'M': <String>['绵阳', '牡丹江', '马鞍山'],
+    'N': <String>['南京', '宁波', '南昌'],
+    'P': <String>['莆田', '攀枝花', '平顶山'],
+    'Q': <String>['青岛', '泉州', '齐齐哈尔'],
+    'S': <String>['苏州', '沈阳', '石家庄'],
+    'T': <String>['天津', '太原', '台州'],
+    'W': <String>['武汉', '无锡', '温州'],
+    'X': <String>['厦门', '西安', '徐州'],
+    'Y': <String>['延安', '烟台', '宜昌'],
+    'Z': <String>['郑州', '珠海', '中山'],
+  };
+
+  /// 展平后的行：分组首行是字母，其余是城市。
+  static final List<String> _rows = <String>[
+    for (final String letter in _letters) ...<String>[
+      letter,
+      ..._cities[letter]!,
+    ],
+  ];
+
+  /// 字母 → 分组首行的行号，`jumpTo` 与受控高亮共用。
+  static final Map<String, int> _firstRow = _buildFirstRow();
+
+  static Map<String, int> _buildFirstRow() {
+    final Map<String, int> offsets = <String, int>{};
+    int row = 0;
+    for (final String letter in _letters) {
+      offsets[letter] = row;
+      row += 1 + _cities[letter]!.length;
+    }
+    return offsets;
+  }
+
+  final ScrollController _scroller = ScrollController();
+  int _selected = 0;
+  bool _showMagnifier = true;
+  bool _customBubble = false;
+
+  @override
+  void dispose() {
+    _scroller.dispose();
+    super.dispose();
+  }
+
+  void _jumpTo(String letter) {
+    final int? row = _firstRow[letter];
+    if (row == null) {
+      return;
+    }
+    if (_scroller.hasClients) {
+      final double target = row * _rowExtent;
+      final double max = _scroller.position.maxScrollExtent;
+      _scroller.jumpTo(target > max ? max : target);
+    }
+    setState(() => _selected = _letters.indexOf(letter));
+  }
 
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Wrap(
+          spacing: 20,
+          runSpacing: 6,
+          children: <Widget>[
+            _toggle(
+              '拖动放大镜',
+              _showMagnifier,
+              (bool value) => setState(() => _showMagnifier = value),
+            ),
+            _toggle(
+              '自定义泡泡',
+              _customBubble,
+              (bool value) => setState(() => _customBubble = value),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: SizedBox(
+                height: 220,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.backgroundColor,
+                      border: Border.all(
+                        color: theme.textTertiaryColor.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: ListView.builder(
+                      controller: _scroller,
+                      itemExtent: _rowExtent,
+                      itemCount: _rows.length,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemBuilder: (BuildContext context, int index) {
+                        final String text = _rows[index];
+                        final bool header = _firstRow.containsKey(text);
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            text,
+                            style: theme.typography.bodySmall?.copyWith(
+                              color: header
+                                  ? theme.highlightColor
+                                  : theme.textSecondaryColor,
+                              fontWeight:
+                                  header ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            OhosAlphabetIndexer(
+              indexer: _letters,
+              size: const Size(24, 220),
+              selectedIndex: _selected,
+              showMagnifier: _showMagnifier,
+              // 泡泡内容换成品牌色圆角方块；仍走同一套落点求解。
+              magnifierBuilder: _showMagnifier && _customBubble
+                  ? (BuildContext context, String letter) =>
+                        _CustomMagnifierBubble(letter: letter)
+                  : null,
+              // 过程：跨一格就定位一次，列表跟着手指走。
+              onSelected: _jumpTo,
+              // 结果：抬手报一次最终字母。挂在 onSelected 上会每跨一格插一层
+              // Overlay（每层存活 2 秒），拖过几个字母就在屏幕中央叠成一片。
+              onSelectEnd: (String letter) => showOhosToast(
+                context,
+                '定位到 $letter',
+                position: OhosToastPosition.center,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        OhosButton(
+          style: OhosButtonStyle.tonal,
+          onPressed: () => _jumpTo('M'),
+          child: const Text('代码定位到 M（selectedIndex）'),
+        ),
+      ],
+    );
+  }
+
+  Widget _toggle(
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Row(
       children: <Widget>[
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '城市列表：点击右侧字母定位',
-              style: theme.typography.bodySmall?.copyWith(
-                color: theme.textSecondaryColor,
+        OhosCheckbox(value: value, size: 20, onChanged: onChanged),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textSecondaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// `magnifierBuilder` 的返回值会被放进 48vp 的泡泡里（超出等比缩小），
+/// 自定义内容要守住这个尺寸。
+class _CustomMagnifierBubble extends StatelessWidget {
+  const _CustomMagnifierBubble({required this.letter});
+
+  final String letter;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Container(
+      width: 44,
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: theme.highlightColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        letter,
+        style: const TextStyle(
+          inherit: false,
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// 独立放大镜：`show` / `update` / `hide` 挂在拖动的三段上。
+///
+/// 泡泡进的是根 `Overlay`，所以它能画在这条色带之外；`IgnorePointer` 保证
+/// 拖动的手势仍然归色带自己。
+class _MagnifierDemo extends StatefulWidget {
+  const _MagnifierDemo();
+
+  @override
+  State<_MagnifierDemo> createState() => _MagnifierDemoState();
+}
+
+class _MagnifierDemoState extends State<_MagnifierDemo> {
+  static const List<_Swatch> _swatches = <_Swatch>[
+    _Swatch(Color(0xFF0A59F7), '#0A59F7'),
+    _Swatch(Color(0xFF24B7A4), '#24B7A4'),
+    _Swatch(Color(0xFF64BB5C), '#64BB5C'),
+    _Swatch(Color(0xFF8BD700), '#8BD700'),
+    _Swatch(Color(0xFFFFD900), '#FFD900'),
+    _Swatch(Color(0xFFF9A01E), '#F9A01E'),
+    _Swatch(Color(0xFFED6B2A), '#ED6B2A'),
+    _Swatch(Color(0xFFE84026), '#E84026'),
+    _Swatch(Color(0xFFD74187), '#D74187'),
+    _Swatch(Color(0xFF8B7FE8), '#8B7FE8'),
+    _Swatch(Color(0xFF5E90F3), '#5E90F3'),
+    _Swatch(Color(0xFF767676), '#767676'),
+  ];
+
+  final OhosMagnifierController _magnifier = OhosMagnifierController();
+  final GlobalKey _stripKey = GlobalKey();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _magnifier.dispose();
+    super.dispose();
+  }
+
+  void _onDragStart(DragStartDetails details) {
+    _hit(details.localPosition);
+    _magnifier.show(
+      context,
+      anchor: details.globalPosition,
+      child: _HexBubble(swatch: _swatches[_index]),
+      bubble: const Size(112, 44),
+      gap: 16,
+    );
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    _hit(details.localPosition);
+    _magnifier.update(
+      details.globalPosition,
+      child: _HexBubble(swatch: _swatches[_index]),
+    );
+  }
+
+  void _hit(Offset local) {
+    final RenderBox? box =
+        _stripKey.currentContext?.findRenderObject() as RenderBox?;
+    final double width = box?.size.width ?? 0;
+    if (width <= 0) {
+      return;
+    }
+    final int next =
+        (local.dx / width * _swatches.length).floor().clamp(
+              0,
+              _swatches.length - 1,
+            );
+    if (next != _index) {
+      setState(() => _index = next);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // 泡泡本身就是个 Widget，静态摆出来也能看清算法给的落点长什么样。
+        const Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            OhosMagnifier(text: 'M'),
+            OhosMagnifier(text: 'Z', size: Size.square(60)),
+            OhosMagnifier(
+              size: Size(112, 44),
+              child: _HexBubble(
+                swatch: _Swatch(Color(0xFF0A59F7), '#0A59F7'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          '左右拖动色带，泡泡跟着手指报出色值',
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textSecondaryColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          key: _stripKey,
+          onHorizontalDragStart: _onDragStart,
+          onHorizontalDragUpdate: _onDragUpdate,
+          onHorizontalDragEnd: (DragEndDetails details) => _magnifier.hide(),
+          onHorizontalDragCancel: () => _magnifier.hide(),
+          behavior: HitTestBehavior.opaque,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                children: <Widget>[
+                  for (int i = 0; i < _swatches.length; i++)
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: _swatches[i].color,
+                          border: i == _index
+                              ? Border.all(color: Colors.white, width: 2)
+                              : null,
+                        ),
+                        // 无子节点的 DecoratedBox 在松散高度约束下会塌成 0 高：
+                        // 给它一个撑满的壳，色块才真的画出来。
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
         ),
-        OhosAlphabetIndexer(
-          indexer: const <String>[
-            'A',
-            'B',
-            'C',
-            'D',
-            'E',
-            'F',
-            'G',
-            'H',
-            'I',
-            'J',
-            'K',
-            'L',
-            'M',
-            'N',
-            'O',
-            'P',
-            'Q',
-            'R',
-            'S',
-            'T',
-            'U',
-            'V',
-            'W',
-            'X',
-            'Y',
-            'Z',
-            '#',
-          ],
-          size: const Size(24, 270),
-          // 拖动中的即时反馈由放大镜负责；Toast 是「结果」提示，挂在
-          // onSelectEnd 上抬手报一次。挂在 onSelected 上会每跨一格插一层
-          // Overlay（每层存活 2 秒），拖过几个字母就在屏幕中央叠成一片。
-          onSelected: (_) {},
-          onSelectEnd: (String c) => showOhosToast(
-            context,
-            '选中 $c',
-            position: OhosToastPosition.center,
-          ),
-        ),
       ],
+    );
+  }
+}
+
+class _Swatch {
+  const _Swatch(this.color, this.label);
+
+  final Color color;
+  final String label;
+}
+
+class _HexBubble extends StatelessWidget {
+  const _HexBubble({required this.swatch});
+
+  final _Swatch swatch;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Container(
+      height: 44,
+      alignment: Alignment.center,
+      // 宽度交给外层泡泡（`bubble` 尺寸 + FittedBox）：大字号下文字变宽时
+      // 整块等比缩小，而不是把固定 112vp 的胶囊撑破。
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: swatch.color,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.textTertiaryColor.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            swatch.label,
+            style: TextStyle(
+              inherit: false,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: theme.textPrimaryColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
