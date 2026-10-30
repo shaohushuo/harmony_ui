@@ -24,6 +24,19 @@ class OhosScaffold extends StatelessWidget {
   final OhosAppBar? appBar;
 
   /// The primary content of the page.
+  ///
+  /// Safe-area insets are already consumed on all four sides — both as
+  /// geometry and as padding in the [MediaQuery] this subtree sees. Wrapping
+  /// [body] in a [SafeArea] therefore adds nothing; before that removal it
+  /// added a second copy of the status-bar / gesture-bar inset whenever an
+  /// [OhosAppBar] or a [bottomNavigationBar] had taken care of it, and
+  /// `MediaQuery.paddingOf(context)` read non-zero inside the body.
+  ///
+  /// Painting edge-to-edge from inside [body] — a background meant to run
+  /// under the status bar, say — needs the raw insets instead:
+  /// `View.of(context).padding`, or `MediaQueryData.fromView(View.of(context))`.
+  /// `MediaQuery.viewPaddingOf` is not a reliable substitute here: the same
+  /// removal subtracts the consumed amount from `viewPadding` too.
   final Widget? body;
 
   /// Optional bottom navigation bar.
@@ -72,7 +85,25 @@ class OhosScaffold extends StatelessWidget {
                     // 同理：底部导航自带 `SafeArea`，body 再让一次同样会多出
                     // 一条 padding.bottom 的缝（列表末项被整体顶起）。
                     bottom: bottomNavigationBar == null,
-                    child: body ?? const SizedBox.shrink(),
+                    // 只让几何还不够：`SafeArea` 只把**自己让过的那几个边**从子树
+                    // 的 `MediaQuery` 里摘掉，`top: false` / `bottom: false` 的那
+                    // 一边仍原样留给后代。于是调用方在 body 里按最常见写法再包一层
+                    // `SafeArea`（或自己读 `padding` 做偏移）就会叠出第二份 ——
+                    // 有 AppBar 时凭空多一条状态栏高度的空白。
+                    // 四个边到这里都已经由本页（栏 / 页面容器 / 底部导航）认领完毕，
+                    // 统一摘干净，与 Flutter `Scaffold` 的 body 槽位一致（它也是
+                    // `removeTopPadding: appBar != null` 那套）。
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      // 左右这两边 `SafeArea` 一直在让，几何与 `MediaQuery` 早就
+                      // 一致；这里重复摘一次是幂等的。四边写全，免得读者以为
+                      // 漏了哪边、也免得下次改 `top` / `bottom` 的取值时再想一遍。
+                      removeLeft: true,
+                      removeTop: true,
+                      removeRight: true,
+                      removeBottom: true,
+                      child: body ?? const SizedBox.shrink(),
+                    ),
                   ),
                 ),
                 if (bottomNavigationBar != null)

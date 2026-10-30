@@ -3,6 +3,7 @@ import 'package:ohos_icons/ohos_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
+import 'safe_area_page.dart';
 
 /// 导航类：标题栏 / 子页签（下划线 + 胶囊）/ 底部页签 / 导航点（轮播）
 class NavigationPage extends StatelessWidget {
@@ -21,6 +22,14 @@ class NavigationPage extends StatelessWidget {
               '状态栏下面 —— 栏高变成 height + inset。示例里注入 24vp 模拟状态栏'
               '（真机上这个值由系统给出），下面对照 80vp / 56vp 两种高度。',
           child: _StatusBarInsetDemo(),
+        ),
+        const DemoSection(
+          title: '安全区：body 里再套 SafeArea 不叠第二份',
+          description:
+              'OhosScaffold 已把四条边的安全区让成几何，并从 body 子树的 MediaQuery 里摘掉，'
+              '所以 body 里再包一层 SafeArea 是空操作。点开对照页：两栏的「顶」「底」条应齐平，'
+              '栏内读到的 padding 四边都是 0。',
+          child: _SafeAreaDemoEntry(),
         ),
         const DemoSection(
           title: '标题栏 OhosAppBar（沉浸光感）',
@@ -66,6 +75,25 @@ class NavigationPage extends StatelessWidget {
           child: _SwiperDemo(),
         ),
       ],
+    );
+  }
+}
+
+/// 打开整屏对照页：两栏只有「body 里是否多包一层 SafeArea」这一个差别。
+class _SafeAreaDemoEntry extends StatelessWidget {
+  const _SafeAreaDemoEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OhosButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(builder: (_) => const SafeAreaPage()),
+        ),
+        child: const Text('打开对照页'),
+      ),
     );
   }
 }

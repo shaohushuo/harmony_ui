@@ -2698,6 +2698,58 @@ void main() {
       expect(body.bottom, nav.top, reason: 'body 底部紧贴导航，不叠第二层留白');
     });
 
+    testWidgets('body 子树不再看到已被页面容器认领的内边距', (
+      WidgetTester tester,
+    ) async {
+      // `SafeArea(top: false)` 只让几何，不会把这一边从子树的 `MediaQuery` 里
+      // 摘掉：调用方在 body 里按最常见写法再包一层 `SafeArea`，就会凭空多出
+      // 一条状态栏高度的空白；四条边都成立（左右是横屏刘海，底部是导航条）。
+      // body 里自己读 `MediaQuery.padding` 做偏移的代码同样会重复计算。
+      EdgeInsets? seen;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(800, 600),
+                padding: EdgeInsets.only(
+                  left: 44,
+                  top: 24,
+                  right: 44,
+                  bottom: 16,
+                ),
+              ),
+              child: OhosScaffold(
+                appBar: const OhosAppBar(title: Text('标题')),
+                bottomNavigationBar: const SizedBox(key: Key('nav'), height: 48),
+                body: Builder(
+                  builder: (BuildContext context) {
+                    seen = MediaQuery.paddingOf(context);
+                    return const SafeArea(
+                      child: SizedBox.expand(key: Key('inner')),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final Rect bar = tester.getRect(find.byType(OhosAppBar));
+      final Rect inner = tester.getRect(find.byKey(const Key('inner')));
+      final Rect nav = tester.getRect(find.byKey(const Key('nav')));
+      expect(inner.top, bar.bottom, reason: 'body 顶部紧贴栏底，不再多吃 24');
+      expect(inner.bottom, nav.top, reason: 'body 底部紧贴导航，不再多吃 16');
+      expect(inner.left, 44, reason: '左右安全区只让一次');
+      expect(inner.right, 800 - 44, reason: '左右安全区只让一次');
+      expect(
+        seen,
+        EdgeInsets.zero,
+        reason: 'body 内读到的 padding 已被页面容器消费干净',
+      );
+    });
+
     testWidgets('primary: false 的 AppBar 在 OhosScaffold 里仍让出状态栏', (
       WidgetTester tester,
     ) async {
