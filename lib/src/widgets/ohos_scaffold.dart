@@ -50,28 +50,47 @@ class OhosScaffold extends StatelessWidget {
     // present in, and drawers are wired up.
     return Scaffold(
       backgroundColor: background,
-      body: SafeArea(
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: Column(
-                children: <Widget>[
-                  if (appBar != null) appBar!,
-                  Expanded(child: body ?? const SizedBox.shrink()),
-                  if (bottomNavigationBar != null) bottomNavigationBar!,
-                ],
-              ),
+      body: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: Column(
+              children: <Widget>[
+                // 顶部内边距分两种情况，横向（横屏刘海 / 挖孔）两种都得让：
+                // * `primary: true`（默认）：栏自己吸收 `padding.top` 并铺出
+                //   状态栏色带 —— 这一层必须 `top: false`，否则 SafeArea 会把
+                //   `MediaQuery.padding.top` 摘成 0，色带退化成 0 高；
+                // * `primary: false`：栏明确不吃顶部内边距（用于「不在屏幕顶部 /
+                //   调用方自己让过」），页面级容器得替它让一次，不然内容顶到
+                //   状态栏下面。
+                if (appBar != null)
+                  SafeArea(top: !appBar!.primary, bottom: false, child: appBar!),
+                Expanded(
+                  child: SafeArea(
+                    // 有 AppBar 时状态栏那一段已经被它占掉，body 再让一次就是
+                    // 双倍留白；没有 AppBar 时才由这里让。
+                    top: appBar == null,
+                    // 同理：底部导航自带 `SafeArea`，body 再让一次同样会多出
+                    // 一条 padding.bottom 的缝（列表末项被整体顶起）。
+                    bottom: bottomNavigationBar == null,
+                    child: body ?? const SizedBox.shrink(),
+                  ),
+                ),
+                if (bottomNavigationBar != null)
+                  SafeArea(top: false, child: bottomNavigationBar!),
+              ],
             ),
-            if (floatingActionButton != null)
-              Align(
-                alignment: Alignment.bottomRight,
+          ),
+          if (floatingActionButton != null)
+            Align(
+              alignment: Alignment.bottomRight,
+              child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: floatingActionButton,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
       drawer: drawer,
       endDrawer: endDrawer,

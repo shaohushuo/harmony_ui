@@ -1056,6 +1056,80 @@ void main() {
     });
   });
 
+  group('挂在根 Overlay 上的提示文本', () {
+    /// `OverlayEntry` 的祖先链里没有 `Material`，`MaterialApp` 会给这种位置
+    /// 兜底一个带 `TextDecorationStyle.double`（两道横线）的 `DefaultTextStyle`。
+    /// 提示自己只覆盖了颜色/字号，`decoration` 会漏下来，文字下面于是多两条线。
+    TextStyle? painted(WidgetTester tester, String label) {
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text(label), matching: find.byType(RichText)),
+      );
+      return (rich.text as TextSpan).style;
+    }
+
+    testWidgets('Toast 用主题字体，不带兜底双下划线', (WidgetTester tester) async {
+      late BuildContext host;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(fontFamily: 'HarmonyOS Sans'),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: Builder(
+                  builder: (BuildContext context) {
+                    host = context;
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      showOhosToast(host, '选中 I');
+      await tester.pump();
+      expect(painted(tester, '选中 I')?.decoration, TextDecoration.none);
+      // 之前这里漏成兜底的 `monospace`（真机上 `I` 是上下两横的等宽字形）。
+      expect(painted(tester, '选中 I')?.fontFamily, 'HarmonyOS Sans');
+
+      // 让 toast 自己摘掉，别把 2s 定时器留给下一条用例。
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('气泡提示不带兜底双下划线', (WidgetTester tester) async {
+      final GlobalKey target = GlobalKey();
+      late BuildContext host;
+      await tester.pumpWidget(
+        wrap(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Builder(
+                builder: (BuildContext context) {
+                  host = context;
+                  return const SizedBox(width: 40, height: 40);
+                },
+              ),
+              SizedBox(key: target, width: 40, height: 40),
+            ],
+          ),
+        ),
+      );
+
+      showOhosPopup(
+        context: host,
+        content: '长按扫码支付',
+        targetKey: target,
+      );
+      await tester.pump();
+      expect(painted(tester, '长按扫码支付')?.decoration, TextDecoration.none);
+      expect(painted(tester, '长按扫码支付')?.fontFamily, isNot('monospace'));
+
+      await tester.pump(const Duration(seconds: 2));
+    });
+  });
+
   group('OhosChipGroup', () {
     testWidgets('single-select mode reports tapped index', (
       WidgetTester tester,
@@ -1294,7 +1368,6 @@ void main() {
       expect(p.offset.dy, 24);
     });
 
-
     testWidgets('泡泡按默认口径绘制：48vp 圆 + 卡片底色 + hairline 描边', (
       WidgetTester tester,
     ) async {
@@ -1319,6 +1392,53 @@ void main() {
         (decoration.border! as Border).top.color,
         theme.textTertiaryColor.withValues(alpha: 0.3),
       );
+    });
+
+    testWidgets('挂在根 Overlay 里（无 Material 祖先）时字母不带双下划线', (
+      WidgetTester tester,
+    ) async {
+      // `MaterialApp` 在没有 `Material` 的祖先处把 `_errorTextStyle`（黄色
+      // `TextDecorationStyle.double`）当 `DefaultTextStyle`。气泡正是挂在那里，
+      // 之前字母下面会多出两条线 —— 这条用例钉住 `decoration`。
+      late BuildContext host;
+      final OhosMagnifierController controller = OhosMagnifierController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        wrap(
+          Builder(
+            builder: (BuildContext context) {
+              host = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      TextStyle? painted() {
+        final RichText rich = tester.widget<RichText>(
+          find.descendant(
+            of: find.byType(OhosMagnifier),
+            matching: find.byType(RichText),
+          ),
+        );
+        return (rich.text as TextSpan).style;
+      }
+
+      controller.show(host, anchor: const Offset(200, 300), text: 'A');
+      await tester.pumpAndSettle();
+      expect(painted()?.decoration, TextDecoration.none);
+      // 兜底样式同时带 `fontFamily: 'monospace'`，也是从外层继承下来的。
+      expect(painted()?.fontFamily, isNot('monospace'));
+
+      // `child` 分支同样可能塞进裸 `Text`，一并钉住。
+      controller.update(
+        const Offset(200, 300),
+        child: const Text('B'),
+      );
+      await tester.pumpAndSettle();
+      expect(painted()?.decoration, TextDecoration.none);
+      expect(painted()?.decorationStyle, isNot(TextDecorationStyle.double));
+      expect(painted()?.fontFamily, isNot('monospace'));
     });
 
     testWidgets('show / update / hide：泡泡进 Overlay 并跟随锚点', (
@@ -1434,6 +1554,42 @@ void main() {
       expect(find.byType(OhosMagnifier), findsNothing);
     });
 
+    testWidgets('自建 Overlay 但没有 MediaQuery 时也不抛（裸树可优雅退让）', (
+      WidgetTester tester,
+    ) async {
+      late BuildContext inner;
+      // 裸树：只有 Directionality + Overlay（`Overlay` 不要求 MediaQuery）。
+      // 注：flutter_test 的宿主总会注入一个 MediaQuery，所以这条用例锁的是
+      // 「裸树可用、不抛」这条契约，而不是复现 `MediaQuery.of` 的崩溃。
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Overlay(
+              initialEntries: <OverlayEntry>[
+                OverlayEntry(
+                  builder: (BuildContext context) {
+                    inner = context;
+                    return const SizedBox(width: 300, height: 400);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final OhosMagnifierController controller = OhosMagnifierController();
+      addTearDown(controller.dispose);
+      expect(
+        controller.show(inner, anchor: const Offset(150, 200), text: 'A'),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(OhosMagnifier), findsOneWidget);
+    });
+
     testWidgets('墨水屏：1px 纯黑描边，且不做入场动画', (
       WidgetTester tester,
     ) async {
@@ -1460,6 +1616,899 @@ void main() {
         ),
         findsNothing,
       );
+    });
+
+    testWidgets('只覆盖字号的 textStyle 也让字母颜色跟随主题', (
+      WidgetTester tester,
+    ) async {
+      // `inherit: false` 断掉继承后没有祖先可以取色：调用方只传
+      // `fontSize` / `fontWeight`（dartdoc 允许的用法）时，颜色必须在组件里
+      // 兜住，否则深色 / 墨主题下是黑字压深底。
+      final OhosThemeData dark = OhosThemeData.dark();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: dark,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosMagnifier(
+                  text: 'A',
+                  animate: false,
+                  textStyle: const TextStyle(fontSize: 20),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(paintedColor(tester, 'A'), dark.highlightColor);
+    });
+  });
+
+  group('OhosAlphabetIndexer', () {
+    const List<String> letters = <String>['#', 'A', 'B', 'C', 'D'];
+
+    Widget host(ValueChanged<String> onSelected) {
+      return wrap(
+        OhosAlphabetIndexer(
+          indexer: letters,
+          size: const Size(24, 160),
+          onSelected: onSelected,
+        ),
+      );
+    }
+
+    testWidgets('点当前高亮的字母也会回调（不再「点不动」）', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      // 初值就是 indexer[0]，这一下以前被 `index != _current` 吞掉了。
+      await tester.tap(find.text('#'));
+      await tester.pump();
+      expect(picked, <String>['#']);
+    });
+
+    testWidgets('连点同一个字母，每次都回调', (WidgetTester tester) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      await tester.tap(find.text('#'));
+      await tester.pump();
+      await tester.tap(find.text('#'));
+      await tester.pump();
+      expect(picked, <String>['#', '#']);
+    });
+
+    testWidgets('条内留白也参与命中，不再漏给下层', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      // x=2 落在字形之外（24vp 的条，字形约 12vp 居中），以前直接漏掉。
+      await tester.tapAt(topLeft + const Offset(2, 10));
+      await tester.pump();
+      expect(picked, <String>['#']);
+    });
+
+    testWidgets('selectedIndex 变化写回内部高亮（代码定位）', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData theme = OhosThemeData.light();
+      Widget controlled(int? index) {
+        return wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: index,
+            onSelected: (String _) {},
+          ),
+        );
+      }
+
+      await tester.pumpWidget(controlled(4));
+      expect(paintedColor(tester, 'D'), theme.highlightColor);
+      expect(paintedColor(tester, '#'), theme.textSecondaryColor);
+
+      // 代码定位到别处后重算高亮：不需要手指碰过索引条。
+      await tester.pumpWidget(controlled(1));
+      expect(paintedColor(tester, 'A'), theme.highlightColor);
+      expect(paintedColor(tester, 'D'), theme.textSecondaryColor);
+    });
+
+    testWidgets('受控高亮下点同一个字母，回调照旧触发', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 4,
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      // 外部高亮 = D（已回写 `_current`）：点它仍要回调，不能被"没变化"吞掉。
+      await tester.tap(find.text('D'));
+      await tester.pump();
+      expect(picked, <String>['D']);
+    });
+
+    testWidgets('受控高亮下拖动，画面跟着手指走', (WidgetTester tester) async {
+      final OhosThemeData theme = OhosThemeData.light();
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 0,
+            // 泡泡里也会画同一个字母，关掉以免 find.text 命中两处。
+            showMagnifier: false,
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      // 槽位 32：y = 16 + 20 + 40 = 76 → 第 2 格（B）。
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      // 外部 selectedIndex 一直是 0，但画面必须跟随手指：绘制只读 `_current`。
+      expect(paintedColor(tester, 'B'), theme.highlightColor);
+      expect(paintedColor(tester, '#'), theme.textSecondaryColor);
+      await gesture.up();
+      await tester.pump();
+      expect(picked, contains('B'));
+    });
+
+    testWidgets('拖动期间父级改了 selectedIndex，抬手后高亮回到受控值', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData theme = OhosThemeData.light();
+      final ValueNotifier<int?> controlled = ValueNotifier<int?>(0);
+      addTearDown(controlled.dispose);
+      await tester.pumpWidget(
+        wrap(
+          ValueListenableBuilder<int?>(
+            valueListenable: controlled,
+            builder: (BuildContext context, int? value, Widget? child) {
+              return OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 160),
+                selectedIndex: value,
+                showMagnifier: false,
+                onSelected: (String _) {},
+              );
+            },
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      expect(paintedColor(tester, 'B'), theme.highlightColor);
+
+      // 拖动中挂起受控值：父级改成 A（1）也不许把高亮从指下拽走。
+      controlled.value = 1;
+      await tester.pump();
+      expect(paintedColor(tester, 'B'), theme.highlightColor);
+
+      // 抬手后没有新的父级重建，收尾时自己对齐受控值。
+      await gesture.up();
+      await tester.pump();
+      expect(paintedColor(tester, 'A'), theme.highlightColor);
+      expect(paintedColor(tester, 'B'), theme.textSecondaryColor);
+    });
+
+    testWidgets('selectedIndex 越界在 debug 下断言', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 99,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      expect(tester.takeException(), isAssertionError);
+    });
+
+    testWidgets('无字母表 + 非空 selectedIndex 不崩（没有合法下标可断言）', (
+      WidgetTester tester,
+    ) async {
+      // 分组切换把 indexer 清空、而父级仍拿着上一次的 selectedIndex 重建：
+      // 修复前 `selected >= 0 && selected < 0` 恒假，debug 下必崩。
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: const <String>[],
+            size: const Size(24, 160),
+            selectedIndex: 3,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('字母表被换成空表时不崩，恢复后高亮夹回合法位置', (
+      WidgetTester tester,
+    ) async {
+      Widget controlled(List<String> indexer, int index) {
+        return wrap(
+          OhosAlphabetIndexer(
+            indexer: indexer,
+            size: const Size(24, 160),
+            selectedIndex: index,
+            onSelected: (String _) {},
+          ),
+        );
+      }
+
+      await tester.pumpWidget(controlled(letters, 4));
+      await tester.pumpWidget(controlled(const <String>[], 4));
+      expect(tester.takeException(), isNull);
+      // 空表期间把高亮留在一个不存在的下标上，恢复时就会越界取字母。
+      await tester.pumpWidget(controlled(letters, 4));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('槽位与命中同源：点渲染出来的字母就是它自己', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: const <String>['#', 'A', 'B', 'C'],
+            size: const Size(24, 160),
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      // 修复前命中用默认 itemHeight = 20：点 A 会报 B（floor(55 / 20) = 2）。
+      for (final String letter in <String>['#', 'A', 'B', 'C']) {
+        picked.clear();
+        await tester.tap(find.text(letter));
+        await tester.pump();
+        expect(picked, <String>[letter]);
+      }
+    });
+
+    testWidgets('按 size.height 平摊槽位（每格等高）', (WidgetTester tester) async {
+      await tester.pumpWidget(host((String _) {}));
+      // 5 个字母摊在 160vp 上 → 每格 32vp
+      final double top = tester.getCenter(find.text('A')).dy;
+      final double next = tester.getCenter(find.text('B')).dy;
+      expect(next - top, 32);
+    });
+
+    testWidgets('父级压到 size.height 以下时跟着缩，不溢出', (WidgetTester tester) async {
+      const List<String> many = <String>[
+        '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', //
+        'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+      ];
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            height: 130,
+            child: OhosAlphabetIndexer(
+              indexer: many,
+              size: const Size(24, 420),
+              onSelected: picked.add,
+            ),
+          ),
+        ),
+      );
+      // 修复前按 size.height 算槽位：22 × 19 = 418 > 130，直接
+      // `RenderFlex overflowed by 290 pixels`（0.3.0 靠约束现算字号能缩进去）。
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(OhosAlphabetIndexer)).height, 130);
+      // 命中映射同样来自约束：点渲染出来的字母还是它自己。
+      picked.clear();
+      await tester.tap(find.text('A'));
+      await tester.pump();
+      expect(picked, <String>['A']);
+    });
+
+    testWidgets('父级给更高的紧约束时，视觉格与命中格一起铺满', (
+      WidgetTester tester,
+    ) async {
+      // 父级紧约束 500 > size.height 360：`SizedBox` 会被 minHeight 抬到 500，
+      // 但槽位若只按 `min(size.height, maxHeight)` 算仍是 360 —— 字母挤在顶部
+      // 360vp、底部 140vp 空白却照样接管手势，点它会夹成末格。
+      final List<String> picked = <String>[];
+      final List<String> many = List<String>.generate(
+        26,
+        (int i) => String.fromCharCode(65 + i),
+      );
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            height: 500,
+            child: OhosAlphabetIndexer(
+              indexer: many,
+              size: const Size(24, 360),
+              onSelected: picked.add,
+            ),
+          ),
+        ),
+      );
+      final Rect rect = tester.getRect(find.byType(OhosAlphabetIndexer));
+      expect(rect.height, 500);
+      // 500 / 26 ≈ 19.23：y = 370 落在第 20 格（索引 19 = 'T'）。
+      // 按 360 算槽位时这里会被夹成 'Z'。
+      await tester.tapAt(Offset(rect.center.dx, rect.top + 370));
+      await tester.pump();
+      expect(picked.last, 'T');
+    });
+
+    testWidgets('高度无界时也吃 minHeight（scroll 里套 ConstrainedBox）', (
+      WidgetTester tester,
+    ) async {
+      // `hasBoundedHeight == false` 时曾被直接当成「用 size.height」：父级用
+      // ConstrainedBox(minHeight: 500) 把它撑到 500，槽位仍按 360 算，字母挤在
+      // 上方，底部空白却接管手势 —— 点 y=370 会跳末格 'Z'。
+      final List<String> picked = <String>[];
+      final List<String> many = List<String>.generate(
+        26,
+        (int i) => String.fromCharCode(65 + i),
+      );
+      await tester.pumpWidget(
+        wrap(
+          SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 500),
+              child: OhosAlphabetIndexer(
+                indexer: many,
+                size: const Size(24, 360),
+                onSelected: picked.add,
+              ),
+            ),
+          ),
+        ),
+      );
+      final Rect rect = tester.getRect(find.byType(OhosAlphabetIndexer));
+      expect(rect.height, 500);
+      // 500 / 26 ≈ 19.23：y = 370 落在第 20 格（索引 19 = 'T'）。
+      await tester.tapAt(Offset(rect.center.dx, rect.top + 370));
+      await tester.pump();
+      expect(picked.last, 'T');
+    });
+
+    testWidgets('高度无界时退回 size.height', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 360),
+                onSelected: (String _) {},
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(OhosAlphabetIndexer)).height, 360);
+    });
+
+    testWidgets('字母继承外层字体家族（golden 里不再画成实心方块）', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          DefaultTextStyle(
+            style: const TextStyle(fontFamily: 'ProbeFamily'),
+            child: OhosAlphabetIndexer(
+              indexer: letters,
+              size: const Size(24, 160),
+              onSelected: (String _) {},
+            ),
+          ),
+        ),
+      );
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text('A'), matching: find.byType(RichText)),
+      );
+      // 修复前是 null：flutter_tester 的 null 家族 = Ahem，整列实心块。
+      expect((rich.text as TextSpan).style?.fontFamily, 'ProbeFamily');
+    });
+
+    testWidgets('外层没有字体家族时退到主题口径', (WidgetTester tester) async {
+      const List<String> letters = <String>['#', 'A', 'B', 'C', 'D'];
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(fontFamily: 'ThemeFamily'),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: DefaultTextStyle(
+                  // 只有字号、没有家族：组件要自己兜住（修复前 fontFamily 为 null）。
+                  style: const TextStyle(fontSize: 14),
+                  child: OhosAlphabetIndexer(
+                    indexer: letters,
+                    size: const Size(24, 160),
+                    onSelected: (String _) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text('A'), matching: find.byType(RichText)),
+      );
+      expect((rich.text as TextSpan).style?.fontFamily, 'ThemeFamily');
+    });
+
+    testWidgets('高度缩小后字号立刻生效，不再等 200ms 追上来', (
+      WidgetTester tester,
+    ) async {
+      const List<String> many = <String>[
+        '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', //
+        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+      ];
+      final ValueNotifier<double> height = ValueNotifier<double>(420);
+      await tester.pumpWidget(
+        wrap(
+          ValueListenableBuilder<double>(
+            valueListenable: height,
+            builder: (BuildContext _, double h, Widget? __) {
+              return OhosAlphabetIndexer(
+                indexer: many,
+                size: Size(24, h),
+                onSelected: (String _) {},
+              );
+            },
+          ),
+        ),
+      );
+      // 模拟拖分隔条缩到最矮：420 → 130，只推一帧。
+      height.value = 130;
+      await tester.pump(const Duration(milliseconds: 16));
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text('A'), matching: find.byType(RichText)),
+      );
+      // 130 / 22 × 0.95 ≈ 5.61。修复前字号走 200ms 动画，此时还停在 11.vp 上，
+      // 22 个字母互相压住（0.3.0 里更是直接 `RenderFlex overflowed`）。
+      expect((rich.text as TextSpan).style?.fontSize, closeTo(5.61, 0.01));
+    });
+
+    testWidgets('默认拖动：途中不断回调，松手时 onSelectEnd 报最终字母', (
+      WidgetTester tester,
+    ) async {
+      final List<String> picked = <String>[];
+      final List<String> ended = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            onSelected: picked.add,
+            onSelectEnd: ended.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 88));
+      await tester.pump();
+      expect(ended, isEmpty, reason: '拖动过程中不报结束');
+      await gesture.up();
+      await tester.pump();
+      expect(picked.last, 'D');
+      expect(ended, <String>['D']);
+    });
+
+    testWidgets('拖动中字母表变短：抬手不越界，回调落在新表内', (
+      WidgetTester tester,
+    ) async {
+      // 拖到末格（_current = 25）后把表缩到 10 个字母，父级 selectedIndex
+      // 没变 —— 旧实现在 didUpdateWidget 里会早退，_current 停在 25，
+      // 抬手走到 _selectEnd 的 widget.indexer[25] 直接 RangeError。
+      List<String> current = List<String>.generate(
+        26,
+        (int i) => String.fromCharCode(65 + i),
+      );
+      final List<String> ended = <String>[];
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        wrap(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              rebuild = setState;
+              return OhosAlphabetIndexer(
+                indexer: current,
+                size: const Size(24, 260),
+                onSelected: (_) {},
+                onSelectEnd: ended.add,
+              );
+            },
+          ),
+        ),
+      );
+
+      final Rect rect = tester.getRect(find.byType(OhosAlphabetIndexer));
+      final TestGesture gesture = await tester.startGesture(rect.center);
+      await gesture.moveTo(Offset(rect.center.dx, rect.bottom - 2));
+      await tester.pump();
+      expect(find.text('Z'), findsWidgets, reason: '已经拖到末格');
+
+      rebuild(() {
+        current = List<String>.generate(
+          10,
+          (int i) => String.fromCharCode(65 + i),
+        );
+      });
+      await tester.pump();
+
+      // 夹紧不只防越界：高亮也得落到新表的末格，否则整列都没有高亮。
+      expect(paintedColor(tester, 'J'), OhosThemeData.light().highlightColor);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(ended.single, 'J', reason: '夹到新表的末格，而不是越界');
+    });
+
+    testWidgets('受控：外部 selectedIndex 没变时，重建也能把高亮纠回来', (
+      WidgetTester tester,
+    ) async {
+      // 受控写法是「外部值说了算」：手指点过之后内部高亮先跟手，父级用同一个
+      // selectedIndex 重建时应该纠回受控值。旧实现只在 selected != previous
+      // 时回写，重建一次就再也纠不回来了。
+      const int controlled = 1; // 'A'
+      final OhosThemeData theme = OhosThemeData.light();
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        wrap(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              rebuild = setState;
+              return OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 160),
+                selectedIndex: controlled,
+                onSelected: (_) {},
+              );
+            },
+          ),
+        ),
+      );
+      expect(paintedColor(tester, 'A'), theme.highlightColor);
+
+      await tester.tap(find.text('D'));
+      await tester.pump();
+      expect(paintedColor(tester, 'D'), theme.highlightColor, reason: '点完先跟手');
+
+      rebuild(() {});
+      await tester.pump();
+      expect(paintedColor(tester, 'A'), theme.highlightColor, reason: '纠回受控值');
+      expect(paintedColor(tester, 'D'), theme.textSecondaryColor);
+    });
+
+    testWidgets('拖动中父级改 selectedIndex 不会把高亮从指下拽走', (
+      WidgetTester tester,
+    ) async {
+      // `_syncSelected` 原本在 `didUpdateWidget` 里无条件执行：拖动过程中父级
+      // 一 setState（改 selectedIndex），高亮就会从指下跳回旧位置。
+      int controlled = 0; // '#'
+      final OhosThemeData theme = OhosThemeData.light();
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        wrap(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              rebuild = setState;
+              return OhosAlphabetIndexer(
+                indexer: letters,
+                size: const Size(24, 160),
+                selectedIndex: controlled,
+                // 这里只盯高亮：关掉放大镜，免得它在 Overlay 里也渲染一份
+                // 同名文字，`find.text('C')` 落到两个 widget 上。
+                showMagnifier: false,
+                onSelected: (_) {},
+              );
+            },
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 60)); // slot 32 → 'C'
+      await tester.pump();
+      expect(paintedColor(tester, 'C'), theme.highlightColor);
+
+      rebuild(() => controlled = 1); // 'A'
+      await tester.pump();
+      expect(
+        paintedColor(tester, 'C'),
+        theme.highlightColor,
+        reason: '拖动中保持跟手，不被外部值拽回',
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('同一格内拖动不重复回调，跨格才回调', (WidgetTester tester) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            onSelected: picked.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      // 第一次移动只越过 slop → drag start，还没有 drag update。
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      // 两次小位移都停在 A 的槽位（32..64）里：drag update 有两帧，回调只该有一次。
+      await gesture.moveBy(const Offset(0, 4));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 4));
+      await tester.pump();
+      expect(
+        picked.where((String l) => l == 'A').length,
+        1,
+        reason: '逐帧 update ≠ 逐帧回调',
+      );
+      // 跨到下一格（64..96 = B）才再通知一次。
+      await gesture.moveBy(const Offset(0, 32));
+      await tester.pump();
+      expect(picked.last, 'B');
+      await gesture.up();
+      await tester.pump();
+    });
+
+    testWidgets('点击也报 onSelectEnd：抬手一次，且在 onSelected 之后', (
+      WidgetTester tester,
+    ) async {
+      final List<String> order = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            onSelected: (String l) => order.add('selected:$l'),
+            onSelectEnd: (String l) => order.add('end:$l'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('B'));
+      await tester.pump();
+      // 落指（过程）先到，抬手（结果）后到：只订阅 onSelectEnd 也能定位。
+      expect(order, <String>['selected:B', 'end:B']);
+    });
+
+    testWidgets('拖动取消也报 onSelectEnd', (WidgetTester tester) async {
+      final List<String> ended = <String>[];
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            onSelected: (String _) {},
+            onSelectEnd: ended.add,
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pump();
+      expect(ended, <String>['B']);
+    });
+
+    testWidgets('拖动时出现放大镜，字母跟随，抬手消失', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host((String _) {}));
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      // 第一次移动只够越过 slop（触发 onVerticalDragStart），第二次才产生
+      // onVerticalDragUpdate —— 泡泡在这时出现并按新字母刷新。
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pumpAndSettle();
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.text('A'),
+        ),
+        findsOneWidget,
+      );
+
+      await gesture.moveBy(const Offset(0, 60));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.text('C'),
+        ),
+        findsOneWidget,
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsNothing);
+    });
+
+    testWidgets('泡泡与手指在两个轴上都留够指肚的余量', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host((String _) {}));
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pumpAndSettle();
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pumpAndSettle();
+
+      // 最后一次 onVerticalDragUpdate 的落点（越过 slop 后再移动 40）。
+      final Offset finger = topLeft + const Offset(12, 56);
+      final Rect rect = tester.getRect(find.byType(OhosMagnifier));
+      final double horizontal = rect.left >= finger.dx
+          ? rect.left - finger.dx
+          : finger.dx - rect.right;
+      final double vertical = rect.top >= finger.dy
+          ? rect.top - finger.dy
+          : finger.dy - rect.bottom;
+      // 指肚接触半径约 30vp：小于它就会被手指压掉一角。
+      expect(horizontal, greaterThanOrEqualTo(32));
+      expect(vertical, greaterThanOrEqualTo(32));
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('点击不显示放大镜', (WidgetTester tester) async {
+      await tester.pumpWidget(host((String _) {}));
+      await tester.tap(find.text('B'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsNothing);
+    });
+
+    testWidgets('showMagnifier: false 时拖动也不显示', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            showMagnifier: false,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pumpAndSettle();
+      expect(find.byType(OhosMagnifier), findsNothing);
+      await gesture.up();
+    });
+
+    testWidgets('magnifierBuilder 可换成自定义内容', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            magnifierBuilder: (BuildContext context, String letter) {
+              return Text('放大$letter');
+            },
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(12, 16),
+      );
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pumpAndSettle();
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(OhosMagnifier),
+          matching: find.text('放大A'),
+        ),
+        findsOneWidget,
+      );
+      await gesture.up();
+    });
+
+    testWidgets('从留白处按下去也能拖动整条', (WidgetTester tester) async {
+      final List<String> picked = <String>[];
+      await tester.pumpWidget(host(picked.add));
+      final Offset topLeft = tester.getTopLeft(
+        find.byType(OhosAlphabetIndexer),
+      );
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(2, 10),
+      );
+      await gesture.moveBy(const Offset(0, 50));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 80));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      // 以前命不中字形，手势根本进不了 GestureDetector，picked 为空。
+      expect(picked, isNotEmpty);
+      expect(picked.last, 'D');
     });
   });
 
@@ -1534,6 +2583,212 @@ void main() {
         () {
       const OhosAppBar bar = OhosAppBar(title: Text('t'));
       expect(bar.preferredSize, const Size.fromHeight(56));
+    });
+
+    testWidgets('statusBarBackgroundColor 只给状态栏那条上色，栏高与标题位置不变', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(
+            title: Text('标题'),
+            statusBarBackgroundColor: Color(0xFF102030),
+          ),
+        ),
+      );
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56 + 24);
+      expect(tester.getCenter(find.text('标题')).dy, 52);
+      final Finder band = find.descendant(
+        of: find.byType(OhosAppBar),
+        matching: find.byType(ColoredBox),
+      );
+      expect(tester.getSize(band).height, 24);
+      // 宽度也得铺满：`Column` 默认 `center` 给子节点松约束，无 child 的
+      // `ColoredBox` 会缩成 `constraints.smallest`（宽 0），色带整条看不见。
+      expect(tester.getSize(band).width, 360);
+      expect(tester.widget<ColoredBox>(band).color, const Color(0xFF102030));
+    });
+
+    testWidgets('不给 statusBarBackgroundColor 时不拆段（0.3.0 观感不变）', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(topPadding: 24, bar: const OhosAppBar(title: Text('标题'))),
+      );
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56 + 24);
+      expect(
+        find.descendant(
+          of: find.byType(OhosAppBar),
+          matching: find.byType(ColoredBox),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('OhosScaffold 下状态栏色带仍有高度（不再被 SafeArea 清零）', (
+      WidgetTester tester,
+    ) async {
+      // `OhosScaffold` 曾把整棵 `Stack`（含 appBar）包进 `SafeArea`，后代的
+      // `MediaQuery.padding.top` 被摘成 0，栏里的 topInset 随之变 0 —— README
+      // 推荐的 `OhosScaffold + OhosAppBar` 组合下 `statusBarBackgroundColor`
+      // 的色带永远是 0 高。既有用例都挂在 Material `Scaffold` 的 `appBar`
+      // 槽位上，所以没抓到。
+      const Color band = Color(0xFF102030);
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(360, 800),
+                padding: EdgeInsets.only(top: 24),
+              ),
+              child: OhosScaffold(
+                appBar: const OhosAppBar(
+                  statusBarBackgroundColor: band,
+                  title: Text('标题'),
+                ),
+                body: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Finder bandBox = find.byWidgetPredicate(
+        (Widget w) => w is ColoredBox && w.color == band,
+      );
+      expect(bandBox, findsOneWidget, reason: '色带仍然存在');
+      expect(tester.getSize(bandBox).height, 24, reason: '色带高度 = 状态栏内边距');
+      expect(
+        tester.getSize(find.byType(OhosAppBar)).height,
+        24 + 56,
+        reason: '总高 = 内边距 + 栏高',
+      );
+    });
+
+    testWidgets('底部导航存在时 body 不再重复让出底部内边距', (
+      WidgetTester tester,
+    ) async {
+      // body 的 `SafeArea` 若同时让 bottom，会与底部导航那层 `SafeArea`
+      // 叠成两条 padding.bottom：内容与导航之间多出一条空白，列表末项被顶起。
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(360, 800),
+                padding: EdgeInsets.only(bottom: 24),
+              ),
+              child: OhosScaffold(
+                body: const SizedBox.expand(key: Key('body')),
+                bottomNavigationBar: const SizedBox(key: Key('nav'), height: 48),
+              ),
+            ),
+          ),
+        ),
+      );
+      final Rect scaffold = tester.getRect(find.byType(Scaffold));
+      final Rect body = tester.getRect(find.byKey(const Key('body')));
+      final Rect nav = tester.getRect(find.byKey(const Key('nav')));
+      expect(nav.height, 48);
+      expect(nav.bottom, scaffold.bottom - 24, reason: '底部导航自己让出安全区');
+      expect(body.bottom, nav.top, reason: 'body 底部紧贴导航，不叠第二层留白');
+    });
+
+    testWidgets('primary: false 的 AppBar 在 OhosScaffold 里仍让出状态栏', (
+      WidgetTester tester,
+    ) async {
+      // `primary: false` 表示栏自己不吃状态栏内边距，页面级容器得替它让一次；
+      // AppBar 移出外层 `SafeArea` 之后这里一度无人消费，标题直接顶到状态栏。
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(360, 800),
+                padding: EdgeInsets.only(top: 24),
+              ),
+              child: const OhosScaffold(
+                appBar: OhosAppBar(primary: false, title: Text('标题')),
+                body: SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.getRect(find.byType(OhosAppBar)).top, 24);
+      expect(tester.getSize(find.byType(OhosAppBar)).height, 56);
+    });
+
+    testWidgets('横屏刘海下 AppBar 仍让出左右安全区（primary 两种取值一致）', (
+      WidgetTester tester,
+    ) async {
+      // AppBar 移出外层 SafeArea 后，primary: true 的分支曾被裸放 —— 顶部由栏
+      // 自己吸收没问题，但 left / right（横屏刘海、挖孔）就没人让了，内容压到
+      // 屏幕边缘；primary: false 的分支反倒让了，两者不一致。
+      for (final bool primary in <bool>[true, false]) {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: OhosThemeData.light(),
+            child: MaterialApp(
+              home: MediaQuery(
+                data: const MediaQueryData(
+                  size: Size(800, 360),
+                  padding: EdgeInsets.only(left: 44, right: 44),
+                ),
+                child: OhosScaffold(
+                  appBar: OhosAppBar(primary: primary, title: const Text('标题')),
+                  body: const SizedBox.expand(),
+                ),
+              ),
+            ),
+          ),
+        );
+        final Rect bar = tester.getRect(find.byType(OhosAppBar));
+        expect(bar.left, 44, reason: 'primary=$primary 时左侧安全区要让出');
+        expect(bar.right, 800 - 44, reason: 'primary=$primary 时右侧安全区要让出');
+      }
+    });
+
+    testWidgets('heightOf 与 Scaffold 预留的高度一致（bottom + 状态栏内边距）', (
+      WidgetTester tester,
+    ) async {
+      const PreferredSizeWidget tabs = PreferredSize(
+        preferredSize: Size.fromHeight(40),
+        child: SizedBox.shrink(),
+      );
+      double? withInset;
+      double? withoutInset;
+      double? plain;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(padding: EdgeInsets.only(top: 24)),
+          child: Builder(
+            builder: (BuildContext context) {
+              withInset = OhosAppBar.heightOf(
+                context,
+                height: 48,
+                bottom: tabs,
+              );
+              withoutInset = OhosAppBar.heightOf(
+                context,
+                height: 48,
+                bottom: tabs,
+                primary: false,
+              );
+              plain = OhosAppBar.heightOf(context);
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      expect(withInset, 48 + 40 + 24);
+      expect(withoutInset, 48 + 40);
+      expect(plain, 56 + 24);
     });
 
     testWidgets('leading / 标题 / actions 单行排布，标题不会压到右侧动作上',
@@ -1734,6 +2989,47 @@ void main() {
       final AnnotatedRegion<SystemUiOverlayStyle> region = tester
           .widget(find.byType(AnnotatedRegion<SystemUiOverlayStyle>));
       expect(region.value, SystemUiOverlayStyle.light);
+    });
+
+    testWidgets('带状态栏色带时 systemOverlayStyle 仍然覆盖到状态栏那一段', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(
+            title: Text('标题'),
+            statusBarBackgroundColor: Color(0xFF102030),
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+          ),
+        ),
+      );
+      final Finder region = find.byType(AnnotatedRegion<SystemUiOverlayStyle>);
+      expect(region, findsOneWidget);
+      // 系统在**屏幕顶端中点**采样状态栏图标明暗（`findAnnotations` at
+      // (width/2, 0)）：注解若只盖住工具栏，那一点采不到样式，等同于没传。
+      expect(tester.getRect(region).top, 0);
+      expect(tester.getSize(region).height, 56 + 24);
+    });
+
+    testWidgets('带色带 + lightMaterial 时栏体仍有确定高度', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 24,
+          bar: const OhosAppBar(
+            title: Text('标题'),
+            lightMaterial: true,
+            statusBarBackgroundColor: Color(0xFF102030),
+          ),
+        ),
+      );
+      final Finder glow = find.byType(OhosLightMaterial);
+      expect(glow, findsOneWidget);
+      // 包色带的 `Column` 给子节点的是无界高度约束；这里钉住栏体（现在由
+      // `SizedBox(height: preferredSize.height)` 定高）尺寸不被压成 0。
+      expect(tester.getSize(glow), const Size(360, 56));
     });
 
     testWidgets('toolbarHeight 是 height 的别名（对齐 kToolbarHeight 命名）',

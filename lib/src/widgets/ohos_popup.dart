@@ -86,9 +86,17 @@ class _OhosPopupOverlayEntry extends StatelessWidget {
             ),
             child: Text(
               content,
+              // 同 Toast：这条提示挂在根 Overlay 上，没有 `Material` 祖先，
+              // `MaterialApp` 的兜底 `DefaultTextStyle` 会带来黄色双下划线和
+              // monospace 字体（浅色底上尤其明显）。`inherit: false` 断掉继承，
+              // 字体族仍跟随主题，主题没设就用引擎默认。
               style:
                   (theme.typography.bodySmall ?? const TextStyle(fontSize: 14))
-                      .copyWith(color: theme.textPrimaryColor),
+                      .copyWith(
+                        color: theme.textPrimaryColor,
+                        decoration: TextDecoration.none,
+                        inherit: false,
+                      ),
             ),
           ),
         ),

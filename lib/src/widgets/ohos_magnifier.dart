@@ -82,6 +82,21 @@ class OhosMagnifier extends StatelessWidget {
           maxLines: 1,
           textAlign: TextAlign.center,
         );
+    // 气泡挂在根 `Overlay` 上，祖先链里没有 `Material`：`MaterialApp` 在这种
+    // 位置把 `_errorTextStyle`（红字 mono + **黄色双下划线**）当
+    // `DefaultTextStyle`。只覆盖字号/字重/颜色，`decoration` 和 `fontFamily`
+    // 会一起漏下来 —— 字母下面多出两条线，字形还变成等宽；`FittedBox` 再把
+    // 它们一起放大。`inherit: false` 断掉整条继承链：主题给了字体族就用，
+    // 没给就用引擎默认，不会退回 monospace。调用方显式给了 decoration 时
+    // 照旧尊重。
+    // 颜色同样要兜住：调用方只传 `fontSize` / `fontWeight` 的 `textStyle`
+    // 是文档允许的用法，断链后没有祖先可继承，深色 / 墨主题下会退化成黑字
+    // 压深底（几乎不可见）。
+    final TextStyle contentStyle = style.copyWith(
+      inherit: false,
+      decoration: style.decoration ?? TextDecoration.none,
+      color: style.color ?? (ink ? theme.textPrimaryColor : theme.highlightColor),
+    );
     final Widget bubble = Container(
       width: size.width,
       height: size.height,
@@ -102,7 +117,10 @@ class OhosMagnifier extends StatelessWidget {
         ),
       ),
       // 大字号（textScale 1.3）时内容会比泡泡高，缩下来而不是溢出。
-      child: FittedBox(fit: BoxFit.scaleDown, child: content),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: DefaultTextStyle(style: contentStyle, child: content),
+      ),
     );
     final Widget body = animate && !ink
         ? TweenAnimationBuilder<double>(
@@ -218,7 +236,10 @@ class OhosMagnifierController {
     if (request == null) {
       return const SizedBox.shrink();
     }
-    final MediaQueryData media = MediaQuery.of(context);
+    // `Overlay` 只要求 `Directionality`，不要求 `MediaQuery`：裸树里自建
+    // `Overlay` 时 `show()` 也会真的插 entry，这里用 `maybeOf` 兜底，
+    // 不然构建气泡时直接抛「context does not contain a MediaQuery」。
+    final MediaQueryData? media = MediaQuery.maybeOf(context);
     // `anchor` 是全局坐标，`Positioned` 却按 Overlay 的局部坐标摆：只在根
     // Overlay 正好铺满窗口时两者才同源，所以显式换算一次，宿主被嵌进非全屏
     // 区域时也不会整体偏移；夹紧边界同样改用 Overlay 自己的尺寸。
@@ -227,13 +248,19 @@ class OhosMagnifierController {
     final Offset origin = overlayBox == null
         ? Offset.zero
         : overlayBox.localToGlobal(Offset.zero);
-    final Size screen = overlayBox?.size ?? media.size;
-    final EdgeInsets safe = media.padding + request.safeInset;
+    final Size screen = overlayBox?.size ?? media?.size ?? request.bubble;
+    // 没有 MediaQuery 时把窗口按 Overlay 自身尺寸算，否则「窗口比 Overlay
+    // 多出来的边」会被算成一大块安全区，把泡泡夹到角落。
+    final Size window = media != null && !media.size.isEmpty
+        ? media.size
+        : screen;
+    final EdgeInsets safe =
+        (media?.padding ?? EdgeInsets.zero) + request.safeInset;
     final EdgeInsets safeInOverlay = EdgeInsets.fromLTRB(
       math.max(0, safe.left - origin.dx),
       math.max(0, safe.top - origin.dy),
-      math.max(0, safe.right - (media.size.width - origin.dx - screen.width)),
-      math.max(0, safe.bottom - (media.size.height - origin.dy - screen.height)),
+      math.max(0, safe.right - (window.width - origin.dx - screen.width)),
+      math.max(0, safe.bottom - (window.height - origin.dy - screen.height)),
     );
     final OhosMagnifierPlacement placement = OhosMagnifierPosition.resolve(
       anchor: request.anchor - origin,

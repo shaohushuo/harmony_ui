@@ -85,6 +85,7 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.scrollEffect,
     this.scrollController,
     this.scrolledBackgroundColor,
+    this.statusBarBackgroundColor,
   });
 
   /// The main title widget, typically a [Text].
@@ -126,6 +127,22 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Overrides the bar background color.
   final Color? backgroundColor;
 
+  /// Background of the status bar band — the `MediaQuery.padding.top` strip
+  /// that [primary] reserves above the toolbar.
+  ///
+  /// Null (the default) keeps the 0.3.0 look: one surface, so the band and the
+  /// toolbar share [backgroundColor]. Setting a color splits the background
+  /// into two bands, which is what an immersive page usually wants (status bar
+  /// = page background, toolbar = card color). The inset is still absorbed by
+  /// the bar, so [preferredSize] and the layout stay the same.
+  ///
+  /// Unrelated to [SystemUiOverlayStyle.statusBarColor] (that one only picks
+  /// light/dark icons) — hence the longer name.
+  ///
+  /// When [scrollEffect] or [lightMaterial] is set, the band keeps its own
+  /// solid color and does not take part in the scroll-driven recoloring.
+  final Color? statusBarBackgroundColor;
+
   /// Shadow elevation; HarmonyOS bars are usually flat so the default is 0.
   final double elevation;
 
@@ -149,10 +166,11 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// bar, and the actions end up hidden behind the system icons — silently,
   /// with no overflow error.
   ///
-  /// Note that [preferredSize] deliberately stays [height]: `Scaffold` already
-  /// reserves `preferredSize.height + MediaQuery.padding.top` for its `appBar`
-  /// slot (see `Scaffold.appBarMaxHeight`), so adding the inset here needs no
-  /// change on the caller's side.
+  /// Note that [preferredSize] stays `height + bottom.preferredSize.height` and
+  /// leaves the inset out: `Scaffold` already reserves
+  /// `preferredSize.height + MediaQuery.padding.top` for its `appBar` slot (see
+  /// `Scaffold.appBarMaxHeight`), so adding the inset here would leave an empty
+  /// strip. Use [heightOf] when the total height is needed outside `Scaffold`.
   ///
   /// Set false when the bar is **not** at the top of the screen (for example
   /// inside a nested panel that already sits below the status bar) or when the
@@ -200,6 +218,24 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize =>
       Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
+
+  /// Total height the bar occupies at the top of a page:
+  /// `height + bottom.preferredSize.height + (primary ? inset : 0)`.
+  ///
+  /// [preferredSize] cannot fold in the inset (it has no `BuildContext`), so a
+  /// caller that reserves the space itself — wrapping the bar in its own widget
+  /// to paint a separate status bar band, for example — needs this instead of
+  /// hand-rolling the sum.
+  static double heightOf(
+    BuildContext context, {
+    double height = 56,
+    PreferredSizeWidget? bottom,
+    bool primary = true,
+  }) {
+    final double inset =
+        primary ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0 : 0.0;
+    return height + (bottom?.preferredSize.height ?? 0) + inset;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -278,13 +314,17 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[toolbar, bottomWidget],
           );
+    final Color? bandColor = statusBarBackgroundColor;
     final Widget surface = Material(
       color: baseColor,
       elevation: elevation,
-      child: Padding(
-        padding: EdgeInsets.only(top: topInset),
-        child: content,
-      ),
+      // 状态栏那条单独着色时，内边距由外层那一段吸收，这里不再加。
+      child: bandColor == null
+          ? Padding(
+              padding: EdgeInsets.only(top: topInset),
+              child: content,
+            )
+          : content,
     );
     Widget result = lightMaterial
         ? OhosLightMaterial(
@@ -315,8 +355,36 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: result,
       );
     }
+    if (bandColor != null) {
+      // 状态栏段放在最外层：不参与 scrollEffect 的颜色过渡，也不会被
+      // lightMaterial 的顶部渐隐压住。总高仍是 inset + height + bottom。
+      result = Column(
+        mainAxisSize: MainAxisSize.min,
+        // `center`（默认值）给子节点的是**松**宽度约束，没有 child 的
+        // `ColoredBox` 会缩成 `constraints.smallest`（宽 0）→ 色带整条不可见。
+        // 撑满才能铺到屏幕左右两端。
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          SizedBox(
+            height: topInset,
+            child: ColoredBox(color: bandColor),
+          ),
+          // `Column` 给非 flex 子节点的是**无界**高度约束，栏体内部件原本靠
+          // 外层给的高度只能用 `constraints.maxHeight`（`OhosLightMaterial`
+          // 就是 `isFinite ? maxHeight : 0`，无界时整层光感直接缩成 0）。
+          // 这里按 `preferredSize` 把它还回去，控件内部看到的还是确定高度。
+          SizedBox(
+            height: preferredSize.height,
+            child: result,
+          ),
+        ],
+      );
+    }
     final SystemUiOverlayStyle? overlay = systemOverlayStyle;
     if (overlay != null) {
+      // 注解要**包住整条栏**（含状态栏那一段）：系统取状态栏图标明暗时是在
+      // 屏幕顶端中点采样 `AnnotatedRegion`，色带若画在注解外面，那里采不到
+      // 样式，等同于没传 `systemOverlayStyle`。
       result = AnnotatedRegion<SystemUiOverlayStyle>(
         value: overlay,
         child: result,

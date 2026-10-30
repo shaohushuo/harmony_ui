@@ -83,7 +83,7 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '索引条 OhosAlphabetIndexer',
-          description: '右侧字母索引，点击 / 拖动快速定位。',
+          description: '右侧字母索引，点击 / 拖动快速定位；拖动时手指旁出现放大镜。',
           child: DemoCard(child: _IndexerDemo()),
         ),
         const DemoSection(
@@ -324,8 +324,11 @@ class _IndexerDemo extends StatelessWidget {
             '#',
           ],
           size: const Size(24, 270),
-          itemHeight: 10,
-          onSelected: (String c) => showOhosToast(
+          // 拖动中的即时反馈由放大镜负责；Toast 是「结果」提示，挂在
+          // onSelectEnd 上抬手报一次。挂在 onSelected 上会每跨一格插一层
+          // Overlay（每层存活 2 秒），拖过几个字母就在屏幕中央叠成一片。
+          onSelected: (_) {},
+          onSelectEnd: (String c) => showOhosToast(
             context,
             '选中 $c',
             position: OhosToastPosition.center,
