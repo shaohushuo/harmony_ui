@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../theme_switch.dart';
+
 /// Shared scaffold for a demo category page: app bar with back button and a
 /// scrollable body.
 class DemoScaffold extends StatelessWidget {
@@ -18,7 +20,10 @@ class DemoScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OhosScaffold(
-      appBar: OhosAppBar(title: Text(title)),
+      appBar: OhosAppBar(
+        title: Text(title),
+        actions: const <Widget>[ThemeSwitchButton()],
+      ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: <Widget>[

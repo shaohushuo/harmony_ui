@@ -10,6 +10,7 @@ import 'pages/kit_page.dart';
 import 'pages/layout_page.dart';
 import 'pages/navigation_page.dart';
 import 'pages/selection_page.dart';
+import 'theme_switch.dart';
 
 void main() {
   runApp(const OhosUiGalleryApp());
@@ -22,14 +23,24 @@ class OhosUiGalleryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // 主题要包在 `MaterialApp` **外面**：push 出去的页面是 Navigator 的兄弟
     // 节点，挂在 `home:` 里的 OhosTheme 传不到它们，页面会静默退回默认浅色
-    // （想整体切墨主题验证时尤其容易误判成「ink 没生效」）。
-    return OhosTheme(
-      data: OhosThemeData.ink(fontFamily: 'HarmonyOS Sans'),
-      child: const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'harmony_ui gallery',
-        home: HomePage(),
-      ),
+    // （切墨主题验证时尤其容易误判成「ink 没生效」）。
+    //
+    // `ValueListenableBuilder` 放在最外层：切主题时 `MaterialApp` 是原地重建
+    // （同一位置、同一类型），Navigator 的 State 会被复用，所以停在第三层演示
+    // 页上点按钮不会把人弹回首页。
+    return ValueListenableBuilder<GalleryTheme>(
+      valueListenable: galleryTheme,
+      builder: (BuildContext context, GalleryTheme theme, Widget? child) {
+        return OhosTheme(
+          data: theme.data,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'harmony_ui gallery',
+            theme: theme.materialTheme,
+            home: const HomePage(),
+          ),
+        );
+      },
     );
   }
 }
@@ -110,6 +121,7 @@ class HomePage extends StatelessWidget {
       appBar: OhosAppBar(
         leading: Icon(OhosIcons.house_fill, color: theme.highlightColor),
         title: const Text('harmony_ui 组件画廊'),
+        actions: const <Widget>[ThemeSwitchButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
