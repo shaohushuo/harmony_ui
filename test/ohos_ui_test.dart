@@ -1779,6 +1779,28 @@ void main() {
       expect(dividers.single.indent, 56);
       expect(dividers.single.endIndent, 16);
     });
+
+    testWidgets('包了一层的 tile 不会叠出两条线', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              Padding(
+                padding: EdgeInsets.zero,
+                child: OhosListTile(title: Text('A')),
+              ),
+              OhosListTile(title: Text('B')),
+            ],
+          ),
+        ),
+      );
+
+      // 第 0 行不是直接的 tile 子节点：列表会替它补一条（indent 56），
+      // 里面那条就必须被 scope 压掉，否则同一个边界上是两条线。
+      final List<OhosDivider> dividers = dividersOf(tester);
+      expect(dividers.length, 1);
+      expect(dividers.single.indent, 56);
+    });
   });
 
   group('OhosBadge', () {

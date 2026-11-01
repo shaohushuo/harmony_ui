@@ -8,10 +8,12 @@ import 'ohos_list_tile.dart';
 /// [OhosListTile]s on the theme card surface with hairline dividers.
 ///
 /// Dividers are the list's business: each row boundary gets exactly one
-/// hairline and the last row gets none. [OhosListTile]s inside the list are told
-/// so through [OhosListDividerScope] and stop drawing their own, which used to
-/// stack two lines of different indents on every boundary. Children that are
-/// not [OhosListTile]s still get a divider inserted here.
+/// hairline and the last row gets none. A direct [OhosListTile] child draws that
+/// hairline itself — [OhosListDividerScope] tells it whether the boundary
+/// exists — so the indent can follow its own `leading`. Any other child,
+/// including a tile wrapped in a `Padding`/`InkWell`, is told `false` and gets a
+/// default-indent divider inserted here instead, so a wrapped tile never stacks
+/// a second line under the first.
 class OhosList extends StatelessWidget {
   const OhosList({
     super.key,
@@ -53,7 +55,12 @@ class OhosList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     OhosListDividerScope(
-                      showBottom: divider && i < children.length - 1,
+                      // 只有直接放进列表的 tile 才需要「下面还有一行」这个信号。
+                      // 非 tile 子节点（包括包了一层 Padding/InkWell 的 tile）
+                      // 一律给 false：那条线由列表自己补，里面再画一条就叠成双线。
+                      showBottom: divider &&
+                          i < children.length - 1 &&
+                          children[i] is OhosListTile,
                       child: children[i],
                     ),
                     // tile 自己会画线（indent 随 leading），只有非 tile 子节点
