@@ -526,12 +526,17 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
       children: <Widget>[
         OhosCard(
           padding: const EdgeInsets.all(10),
-          child: Row(
-            children: <Widget>[
-              for (final OhosTabBarDividerMode mode in OhosTabBarDividerMode.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
+          // 这三个是演示自己的切换控件，用库里的 OhosChip：Material 的 ChoiceChip
+          // 靠浅色底/浅描边表意，压到 16 级灰阶上整块看不见；OhosChip 在墨屏
+          // 已经走「留白 + 1px 实线」，选中的一档再补个对勾，灰阶下也分得清。
+          child: SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final OhosTabBarDividerMode mode in OhosTabBarDividerMode.values)
+                  OhosChip(
                     label: Text(
                       switch (mode) {
                         OhosTabBarDividerMode.visible => '常显',
@@ -540,10 +545,11 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
                       },
                     ),
                     selected: _mode == mode,
-                    onSelected: (_) => setState(() => _mode = mode),
+                    icon: _mode == mode ? const Icon(Icons.check_rounded) : null,
+                    onPressed: () => setState(() => _mode = mode),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 10),

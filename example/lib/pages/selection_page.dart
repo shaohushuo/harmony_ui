@@ -29,6 +29,9 @@ class _SelectionPageState extends State<SelectionPage> {
     Color(0xFFAA2ED1),
     Color(0xFF2CC2C9),
     Color(0xFF8A8A8E),
+    // 白与浅灰压在白底上，靠色块自己的描边读出来（墨屏更明显）
+    Color(0xFFFFFFFF),
+    Color(0xFFE8E8E8),
   ];
 
   @override
@@ -166,6 +169,10 @@ class _SelectionPageState extends State<SelectionPage> {
                       decoration: BoxDecoration(
                         color: _color,
                         borderRadius: BorderRadius.circular(14),
+                        // 选到白 / 浅色时，色块自身在白卡片上会消失
+                        border: Border.fromBorderSide(
+                          ohosSwatchOutline(context, theme, _color),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),

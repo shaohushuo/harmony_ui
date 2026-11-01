@@ -50,6 +50,16 @@ class _GridDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    // 彩色屏的两级填充（浅灰 #F1F3F5 / 10% 品牌蓝）压到 16 级灰阶上都会落成
+    // 白色，单元整块看不见。墨屏保留同样的形式（实心圆角块 + 两级交替），只把
+    // 颜色换成灰阶里读得出来的两档；取值都是 17 的倍数，正好落在灰阶格子上。
+    final List<Color> fills = theme.monochrome
+        ? const <Color>[Color(0xFFDDDDDD), Color(0xFFBBBBBB)]
+        : const <Color>[
+            OhosColors.compBackgroundGray,
+            OhosColors.emphasizeTertiary,
+          ];
     return OhosGrid(
       children: <Widget>[
         for (int i = 0; i < 8; i++)
@@ -58,15 +68,13 @@ class _GridDemo extends StatelessWidget {
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: i.isEven
-                    ? OhosColors.compBackgroundGray
-                    : OhosColors.emphasizeTertiary,
+                color: fills[i % fills.length],
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
               child: Text(
                 '${i + 1}',
-                style: const TextStyle(color: OhosColors.textPrimaryLight),
+                style: TextStyle(color: theme.textPrimaryColor),
               ),
             ),
           ),
@@ -80,13 +88,24 @@ class _ResponsiveDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    // 墨屏：底板与单元都换成灰阶填充，形式仍是「浅色底板 + 三级实心单元」，
+    // 只是彩屏那套浅灰 / 半透明蓝在 16 级灰阶上等于白色。
+    final Color panel = theme.monochrome
+        ? const Color(0xFFEEEEEE)
+        : OhosColors.compBackgroundGray;
+    const List<Color> inkCells = <Color>[
+      Color(0xFFCCCCCC),
+      Color(0xFFBBBBBB),
+      Color(0xFFAAAAAA),
+    ];
     return OhosResponsiveBuilder(
       builder: (BuildContext context, OhosWindowSize size) {
         final int columns = size.columns;
         return Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: OhosColors.compBackgroundGray,
+            color: panel,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -99,13 +118,14 @@ class _ResponsiveDemo extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '${size.type.name} · ${size.width.round()}vp',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: theme.textPrimaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     '$columns 列',
-                    style: const TextStyle(
-                      color: OhosColors.textSecondaryLight,
-                    ),
+                    style: TextStyle(color: theme.textSecondaryColor),
                   ),
                 ],
               ),
@@ -128,17 +148,17 @@ class _ResponsiveDemo extends StatelessWidget {
                           width: cell,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF0A59F7,
-                            ).withValues(alpha: 0.08 + (i % 3) * 0.06),
+                            color: theme.monochrome
+                                ? inkCells[i % inkCells.length]
+                                : const Color(
+                                    0xFF0A59F7,
+                                  ).withValues(alpha: 0.08 + (i % 3) * 0.06),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
+                          child: Text(
                             '内容',
-                            style: TextStyle(
-                              color: OhosColors.textPrimaryLight,
-                            ),
+                            style: TextStyle(color: theme.textPrimaryColor),
                           ),
                         ),
                     ],
@@ -158,22 +178,28 @@ class _LightDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Column(
       children: <Widget>[
         Stack(
           children: <Widget>[
             Container(
               height: 150,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: <Color>[
-                    Color(0xFFE55392),
-                    Color(0xFFA12DF7),
-                    Color(0xFF4B48F7),
-                  ],
-                ),
+              decoration: BoxDecoration(
+                // 墨屏没有中间调：粉紫蓝渐变压下来是一段没有意义的灰带，
+                // 直接用一档深灰当「背景」，THIN 退化成纯白后仍然立得住。
+                color: theme.monochrome ? const Color(0xFF333333) : null,
+                gradient: theme.monochrome
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: <Color>[
+                          Color(0xFFE55392),
+                          Color(0xFFA12DF7),
+                          Color(0xFF4B48F7),
+                        ],
+                      ),
               ),
             ),
             Positioned(
@@ -206,25 +232,35 @@ class _LightDemo extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        OhosLightMaterial(
-          level: OhosLightMaterialLevel.thick,
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          effectTuning: const OhosLightEffectTuning(scatterScale: 0.6),
-          child: const SizedBox(
-            height: 72,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(OhosIcons.plus, color: OhosColors.highlight),
-                SizedBox(width: 8),
-                // 320vp 下这行标题会超出，允许它收缩换行
-                Flexible(
-                  child: Text(
-                    '任意位置弹层 · THICK + 漫射',
-                    textAlign: TextAlign.center,
+        // 墨屏下 THICK 退化成一块纯白，与页面底色相同 —— 库的约定是「边界交给
+        // 调用方自己的 1px 线」，这里补上，否则演示只剩一行没有载体的文字。
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: theme.monochrome
+                ? Border.all(color: theme.dividerColor)
+                : null,
+          ),
+          child: OhosLightMaterial(
+            level: OhosLightMaterialLevel.thick,
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            effectTuning: const OhosLightEffectTuning(scatterScale: 0.6),
+            child: SizedBox(
+              height: 72,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(OhosIcons.plus, color: theme.highlightColor),
+                  const SizedBox(width: 8),
+                  // 320vp 下这行标题会超出，允许它收缩换行
+                  const Flexible(
+                    child: Text(
+                      '任意位置弹层 · THICK + 漫射',
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -247,13 +283,23 @@ class _SharedElementDemoState extends State<_SharedElementDemo> {
     (2, Color(0xFFED6F21), '共享动势'),
   ];
 
+  /// 墨屏的三档填充：这三个彩色压到 16 级灰阶后都是中灰，而标签是白字 ——
+  /// 绿 / 橙两张卡会糊成一片，字基本读不出来。换成深灰阶（第 1/3/5 级），
+  /// 白字对比度仍在 7:1 以上，形式与彩屏一致（实心圆角块 + 白字）。
+  static const List<Color> _inkCards = <Color>[
+    Color(0xFF111111),
+    Color(0xFF333333),
+    Color(0xFF555555),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return SizedBox(
       height: 96,
       child: Row(
         children: <Widget>[
-          for (final (int index, Color color, String label) in _cards)
+          for (final (int index, _, String label) in _cards)
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -262,12 +308,12 @@ class _SharedElementDemoState extends State<_SharedElementDemo> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _open(context, index),
+                      onTap: () => _open(context, index, _fill(theme, index)),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         height: 96,
                         decoration: BoxDecoration(
-                          color: color,
+                          color: _fill(theme, index),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Center(
@@ -290,11 +336,14 @@ class _SharedElementDemoState extends State<_SharedElementDemo> {
     );
   }
 
+  Color _fill(OhosThemeData theme, int index) =>
+      theme.monochrome ? _inkCards[index] : _cards[index].$2;
+
   /// Pushes a full-screen page with the same [Hero] tag, so Flutter morphs
   /// the small card into the large one (一镜到底) with the shared-element
   /// curve instead of an instant tree swap.
-  void _open(BuildContext context, int index) {
-    final (int _, Color color, String label) = _cards[index];
+  void _open(BuildContext context, int index, Color color) {
+    final String label = _cards[index].$3;
     Navigator.of(context).push(
       PageRouteBuilder<void>(
         transitionDuration: OhosGeometry.durationLong,
@@ -339,8 +388,12 @@ class _SharedCardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Scaffold(
-      backgroundColor: Colors.black.withValues(alpha: 0.35),
+      // 墨屏：35% 黑遮罩压成浅灰，深灰卡片仍立得住；彩屏保持原来的半透明黑。
+      backgroundColor: theme.monochrome
+          ? const Color(0xFFDDDDDD)
+          : Colors.black.withValues(alpha: 0.35),
       body: Center(
         child: GestureDetector(
           onTap: () => Navigator.of(context).maybePop(),
@@ -354,13 +407,16 @@ class _SharedCardPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: const <BoxShadow>[
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
+                  // 阴影在白底上本来就看不见，墨屏更是一层噪点
+                  boxShadow: theme.monochrome
+                      ? null
+                      : const <BoxShadow>[
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 24,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -398,6 +454,7 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     final List<(Curve, Duration, String)> rows = <(Curve, Duration, String)>[
       (OhosGeometry.spring, OhosGeometry.durationPress, '按下反馈 · spring 90ms'),
       (
@@ -416,7 +473,10 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
             width: double.infinity,
             height: 96,
             decoration: BoxDecoration(
-              color: OhosColors.compBackgroundGray,
+              // 灰底在墨屏上等于白纸，跑道整块消失；换一档读得出来的浅灰。
+              color: theme.monochrome
+                  ? const Color(0xFFEEEEEE)
+                  : OhosColors.compBackgroundGray,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Stack(
@@ -429,8 +489,8 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
                   child: Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(
-                      color: OhosColors.highlight,
+                    decoration: BoxDecoration(
+                      color: theme.highlightColor,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -442,8 +502,8 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
                   child: Text(
                     '点击切换 · 位移+缩放（共享动势）',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: OhosColors.textSecondaryLight,
+                    style: TextStyle(
+                      color: theme.textSecondaryColor,
                       fontSize: 12,
                     ),
                   ),
@@ -454,12 +514,17 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
         ),
         const SizedBox(height: 12),
         for (final (Curve curve, Duration duration, String label) in rows)
-          _curveBar(curve, duration, label),
+          _curveBar(theme, curve, duration, label),
       ],
     );
   }
 
-  Widget _curveBar(Curve curve, Duration duration, String label) {
+  Widget _curveBar(
+    OhosThemeData theme,
+    Curve curve,
+    Duration duration,
+    String label,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TweenAnimationBuilder<double>(
@@ -474,8 +539,8 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
             children: <Widget>[
               Text(
                 label,
-                style: const TextStyle(
-                  color: OhosColors.textSecondaryLight,
+                style: TextStyle(
+                  color: theme.textSecondaryColor,
                   fontSize: 12,
                 ),
               ),
@@ -483,7 +548,9 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
               Container(
                 height: 10,
                 decoration: BoxDecoration(
-                  color: OhosColors.compBackgroundGray,
+                  color: theme.monochrome
+                      ? const Color(0xFFEEEEEE)
+                      : OhosColors.compBackgroundGray,
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: FractionallySizedBox(
@@ -491,6 +558,8 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
                   widthFactor: _pressed ? eased : 0.3,
                   child: Container(
                     decoration: BoxDecoration(
+                      // 55% 品牌蓝压到灰阶上是中灰，仍读得出来；留着反而与
+                      // 彩屏版本对照最直观，所以只把轨道换成浅灰。
                       color: const Color(0xFF0A59F7).withValues(alpha: 0.55),
                       borderRadius: BorderRadius.circular(5),
                     ),

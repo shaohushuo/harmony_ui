@@ -20,12 +20,15 @@ class OhosUiGalleryApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'harmony_ui gallery',
-      home: OhosTheme(
-        data: OhosThemeData.light(fontFamily: 'HarmonyOS Sans'),
-        child: const HomePage(),
+    // 主题要包在 `MaterialApp` **外面**：push 出去的页面是 Navigator 的兄弟
+    // 节点，挂在 `home:` 里的 OhosTheme 传不到它们，页面会静默退回默认浅色
+    // （想整体切墨主题验证时尤其容易误判成「ink 没生效」）。
+    return OhosTheme(
+      data: OhosThemeData.ink(fontFamily: 'HarmonyOS Sans'),
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'harmony_ui gallery',
+        home: HomePage(),
       ),
     );
   }
@@ -120,10 +123,7 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        'HarmonyOS 设计控件全覆盖',
-                        style: theme.typography.titleMedium,
-                      ),
+                      Text('HarmonyOS 设计控件全覆盖', style: theme.typography.titleMedium),
                       const SizedBox(height: 4),
                       Text(
                         '参考华为设计文档「控件概览」6 大类 42 个控件，点击分类查看演示。',
@@ -142,14 +142,9 @@ class HomePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: OhosCard(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(builder: category.builder),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+                onTap: () =>
+                    Navigator.push(context, MaterialPageRoute<void>(builder: category.builder)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: <Widget>[
                     Container(
@@ -159,21 +154,14 @@ class HomePage extends StatelessWidget {
                         color: theme.highlightColor.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(
-                        category.icon,
-                        size: 22,
-                        color: theme.highlightColor,
-                      ),
+                      child: Icon(category.icon, size: 22, color: theme.highlightColor),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
-                            category.title,
-                            style: theme.typography.titleSmall,
-                          ),
+                          Text(category.title, style: theme.typography.titleSmall),
                           const SizedBox(height: 2),
                           Text(
                             category.subtitle,
@@ -184,11 +172,7 @@ class HomePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Icon(
-                      OhosIcons.chevron_right,
-                      size: 20,
-                      color: theme.textTertiaryColor,
-                    ),
+                    Icon(OhosIcons.chevron_right, size: 20, color: theme.textTertiaryColor),
                   ],
                 ),
               ),
