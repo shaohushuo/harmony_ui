@@ -219,4 +219,50 @@ class OhosTypography with Diagnosticable {
       ),
     );
   }
+
+  /// 按值比较。
+  ///
+  /// `OhosThemeData` 的 `==` 会往下比到排版，而 [light] / [dark] 每次调用都
+  /// 新建 13 个 `TextStyle`：不在这里比出值相等的话，`OhosThemeData.light()
+  /// == OhosThemeData.light()` 恒为 false，主题的「没变就不重建」就失效了。
+  /// `TextStyle` 自身实现了 `==`，逐字段比即可。
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    return other is OhosTypography &&
+        other.fontFamily == fontFamily &&
+        other.displayLarge == displayLarge &&
+        other.displayMedium == displayMedium &&
+        other.headlineLarge == headlineLarge &&
+        other.headlineMedium == headlineMedium &&
+        other.titleLarge == titleLarge &&
+        other.titleMedium == titleMedium &&
+        other.titleSmall == titleSmall &&
+        other.bodyLarge == bodyLarge &&
+        other.bodyMedium == bodyMedium &&
+        other.bodySmall == bodySmall &&
+        other.labelLarge == labelLarge &&
+        other.labelMedium == labelMedium &&
+        other.labelSmall == labelSmall;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    fontFamily,
+    displayLarge,
+    displayMedium,
+    headlineLarge,
+    headlineMedium,
+    titleLarge,
+    titleMedium,
+    titleSmall,
+    bodyLarge,
+    bodyMedium,
+    bodySmall,
+    labelLarge,
+    labelMedium,
+    labelSmall,
+  );
 }

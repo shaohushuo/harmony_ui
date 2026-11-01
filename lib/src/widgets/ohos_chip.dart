@@ -34,30 +34,22 @@ class OhosChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final bool enabled = onPressed != null;
-    // 墨水屏：12% 的选中底与 30% 的描边都活不过 16 级灰阶，改成「留白 +
-    // 选中纯黑边 / 未选中 #767676 边」，靠线的深浅而不是色的浓淡表意。
-    final bool ink = theme.monochrome;
+    final OhosVisualPolicy policy = theme.policy;
     final Color fg = selected ? theme.highlightColor : theme.textSecondaryColor;
-    // 墨屏两种状态都不填色，一律透明底 + 描边。
-    final Color idleFill = ink
-        ? Colors.transparent
-        : (theme.compBackgroundGrayColor ?? theme.cardColor);
-    final Color selectedFill = ink
+    // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，下面统一改成
+    // 「留白 + 描边」，靠线的深浅而不是色的浓淡表意。
+    final Color idleFill =
+        theme.compBackgroundGrayColor ?? theme.cardColor;
+    final Color selectedFill =
+        policy.tint(theme.highlightColor, 0.10) == Colors.transparent
         ? Colors.transparent
         : (theme.emphasizeTertiaryColor ??
               theme.highlightColor.withValues(alpha: 0.10));
-    final Color bg = selected
-        ? (selectedColor ?? selectedFill)
-        : idleFill;
-    // 描边：墨屏选中纯黑、未选中 #767676；彩屏沿用半透明品牌色 / 30% 灰。
+    final Color bg = selected ? (selectedColor ?? selectedFill) : idleFill;
+    // 描边：选中用品牌色，未选中用提示色；墨屏上两者都由策略换成实色
     final Color borderColor = selected
-        ? (ink
-              ? theme.dividerColor
-              : (theme.emphasizeSecondaryColor ??
-                    theme.highlightColor.withValues(alpha: 0.20)))
-        : (ink
-              ? theme.textTertiaryColor
-              : theme.textTertiaryColor.withValues(alpha: 0.3));
+        ? policy.line(theme.highlightColor, 0.20)
+        : policy.line(theme.textTertiaryColor, 0.3);
     return Material(
       color: bg,
       shape: RoundedRectangleBorder(

@@ -162,12 +162,12 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
         // 这条线不能交给 `Material.shape`：它在 1.5x 屏上会和子节点抢同一条
         // 边（下沿实测只剩 1 个设备像素，上沿却有 2 个），看着「下边框变细」。
         // 用 `foregroundDecoration` 单独画在最上层，四条边落在同一套几何上。
-        foregroundDecoration: theme.monochrome
+        foregroundDecoration: theme.usesOutlines
             ? BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
                   color: theme.dividerColor,
-                  width: ohosStrokeWidth(context),
+                  width: ohosStrokeWidth(context, theme.outlineWidth),
                 ),
               )
             : null,
@@ -250,10 +250,10 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       visualDensity: VisualDensity.standard,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      // 墨水屏：点按时不要半透明灰块（与主题里 interactive* 全透明一致）
-                      overlayColor: theme.monochrome
-                          ? Colors.transparent
-                          : null,
+                      // 不做水波纹的主题：点按时不要半透明灰块
+                      overlayColor: theme.policy.allowsRipple
+                          ? null
+                          : Colors.transparent,
                     ),
                     child: Text(widget.cancelText),
                   ),

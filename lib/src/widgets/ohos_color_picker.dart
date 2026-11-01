@@ -144,12 +144,10 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                 child: Icon(
                   _isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
                   size: 20,
-                  // 收藏星是唯一的暖色装饰，墨屏上压成浅灰等于没点亮，
-                  // 换成纯黑实心
+                  // 收藏星是唯一的暖色装饰，灰阶屏上压成浅灰等于没点亮，
+                  // 换成正文实色。
                   color: _isFavorite
-                      ? (theme.monochrome
-                            ? theme.textPrimaryColor
-                            : const Color(0xFFF7CE00))
+                      ? theme.policy.quantize(const Color(0xFFF7CE00))
                       : theme.textTertiaryColor,
                 ),
               ),
@@ -233,28 +231,32 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          // 墨屏：未选中片的 6% 黑底等于没有，按「留白 + 1px 实线」处理；选中
-          // 那一档同理不能用 12% 黑 —— 它在 16 级灰上只到第 2 级，比留白加线
-          // 的未选中还弱。选中直接反相成黑底白字。
-          color: theme.monochrome
+          // 未选中片的 6% 黑底在灰阶屏上等于没有，按「留白 + 实线」处理；
+          // 选中那一档的 12% 黑只到第 2 级，比「留白加线」的未选中还弱，
+          // 所以用描边主题时选中直接反相成实底。
+          color: theme.usesOutlines
               ? (selected ? theme.dividerColor : Colors.transparent)
               : (selected
                     ? (theme.emphasizeSecondaryColor ??
                           theme.highlightColor.withValues(alpha: 0.12))
                     : theme.textPrimaryColor.withValues(alpha: 0.06)),
           borderRadius: BorderRadius.circular(12),
-          border: theme.monochrome && !selected
+          border: theme.usesOutlines && !selected
               ? Border.fromBorderSide(
-                  ohosBorderSide(context, theme.dividerColor),
+                  ohosBorderSide(
+                    context,
+                    theme.dividerColor,
+                    width: theme.outlineWidth,
+                  ),
                 )
               : null,
         ),
         child: Text(
           label,
           style: theme.typography.labelSmall?.copyWith(
-            // 墨屏选中是黑底，文字跟着反相成白
+            // 用描边的主题里选中是实底，文字跟着反相成背景色
             color: selected
-                ? (theme.monochrome
+                ? (theme.usesOutlines
                       ? theme.backgroundColor
                       : theme.highlightColor)
                 : theme.textSecondaryColor,
@@ -399,9 +401,10 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                       border: Border.fromBorderSide(
                         ohosBorderSide(
                           context,
-                          theme.monochrome
-                              ? theme.dividerColor
-                              : const Color(0x14000000),
+                          theme.policy.line(
+                            const Color(0xFF000000),
+                            theme.usesOutlines ? 1 : 0.08,
+                          ),
                         ),
                       ),
                     ),
@@ -438,9 +441,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
           border: Border.fromBorderSide(
             ohosBorderSide(
               context,
-              theme.monochrome
-                  ? theme.dividerColor
-                  : const Color(0x66000000),
+              theme.policy.line(const Color(0xFF000000), 0.4),
             ),
           ),
         ),
@@ -595,9 +596,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                   border: Border.fromBorderSide(
                     ohosBorderSide(
                       context,
-                      theme.monochrome
-                          ? theme.dividerColor
-                          : const Color(0x14000000),
+                      theme.policy.line(const Color(0xFF000000), 0.08),
                     ),
                   ),
                 ),
@@ -616,12 +615,10 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                   border: Border.fromBorderSide(
                     ohosBorderSide(
                       context,
-                      theme.monochrome
-                          ? theme.dividerColor
-                          : const Color(0x40000000),
+                      theme.policy.line(const Color(0xFF000000), 0.25),
                     ),
                   ),
-                  boxShadow: theme.monochrome
+                  boxShadow: !theme.policy.allowsShadow
                       ? null
                       : const <BoxShadow>[
                           BoxShadow(

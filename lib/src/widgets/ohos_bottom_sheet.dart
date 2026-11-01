@@ -99,21 +99,25 @@ Future<void> showOhosBottomSheet({
           ),
         );
 
-      if (!lightMaterial || theme.monochrome) {
-        // 关掉毛玻璃，或墨水屏上本来就不该做整层模糊：退化成纯色面板。
-        // 墨水屏上面板与页面同为纯白，顶上那条边会整个消失 → 补 1px 实线。
+      if (!lightMaterial || !theme.policy.allowsBlur) {
+        // 关掉毛玻璃，或这套主题不做整层模糊：退化成纯色面板。
+        // 墨屏上面板与页面同为纯白，顶上那条边会整个消失 → 补 1px 实线。
         return Material(
           color: theme.cardColor,
           clipBehavior: Clip.antiAlias,
-          shape: theme.monochrome
+          shape: theme.usesOutlines
               ? RoundedRectangleBorder(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(24),
                   ),
-                  side: ohosBorderSide(context, theme.dividerColor),
+                  side: ohosBorderSide(
+                    context,
+                    theme.dividerColor,
+                    width: theme.outlineWidth,
+                  ),
                 )
               : null,
-          borderRadius: theme.monochrome
+          borderRadius: theme.usesOutlines
               ? null
               : const BorderRadius.vertical(top: Radius.circular(24)),
           child: panel,

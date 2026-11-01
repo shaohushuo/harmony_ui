@@ -217,11 +217,11 @@ class _OhosTextFieldState extends State<OhosTextField> {
           horizontal: 0,
           vertical: 12,
         ),
-        // 墨水屏：50% / 20% 的下划线在 16 级灰上淡成一圈白边，输入框等于
-        // 没有边界 —— 改 1px 实线，禁用降一档到 #767676。
+        // 50% / 20% 的下划线在 16 级灰上淡成一圈白边，输入框等于没有边界 ——
+        // 策略换成实线，禁用降一档到提示色。
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(
-            color: theme.monochrome
+            color: theme.usesOutlines
                 ? theme.dividerColor
                 : theme.textTertiaryColor.withValues(alpha: 0.5),
           ),
@@ -231,9 +231,7 @@ class _OhosTextFieldState extends State<OhosTextField> {
         ),
         disabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(
-            color: theme.monochrome
-                ? theme.textTertiaryColor
-                : theme.textTertiaryColor.withValues(alpha: 0.2),
+            color: theme.policy.line(theme.textTertiaryColor, 0.2),
           ),
         ),
         errorBorder: UnderlineInputBorder(
@@ -248,10 +246,10 @@ class _OhosTextFieldState extends State<OhosTextField> {
           theme: theme,
           hasError: hasError,
           accent: accent,
-          // 墨水屏上「填充色 = 背景色」，灰底方块的边界会整个消失 →
-          // 改回透明底 + 1px 黑边，靠线而不是靠色分层。
+          // 墨屏上「填充色 = 背景色」，灰底方块的边界会整个消失 →
+          // 改回透明底 + 实线，靠线而不是靠色分层。
           useFill: widget.variant == OhosTextFieldVariant.filled &&
-              !theme.monochrome,
+              !theme.usesOutlines,
           radius: widget.variant == OhosTextFieldVariant.capsule
               ? OhosGeometry.radiusCapsule
               : OhosGeometry.radiusMedium,
@@ -294,9 +292,7 @@ class _OhosTextFieldState extends State<OhosTextField> {
   }) {
     final BorderRadius borderRadius = BorderRadius.circular(radius);
     // 墨水屏上 50% 的 hairline 会淡掉，填充框本来就退化成描边框（见上）
-    final Color hairline = theme.monochrome
-        ? theme.dividerColor
-        : theme.textTertiaryColor.withValues(alpha: 0.5);
+    final Color hairline = theme.policy.line(theme.textTertiaryColor, 0.5);
     OutlineInputBorder border(Color color, [double width = 1]) =>
         OutlineInputBorder(
           borderRadius: borderRadius,
@@ -335,11 +331,7 @@ class _OhosTextFieldState extends State<OhosTextField> {
       focusedBorder: border(accent, 1.5),
       disabledBorder: useFill
           ? border(Colors.transparent, 0)
-          : border(
-              theme.monochrome
-                  ? theme.textTertiaryColor
-                  : theme.textTertiaryColor.withValues(alpha: 0.2),
-            ),
+          : border(theme.policy.line(theme.textTertiaryColor, 0.2)),
       errorBorder: border(theme.dangerColor, 1.5),
       focusedErrorBorder: border(theme.dangerColor, 1.5),
     );

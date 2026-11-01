@@ -50,12 +50,16 @@ void showOhosSnackBar(
       duration: resident ? const Duration(days: 365) : duration,
       behavior: SnackBarBehavior.floating,
       backgroundColor: surface,
-      elevation: theme.monochrome ? 0 : 6,
+      elevation: theme.policy.allowsShadow ? 6 : 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
         // 浅底浮条自己画一条发丝线：墨屏纯黑、彩屏用分隔色
-        side: theme.monochrome || lightSurface
-            ? ohosBorderSide(context, theme.dividerColor)
+        side: theme.usesOutlines || lightSurface
+            ? ohosBorderSide(
+                context,
+                theme.dividerColor,
+                width: theme.outlineWidth,
+              )
             : BorderSide.none,
       ),
       content: Row(
