@@ -39,7 +39,8 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 ## 特性
 
 - **HarmonyOS 设计令牌**：主题色 `#0A59F7` / `#317AF7`、11 色多彩色板、功能色、四级文字/图标透明度（90%/60%/40%/20%）、组件分层背景（`comp_background_primary/gray`）、20%/10% 品牌高亮背景（`comp_emphasize_secondary/tertiary`）与交互态色（hover/pressed/focus/select），全部对齐官方 Token 表。
-- **明暗双主题**：`OhosThemeData.light()` / `OhosThemeData.dark()` 开箱即用，支持 `copyWith` 定制。
+- **多主题**：`OhosThemeData.light()` / `.dark()` / `.ink()`（墨水屏）开箱即用，支持 `copyWith` 定制。
+- **一键切换普通 / 墨水屏**：`OhosThemeController` + `OhosThemeSwitcher` + `OhosThemeToggleButton` 三件套，顶栏放一个按钮即可在运行中来回切换，切换不丢页面栈。墨水屏与普通主题的差异集中在 `OhosVisualPolicy`（彩屏靠分层、墨水屏靠 1px 实线），加新屏只需加一个策略子类，组件层不动。
 - **API 对齐 Flutter**：使用方式与 Material/Cupertino 组件一致，学习成本低。
 - **原生字体**：默认使用 HarmonyOS 系统字体 `HarmonyOS Sans`（非鸿蒙平台自动回退系统字体）。
 - **沉浸光感材质**：`OhosLightMaterial` 实现官方 ULTRA_THIN … ULTRA_THICK 五档毛玻璃背板，支持顶部/底部渐变模糊，AppBar、底部页签、半模态面板开箱即用。
@@ -123,6 +124,113 @@ class MyApp extends StatelessWidget {
   }
 }
 ```
+
+## 一键切换普通 / 墨水屏主题
+
+墨水屏（如华为 MatePad Paper / NoteAir）上，16 级灰只能分辨出约 5 档，靠半透明
+叠色、阴影、模糊分层的界面会整块糊掉。`harmony_ui` 让同一组组件在两种主题下都成
+立，并且能在运行中一键来回：
+
+```dart
+// 1. 建一个控制器（`main()` 里建，或交给状态管理持有）
+final OhosThemeController themeController = OhosThemeController();
+
+// 2. 包住 MaterialApp —— 必须在**外面**，push 出去的页面才拿得到主题
+OhosThemeSwitcher(
+  controller: themeController,
+  builder: (BuildContext context, ThemeData materialTheme) {
+    return MaterialApp(
+      theme: materialTheme,
+      home: OhosScaffold(
+        appBar: OhosAppBar(
+          title: const Text('我的应用'),
+          // 3. 顶栏放一个按钮：点按翻转，长按弹出浅色 / 深色 / 墨水屏三选一
+          actions: <Widget>[
+            OhosThemeToggleButton(controller: themeController),
+          ],
+        ),
+        body: const SizedBox.shrink(),
+      ),
+    );
+  },
+);
+
+// 任意位置（包括内层页面）都能切：
+themeController.toggle();      // 普通 ↔ 墨水屏，回来时仍是原来的深/浅色
+themeController.mode = OhosThemeMode.dark;   // 指定档位
+```
+
+切换时 `MaterialApp` 原地重建，Navigator 的 State 会被复用，**不会把用户弹回首页**。
+
+### 两种主题为什么不是「深色模式的变体」
+
+墨水屏是黑字白纸（`Brightness.light`），差别不在色值而在**表现规则**：
+彩屏靠分层（20% 叠色、阴影、`BackdropFilter` 模糊、水波纹），墨水屏靠线
+（1px 实线描边、留白、关掉一切动画）。这套规则收在 `OhosVisualPolicy` 里：
+
+| 组件想表达 | 彩屏（`ColorVisualPolicy`） | 墨水屏（`InkVisualPolicy`） |
+| --- | --- | --- |
+| `policy.tint(base, 0.12)` | 12% 叠色 | `Colors.transparent`（托不住形体） |
+| `policy.line(base, 0.4)` | 40% 的线 | 实色（丢掉 alpha） |
+| `policy.allowsShadow` | `true` | `false` |
+| `policy.allowsBlur` | `true` | `false` |
+| `policy.allowsRipple` | `true` | `false` |
+| `policy.scaleMotion(200ms)` | `200ms` | `Duration.zero` |
+
+收到透明的底色就改画线 —— 这条约定替代了原先散在 24 个组件里的
+`theme.monochrome ? A : B`。
+
+> 已有代码里的 `theme.monochrome` 仍然可用（是 `policy.isMonochrome` 的别名），
+> 但新代码请读 `policy`。判断「要不要补一条线」用 `theme.usesOutlines`。
+
+### 加第三种主题要改哪些文件
+
+答案是「不碰 `lib/src/widgets/` 下的任何一行」。一个主题由两份东西构成：
+
+```dart
+// 1. 表现规则：这块屏上「怎么写才看得见」。不存在就不写，沿用已有两种之一。
+class HighContrastPolicy extends OhosVisualPolicy {
+  const HighContrastPolicy();
+
+  @override bool get isMonochrome => false;
+  @override Color tint(Color base, double alpha) =>
+      base.withValues(alpha: alpha < 0.30 ? 0.30 : alpha);  // 抬地板
+  @override Color line(Color base, double alpha) => base;
+  @override Color quantize(Color color) => color;
+  @override double? get outlineWidth => 2;      // 2px 粗线
+  @override bool get allowsShadow => true;
+  @override bool get allowsBlur => false;
+  @override bool get allowsRipple => true;
+  @override Duration scaleMotion(Duration base) => base;
+  @override Color disabledFill(Color base) => base.withValues(alpha: 0.30);
+}
+
+// 2. 色值：复用任一份现成色板再改。不需要新策略时这步就够了。
+final OhosThemeData highContrast = OhosThemeData.light().copyWith(
+  policy: const HighContrastPolicy(),
+  id: 'high_contrast',
+  textPrimaryColor: const Color(0xFF000000),
+  dividerColor: const Color(0xFF000000),
+);
+
+// 3. 接进切换流程：不需要往 OhosThemeMode 枚举里加值。
+final controller = OhosThemeController.custom(highContrast);
+controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
+```
+
+`test/theme_extension_test.dart` 里有一份**完整可跑的**自定义主题，用来把这条约束
+固化成回归测试：如果哪天某个 widget 又开始 `switch` 主题枚举、或硬编码某块屏的
+令牌，那个测试就会先红。
+
+### 已知的边界
+
+- **新增内置档位**（写进 `OhosThemeMode`）仍要改两处：`OhosThemeMode.theme()` 的
+  映射，和切换按钮长按菜单的取项（后者是自动遍历 `values`，不用改代码）。除此之外
+  没有 widget 需要动 —— 图标对未知档位走兜底推导，不会编译失败。
+- **`InkVisualPolicy.paper` 只改量化底色**，不改色值。做深色墨水屏还要另给一份深色
+  令牌（`OhosThemeData.ink().copyWith(...)` 即可），否则正文仍是白纸上的纯黑。
+- **持久化留给应用层**。核心库只提供 `OhosThemeData.id` 这个稳定字符串，不引入
+  `shared_preferences` 之类的依赖。
 
 ## 控件覆盖（对应官方「控件概览」42 控件）
 

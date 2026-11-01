@@ -4,40 +4,67 @@ import 'package:harmony_ui/harmony_ui.dart';
 import 'package:ohos_ui_example/main.dart';
 import 'package:ohos_ui_example/theme_switch.dart';
 
-/// 顶栏主题切换：三档能互相切、切完页面的组件主题真的换了，而且不会把人
-/// 从当前演示页弹回首页（`MaterialApp` 是原地重建，Navigator 的 State 复用）。
+/// 顶栏主题切换：一键在普通主题与墨水屏之间切换、长按列出三档、切完页面的
+/// 组件主题真的换了，而且不会把人从当前演示页弹回首页（`MaterialApp` 是原地
+/// 重建，Navigator 的 State 复用）。
 void main() {
   OhosThemeData themeOf(WidgetTester tester) =>
-      OhosTheme.of(tester.element(find.byType(HomePage)));
+      OhosTheme.of(tester.element(find.byType(HomePage).first));
 
-  setUp(() => galleryTheme.value = GalleryTheme.ink);
-  tearDown(() => galleryTheme.value = GalleryTheme.ink);
+  // `galleryTheme` 是全局单例，会记住上一个用例停在哪个彩屏档位；先把它拨回
+  // 浅色再进墨水屏，每个用例才有一样的起点。
+  void resetTheme() {
+    galleryTheme.setColorMode(OhosThemeMode.light);
+    galleryTheme.mode = OhosThemeMode.ink;
+  }
 
-  testWidgets('默认停在墨主题，按钮把三档都列出来', (WidgetTester tester) async {
+  setUp(resetTheme);
+  tearDown(resetTheme);
+
+  testWidgets('默认停在墨水屏，点一下回到普通主题', (WidgetTester tester) async {
     await tester.pumpWidget(const OhosUiGalleryApp());
     await tester.pumpAndSettle();
 
     expect(themeOf(tester).monochrome, isTrue);
 
+    // 一键切换：不需要先开菜单
     await tester.tap(find.byType(ThemeSwitchButton));
     await tester.pumpAndSettle();
-    expect(find.text('浅色'), findsOneWidget);
-    expect(find.text('深色'), findsOneWidget);
-    expect(find.text('墨主题'), findsOneWidget);
+
+    expect(galleryTheme.mode, OhosThemeMode.light);
+    expect(themeOf(tester).monochrome, isFalse);
   });
 
-  testWidgets('选浅色后组件主题跟着换（monochrome 关掉）', (WidgetTester tester) async {
+  testWidgets('再点一下回到墨水屏', (WidgetTester tester) async {
     await tester.pumpWidget(const OhosUiGalleryApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(ThemeSwitchButton));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('浅色'));
+    await tester.tap(find.byType(ThemeSwitchButton));
     await tester.pumpAndSettle();
 
-    expect(galleryTheme.value, GalleryTheme.light);
+    expect(galleryTheme.mode, OhosThemeMode.ink);
+    expect(themeOf(tester).monochrome, isTrue);
+  });
+
+  testWidgets('长按弹出三档菜单，选深色后主题跟着换', (WidgetTester tester) async {
+    await tester.pumpWidget(const OhosUiGalleryApp());
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byType(ThemeSwitchButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('浅色'), findsOneWidget);
+    expect(find.text('深色'), findsOneWidget);
+    expect(find.text('墨水屏'), findsOneWidget);
+
+    await tester.tap(find.text('深色'));
+    await tester.pumpAndSettle();
+
+    expect(galleryTheme.mode, OhosThemeMode.dark);
+    expect(themeOf(tester).brightness, Brightness.dark);
     expect(themeOf(tester).monochrome, isFalse);
-    expect(themeOf(tester).brightness, Brightness.light);
   });
 
   testWidgets('在演示页里切主题不会把人弹回首页', (WidgetTester tester) async {
@@ -51,10 +78,9 @@ void main() {
     // 演示页共用 `DemoScaffold`，按钮也在它的顶栏上
     await tester.tap(find.byType(ThemeSwitchButton));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('深色'));
-    await tester.pumpAndSettle();
 
-    expect(galleryTheme.value, GalleryTheme.dark);
+    // 直接翻转：墨水屏 -> 普通主题
+    expect(galleryTheme.mode, OhosThemeMode.light);
     // 还在导航类页面：首页的分类列表没有回来
     expect(find.byType(HomePage), findsNothing);
     expect(find.text('UI Design Kit'), findsNothing);

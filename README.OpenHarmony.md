@@ -38,7 +38,8 @@ Current version and branch mapping:
 
 | Library version | Branch / TAG | Flutter version |
 | --- | --- | --- |
-| 0.4.0 | `main` / `v0.4.0` | oh-3.35.7-release |
+| 0.5.0 | `main` / `v0.5.0` | oh-3.35.7-release |
+| 0.4.0 | `v0.4.0` | oh-3.35.7-release |
 | 0.3.0 | `v0.3.0` | oh-3.35.7-release |
 | 0.2.0 | historical commit | oh-3.35.7-release |
 | 0.1.0 | historical commit | oh-3.35.7-release |
@@ -125,10 +126,11 @@ hdc shell aa start -a EntryAbility -b com.example.ohos_ui_example
 
 ## Instructions
 
-1. **Theme first**: wrap inside `MaterialApp` with `OhosTheme`; `OhosThemeData.light()` / `dark()` work out of the box. All widget colors come from theme tokens, and `copyWith` supports brand customization.
-2. **Replace widgets one by one**: `ElevatedButton` → `OhosButton`, `ListTile` → `OhosListTile`, etc. API names map one-to-one, so most cases can be migrated with a global replace.
-3. **Upgrade to light material on demand**: enable `lightMaterial: true` on the app bar / bottom navigation / bottom sheet to get the immersive light effect.
-4. **Full demo**: the gallery app under `example/` covers every control (6 categories + layout & motion, 7 entries) and serves as an API reference.
+1. **Theme first**: wrap inside `MaterialApp` with `OhosTheme`; `OhosThemeData.light()` / `dark()` / `ink()` work out of the box. All widget colors come from theme tokens, and `copyWith` supports brand customization.
+2. **Normal ↔ e-ink in one tap**: `OhosThemeController` + `OhosThemeSwitcher` (wraps `MaterialApp`) + `OhosThemeToggleButton` (drop into `OhosAppBar.actions`). The two themes differ by *rendering policy*, not just colors: colour screens layer (20% tints, shadows, blur, ripples), e-ink uses 1px solid lines and no motion. That rule lives in `OhosVisualPolicy` — adding a third screen type means one new subclass, not edits to 24 widgets.
+3. **Replace widgets one by one**: `ElevatedButton` → `OhosButton`, `ListTile` → `OhosListTile`, etc. API names map one-to-one, so most cases can be migrated with a global replace.
+4. **Upgrade to light material on demand**: enable `lightMaterial: true` on the app bar / bottom navigation / bottom sheet to get the immersive light effect.
+5. **Full demo**: the gallery app under `example/` covers every control (6 categories + layout & motion, 7 entries) and serves as an API reference.
 
 ## API Reference
 
