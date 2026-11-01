@@ -54,6 +54,10 @@ class _GridDemo extends StatelessWidget {
     // 彩色屏的两级填充（浅灰 #F1F3F5 / 10% 品牌蓝）压到 16 级灰阶上都会落成
     // 白色，单元整块看不见。墨屏保留同样的形式（实心圆角块 + 两级交替），只把
     // 颜色换成灰阶里读得出来的两档；取值都是 17 的倍数，正好落在灰阶格子上。
+    //
+    // 填充是固定的浅 / 中灰，文字也就固定深色（`textPrimaryLight`），不跟
+    // `theme.textPrimaryColor` 走 —— 深色主题下那个值接近纯白，压在这种浅底上
+    // 对比度不到 1.2:1，格子里的数字会整片消失。
     final List<Color> fills = theme.monochrome
         ? const <Color>[Color(0xFFDDDDDD), Color(0xFFBBBBBB)]
         : const <Color>[
@@ -74,7 +78,7 @@ class _GridDemo extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 '${i + 1}',
-                style: TextStyle(color: theme.textPrimaryColor),
+                style: const TextStyle(color: OhosColors.textPrimaryLight),
               ),
             ),
           ),
@@ -118,8 +122,8 @@ class _ResponsiveDemo extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '${size.type.name} · ${size.width.round()}vp',
-                    style: TextStyle(
-                      color: theme.textPrimaryColor,
+                    style: const TextStyle(
+                      color: OhosColors.textPrimaryLight,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -158,7 +162,9 @@ class _ResponsiveDemo extends StatelessWidget {
                           alignment: Alignment.center,
                           child: Text(
                             '内容',
-                            style: TextStyle(color: theme.textPrimaryColor),
+                            style: const TextStyle(
+                              color: OhosColors.textPrimaryLight,
+                            ),
                           ),
                         ),
                     ],
@@ -234,8 +240,11 @@ class _LightDemo extends StatelessWidget {
         const SizedBox(height: 12),
         // 墨屏下 THICK 退化成一块纯白，与页面底色相同 —— 库的约定是「边界交给
         // 调用方自己的 1px 线」，这里补上，否则演示只剩一行没有载体的文字。
+        //
+        // 必须用 `foregroundDecoration`：那块白底不透明，画在 `decoration` 里的
+        // 线会被同一个矩形的子节点整块盖住，真机上仍然看不到边界。
         Container(
-          decoration: BoxDecoration(
+          foregroundDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: theme.monochrome
                 ? Border.all(color: theme.dividerColor)

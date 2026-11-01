@@ -58,7 +58,7 @@ class OhosListTile extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.selected = false,
-    this.divider = true,
+    this.divider,
     this.density = OhosListTileDensity.regular,
     this.padding,
   });
@@ -83,10 +83,13 @@ class OhosListTile extends StatelessWidget {
 
   /// Whether to draw the hairline divider below the tile.
   ///
-  /// Only honoured when the tile stands on its own: inside an [OhosList] the
-  /// list decides (it draws one hairline per row boundary and skips the last
-  /// row), so this flag is ignored there.
-  final bool divider;
+  /// `null` (the default) follows the surrounding [OhosList]: inside a list the
+  /// list owns the dividers — one hairline per row boundary, none under the
+  /// last row — and a tile standing on its own draws one.
+  ///
+  /// Pass `false` to force the line off even inside a list (a header row or a
+  /// grouped section, say), or `true` to force it on.
+  final bool? divider;
 
   /// Vertical rhythm; see [OhosListTileDensity].
   final OhosListTileDensity density;
@@ -156,7 +159,10 @@ class OhosListTile extends StatelessWidget {
     // 分隔线不贯穿：左侧对齐文字（有 leading 时让到图标之后），右侧留出与
     // 内容相同的 16vp，两端都收进卡片里比通栏画一条好看。
     final double dividerIndent = leading == null ? 16 : 56;
-    final bool drawDivider = OhosListDividerScope.maybeOf(context) ?? divider;
+    // 显式传值优先（`false` 就是关掉），没传才跟随所在列表，列表里也没人
+    // 表态时默认画一条 —— 与 `divider` 原来的「默认 true」一致。
+    final bool drawDivider =
+        divider ?? OhosListDividerScope.maybeOf(context) ?? true;
 
     final Widget column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

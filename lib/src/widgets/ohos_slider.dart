@@ -135,8 +135,11 @@ class _OhosSliderState extends State<OhosSlider> {
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
             // Material 自己还会画一个 value indicator（`divisions` + `label`
             // 时默认 onlyForDiscrete）：墨屏下它是白底、没有描边，贴在白页面上
-            // 整个消失，而且跟上面自绘的气泡重影。统一关掉，只留自绘那个。
-            showValueIndicator: ShowValueIndicator.never,
+            // 整个消失，而且跟上面自绘的气泡重影。只在墨屏关掉，彩屏保持
+            // Material 的默认 —— 离散滑条在彩屏上仍要那块数值反馈。
+            showValueIndicator: theme.monochrome
+                ? ShowValueIndicator.never
+                : ShowValueIndicator.onlyForDiscrete,
           ),
           child: Slider(
             value: _display.clamp(widget.min, widget.max),

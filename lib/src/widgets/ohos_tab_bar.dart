@@ -78,6 +78,7 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.showDivider = false,
     this.divider,
+    this.dividerStyle,
     this.scrollController,
   });
 
@@ -103,8 +104,7 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
 
   /// Whether a 1px hairline separates the strip from the content below
-  /// (bottom-tab style). Superseded by [divider], which also carries the
-  /// follow-scroll and colour options.
+  /// (bottom-tab style). Superseded by [dividerStyle] / [divider].
   final bool showDivider;
 
   /// Optional divider configuration (常显/常隐/跟手滑动).
@@ -112,6 +112,11 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
   /// Null falls back to [showDivider]: a hairline when it is true, nothing
   /// when it is false — so existing call sites keep their behaviour.
   final OhosTabBarDividerOptions? divider;
+
+  /// Alias of [divider]; kept for readability in call sites.
+  ///
+  /// Still honoured because 0.4.0 shipped it — prefer [divider] in new code.
+  final OhosTabBarDividerOptions? dividerStyle;
 
   /// Listens for the follow-scroll divider mode.
   final ScrollController? scrollController;
@@ -192,7 +197,7 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
               _UnderlineDivider(
-                options: divider,
+                options: divider ?? dividerStyle,
                 legacyShowDivider: showDivider,
                 dividerColor: theme.dividerColor,
                 scrollController: scrollController,

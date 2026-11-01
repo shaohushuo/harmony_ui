@@ -163,8 +163,10 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
   /// 选中态对勾的颜色：跟着色块亮度走。
   ///
   /// 白勾画在白 / 浅色块上等于没画（墨屏压成灰阶后更明显），只有深色块才配白勾。
-  Color _checkColor(OhosThemeData theme, Color color) {
-    return color.computeLuminance() > 0.5 ? theme.textPrimaryColor : Colors.white;
+  /// 浅色块固定用纯黑，**不取 `theme.textPrimaryColor`** —— 深色主题里那个值
+  /// 本身接近纯白，白勾会重新消失在浅色块上。
+  Color _checkColor(Color color) {
+    return color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
   }
 
   Widget _favoritesRow(OhosThemeData theme) {
@@ -196,7 +198,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                       ? Icon(
                           Icons.check_rounded,
                           size: 14,
-                          color: _checkColor(theme, color),
+                          color: _checkColor(color),
                         )
                       : null,
                 ),
@@ -294,7 +296,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                       ? Icon(
                           Icons.check_rounded,
                           size: 18,
-                          color: _checkColor(theme, color),
+                          color: _checkColor(color),
                         )
                       : null,
                 ),

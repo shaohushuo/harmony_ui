@@ -735,6 +735,32 @@ void main() {
       expect(find.byKey(const ValueKey<String>('bubble')), findsNothing);
     });
 
+    testWidgets('彩屏离散滑条保留 Material 的数值指示器', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosSlider(
+                  value: 30,
+                  divisions: 20,
+                  onChanged: (double _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 只有墨屏要关（白底无描边会消失）；彩屏离散滑条还得有拖动时的数值反馈，
+      // 否则 `divisions` 一给，气泡就没了。
+      expect(
+        SliderTheme.of(tester.element(find.byType(Slider))).showValueIndicator,
+        ShowValueIndicator.onlyForDiscrete,
+      );
+    });
+
     testWidgets('墨屏滑块自己画描边，禁用态变灰实心', (WidgetTester tester) async {
       Future<SliderThemeData> themeFor(OhosThemeData data) async {
         await tester.pumpWidget(
@@ -1623,6 +1649,23 @@ void main() {
         ),
       );
 
+      expect(dividersOf(tester), isEmpty);
+    });
+
+    testWidgets('tile 显式 divider: false 在列表内也生效', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              OhosListTile(title: Text('A'), divider: false),
+              OhosListTile(title: Text('B')),
+            ],
+          ),
+        ),
+      );
+
+      // A 是第一行（scope 本来让它画一条），显式 false 必须压过 scope ——
+      // 否则「列表接管分隔线」就变成没法逐行关掉的静默回归。B 是末行，不画。
       expect(dividersOf(tester), isEmpty);
     });
 
