@@ -510,12 +510,21 @@ class _TabDividerDemo extends StatefulWidget {
 }
 
 class _TabDividerDemoState extends State<_TabDividerDemo> {
-  final ScrollController _scroller = ScrollController();
+  // 每页一个 controller：`TabBarView` 在切换动画里会同时挂着两页，一份
+  // `ScrollController` 只能 attach 一个 `ScrollPosition`，共用一个会在切页瞬间
+  // 抛 "ScrollController attached to multiple scroll views"（debug 下红屏闪烁）。
+  final List<ScrollController> _scrollers = <ScrollController>[
+    ScrollController(),
+    ScrollController(),
+    ScrollController(),
+  ];
   OhosTabBarDividerMode _mode = OhosTabBarDividerMode.followScroll;
 
   @override
   void dispose() {
-    _scroller.dispose();
+    for (final ScrollController scroller in _scrollers) {
+      scroller.dispose();
+    }
     super.dispose();
   }
 
@@ -557,12 +566,27 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
           length: 3,
           child: Column(
             children: <Widget>[
-              OhosTabBar(
-                tabs: const <Widget>[Tab(text: '推荐'), Tab(text: '关注'), Tab(text: '热榜')],
-                divider: OhosTabBarDividerOptions(mode: _mode),
-                scrollController: _mode == OhosTabBarDividerMode.followScroll
-                    ? _scroller
-                    : null,
+              // 跟手分割线要盯「当前页」的滚动位置：切页后换成那一页的 controller。
+              Builder(
+                builder: (BuildContext tabContext) {
+                  final TabController controller =
+                      DefaultTabController.of(tabContext);
+                  return AnimatedBuilder(
+                    animation: controller,
+                    builder: (BuildContext context, Widget? child) => OhosTabBar(
+                      tabs: const <Widget>[
+                        Tab(text: '推荐'),
+                        Tab(text: '关注'),
+                        Tab(text: '热榜'),
+                      ],
+                      divider: OhosTabBarDividerOptions(mode: _mode),
+                      scrollController:
+                          _mode == OhosTabBarDividerMode.followScroll
+                          ? _scrollers[controller.index]
+                          : null,
+                    ),
+                  );
+                },
               ),
               Container(
                 height: 180,
@@ -585,7 +609,7 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
 
   Widget _scrollList(int page) {
     return ListView(
-      controller: _scroller,
+      controller: _scrollers[page],
       padding: const EdgeInsets.all(6),
       children: <Widget>[
         for (int i = 0; i < 20; i++)

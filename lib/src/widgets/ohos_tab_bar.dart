@@ -265,16 +265,25 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: AnimatedContainer(
+            child: TweenAnimationBuilder<double>(
+              // `spring` 的 y 控制点是 1.56，会过冲到 1 以上；这里的目标值有一侧
+              // 是 0，插值就变成**负宽** —— `Container` 会抛
+              // "BoxConstraints has a negative minimum width"（debug 下红屏 + 闪烁）。
+              // 过冲段 clamp 到 0，弹性仍保留；`begin` 留空，首次直接就位、不播动画。
+              tween: Tween<double>(end: selected ? 24 : 0),
               duration: OhosGeometry.durationShort,
               curve: OhosGeometry.spring,
-              width: selected ? 24 : 0,
-              height: 3,
-              margin: const EdgeInsets.only(bottom: 2),
-              decoration: BoxDecoration(
-                color: activeColor,
-                borderRadius: BorderRadius.circular(1.5),
-              ),
+              builder: (BuildContext context, double width, Widget? child) {
+                return Container(
+                  width: width.clamp(0.0, 24),
+                  height: 3,
+                  margin: const EdgeInsets.only(bottom: 2),
+                  decoration: BoxDecoration(
+                    color: activeColor,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                );
+              },
             ),
           ),
         ],
