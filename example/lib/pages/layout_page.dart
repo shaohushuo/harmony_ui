@@ -129,7 +129,9 @@ class _ResponsiveDemo extends StatelessWidget {
                   ),
                   Text(
                     '$columns 列',
-                    style: TextStyle(color: theme.textSecondaryColor),
+                    // 底板是固定浅灰（见上方 fills 的说明），次级文字也就固定
+                    // 深色，不跟主题走。
+                    style: const TextStyle(color: OhosColors.textSecondaryLight),
                   ),
                 ],
               ),
@@ -511,8 +513,10 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
                   child: Text(
                     '点击切换 · 位移+缩放（共享动势）',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: theme.textSecondaryColor,
+                    // 跑道底色是固定浅灰（墨屏 #EEEEEE / 彩屏 #F1F3F5），文字
+                    // 固定深色；跟主题走的话深色主题下会变成浅灰底 + 近白字。
+                    style: const TextStyle(
+                      color: OhosColors.textSecondaryLight,
                       fontSize: 12,
                     ),
                   ),

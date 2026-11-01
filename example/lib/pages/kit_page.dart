@@ -781,8 +781,11 @@ class _ExpandableActionBarDemoState extends State<_ExpandableActionBarDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Container(
-      color: const Color(0xFFF1F3F5),
+      // 底板跟着主题走：固定浅灰配主题配色的图标按钮，深色主题下会变成
+      // 浅灰底 + 近白图标。
+      color: theme.compBackgroundGrayColor ?? OhosColors.compBackgroundGray,
       height: 88,
       alignment: Alignment.bottomRight,
       padding: const EdgeInsets.all(12),

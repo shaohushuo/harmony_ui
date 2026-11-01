@@ -212,7 +212,9 @@ class _StatusBarColorDemoBody extends StatelessWidget {
           context,
           caption: '默认：一段式背景，状态栏那条与工具栏同色',
           bar: const OhosAppBar(
-            title: Text('消息'),
+            // 这个示例故意用固定白底（演示 backgroundColor 覆盖），标题就也
+            // 固定深色 —— 否则深色主题下是白底白字。
+            title: Text('消息', style: TextStyle(color: OhosColors.textPrimaryLight)),
             backgroundColor: Colors.white,
           ),
         ),
@@ -221,7 +223,7 @@ class _StatusBarColorDemoBody extends StatelessWidget {
           context,
           caption: 'statusBarBackgroundColor：状态栏 = 页面底色，工具栏 = 卡片色',
           bar: const OhosAppBar(
-            title: Text('消息'),
+            title: Text('消息', style: TextStyle(color: OhosColors.textPrimaryLight)),
             backgroundColor: Colors.white,
             statusBarBackgroundColor: Color(0xFFE8EBF0),
           ),
@@ -496,9 +498,12 @@ class _NavigationBarDemoState extends State<_NavigationBarDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: OhosColors.compBackgroundGray,
+        // 底板与栏体都跟着主题走：固定浅灰 + 固定白栏这套组合在深色主题下
+        // 会让栏里的标签文字（跟着主题变近白）压在白底上。
+        color: theme.compBackgroundGrayColor ?? OhosColors.compBackgroundGray,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -507,7 +512,7 @@ class _NavigationBarDemoState extends State<_NavigationBarDemo> {
           type: widget.type,
           lightMaterial: widget.type == OhosNavigationBarType.float,
           glow: widget.type == OhosNavigationBarType.float,
-          backgroundColor: Colors.white,
+          backgroundColor: theme.cardColor,
           currentIndex: _index,
           onDestinationSelected: (int i) => setState(() => _index = i),
           destinations: const <OhosNavigationDestination>[
