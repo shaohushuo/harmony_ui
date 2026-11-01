@@ -233,12 +233,14 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          // 墨屏：未选中片的 6% 黑底等于没有，按「留白 + 1px 实线」处理
-          color: selected
-              ? (theme.emphasizeSecondaryColor ??
-                    theme.highlightColor.withValues(alpha: 0.12))
-              : (theme.monochrome
-                    ? Colors.transparent
+          // 墨屏：未选中片的 6% 黑底等于没有，按「留白 + 1px 实线」处理；选中
+          // 那一档同理不能用 12% 黑 —— 它在 16 级灰上只到第 2 级，比留白加线
+          // 的未选中还弱。选中直接反相成黑底白字。
+          color: theme.monochrome
+              ? (selected ? theme.dividerColor : Colors.transparent)
+              : (selected
+                    ? (theme.emphasizeSecondaryColor ??
+                          theme.highlightColor.withValues(alpha: 0.12))
                     : theme.textPrimaryColor.withValues(alpha: 0.06)),
           borderRadius: BorderRadius.circular(12),
           border: theme.monochrome && !selected
@@ -250,7 +252,12 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
         child: Text(
           label,
           style: theme.typography.labelSmall?.copyWith(
-            color: selected ? theme.highlightColor : theme.textSecondaryColor,
+            // 墨屏选中是黑底，文字跟着反相成白
+            color: selected
+                ? (theme.monochrome
+                      ? theme.backgroundColor
+                      : theme.highlightColor)
+                : theme.textSecondaryColor,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
@@ -559,7 +566,11 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
     final double t = value.clamp(0.0, 1.0);
     // 拇指圆心留出半径，滑到两端时整圆仍落在轨道内，不会被父级裁掉半边
     final double centerX = thumbSize / 2 + t * (width - thumbSize);
-    double getT(Offset local) => (local.dx / width).clamp(0.0, 1.0);
+    // 命中换算必须跟拇指行程用同一段区间：按整条宽度算的话，两端最大错位
+    // 一个半径（指尖压在最左边，拇指却停在 12vp 处）。
+    final double travel = (width - thumbSize).clamp(1.0, double.infinity);
+    double getT(Offset local) =>
+        ((local.dx - thumbSize / 2) / travel).clamp(0.0, 1.0);
     return GestureDetector(
       onTapDown: (TapDownDetails d) => onChanged(getT(d.localPosition)),
       onPanDown: (DragDownDetails d) => onChanged(getT(d.localPosition)),

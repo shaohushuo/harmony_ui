@@ -69,10 +69,18 @@ class _OhosSwitchState extends State<OhosSwitch> {
                 ? (ink && !enabled ? theme.textTertiaryColor : active)
                 : inactive,
             borderRadius: BorderRadius.circular(trackHeight / 2),
-            border: ink
-                ? Border.all(color: inkLine, width: ohosStrokeWidth(context))
-                : null,
           ),
+          // 边框走 `foregroundDecoration`：`BoxDecoration.border` 会占掉内边距，
+          // 26vp 的滑块被压成 26×24 的椭圆（轨道高 30、padding 2、边框 1）。
+          foregroundDecoration: ink
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(trackHeight / 2),
+                  border: Border.all(
+                    color: inkLine,
+                    width: ohosStrokeWidth(context),
+                  ),
+                )
+              : null,
           padding: EdgeInsets.all((trackHeight - thumb) / 2),
           child: AnimatedAlign(
             duration: OhosGeometry.durationShort,

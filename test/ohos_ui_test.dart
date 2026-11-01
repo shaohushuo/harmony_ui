@@ -466,19 +466,31 @@ void main() {
       );
       final BoxDecoration trackDecoration = track.decoration! as BoxDecoration;
       expect(trackDecoration.color, Colors.transparent);
-      expect(trackDecoration.border!.top.color, ink.dividerColor);
-
-      final Container thumb = tester.widget<Container>(
-        find
-            .descendant(
-              of: find.byType(AnimatedAlign),
-              matching: find.byType(Container),
-            )
-            .first,
+      expect(
+        trackDecoration.border,
+        isNull,
+        reason: '边框走 decoration 会占掉内边距，把滑块压成椭圆',
       );
+
+      final BoxDecoration trackOutline =
+          track.foregroundDecoration! as BoxDecoration;
+      expect(trackOutline.border!.top.color, ink.dividerColor);
+
+      final Finder thumbFinder = find
+          .descendant(
+            of: find.byType(AnimatedAlign),
+            matching: find.byType(Container),
+          )
+          .first;
+      final Container thumb = tester.widget<Container>(thumbFinder);
       final BoxDecoration thumbDecoration = thumb.decoration! as BoxDecoration;
       expect(thumbDecoration.border, isNotNull);
       expect(thumbDecoration.boxShadow, isNull, reason: '墨水屏没有阴影可画');
+
+      // 轨道加 1px 边之后滑块仍是正圆（26×26），没有被压成 26×24
+      final Size thumbSize = tester.getSize(thumbFinder);
+      expect(thumbSize.width, thumbSize.height);
+      expect(thumbSize.height, 26);
     });
 
     testWidgets('ink 卡片默认面补 1px 实线，自定义色不框', (
@@ -840,6 +852,52 @@ void main() {
   });
 
   group('OhosColorPicker', () {
+    testWidgets('墨屏模式页签：选中反相成黑底白字，未选中留白 + 1px 线', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: OhosColorPicker(
+                colors: const <Color>[Colors.red, Colors.green],
+                selectedColor: Colors.red,
+                onChanged: (Color _) {},
+                tabs: const <OhosColorPickerTab>[
+                  OhosColorPickerTab.grid,
+                  OhosColorPickerTab.spectrum,
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      BoxDecoration chipOf(String label) =>
+          tester
+                  .widget<Container>(
+                    find
+                        .ancestor(
+                          of: find.text(label),
+                          matching: find.byType(Container),
+                        )
+                        .first,
+                  )
+                  .decoration!
+              as BoxDecoration;
+
+      // 选中：黑底。原来的 12% 黑在 16 级灰上只到第 2 级，比「留白 + 1px 线」
+      // 的未选中片还弱，选中态反而看不出来。
+      expect(chipOf('网格').color, ink.dividerColor);
+      // 未选中：留白 + 实线
+      expect(chipOf('光谱').color, Colors.transparent);
+      expect(chipOf('光谱').border, isNotNull);
+      // 黑底上的文字必须反相
+      expect(tester.widget<Text>(find.text('网格')).style?.color, ink.backgroundColor);
+    });
+
     testWidgets('未选中的浅色色块补描边，深色不描；墨屏用纯黑', (
       WidgetTester tester,
     ) async {
