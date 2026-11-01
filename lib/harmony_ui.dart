@@ -24,6 +24,7 @@ library;
 
 export 'src/theme/ohos_colors.dart';
 export 'src/theme/ohos_geometry.dart';
+export 'src/theme/ohos_stroke.dart';
 export 'src/theme/ohos_theme.dart';
 export 'src/theme/ohos_theme_data.dart';
 export 'src/theme/ohos_typography.dart';
