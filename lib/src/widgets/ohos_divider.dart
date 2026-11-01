@@ -7,7 +7,9 @@ import '../theme/ohos_theme.dart';
 ///
 /// [indent] defaults to 0, the same as Material's `Divider`, so a straight
 /// replacement keeps the previous geometry. Insets that align the hairline with
-/// list text are the caller's job — `OhosListTile` passes `indent: 16` itself.
+/// list text are the caller's job — `OhosListTile` passes `indent: 16` (or 56
+/// behind a leading icon) plus `endIndent: 16` itself, so the line stops before
+/// both edges instead of running through them.
 class OhosDivider extends StatelessWidget {
   const OhosDivider({
     super.key,

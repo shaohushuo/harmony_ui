@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// A HarmonyOS filter chip used for tags and multi-select filters, the
@@ -33,22 +34,35 @@ class OhosChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final bool enabled = onPressed != null;
+    // 墨水屏：12% 的选中底与 30% 的描边都活不过 16 级灰阶，改成「留白 +
+    // 选中纯黑边 / 未选中 #767676 边」，靠线的深浅而不是色的浓淡表意。
+    final bool ink = theme.monochrome;
     final Color fg = selected ? theme.highlightColor : theme.textSecondaryColor;
-    final Color bg = selected
-        ? (selectedColor ??
-              (theme.emphasizeTertiaryColor ??
-                  theme.highlightColor.withValues(alpha: 0.10)))
+    // 墨屏两种状态都不填色，一律透明底 + 描边。
+    final Color idleFill = ink
+        ? Colors.transparent
         : (theme.compBackgroundGrayColor ?? theme.cardColor);
+    final Color selectedFill = ink
+        ? Colors.transparent
+        : (theme.emphasizeTertiaryColor ??
+              theme.highlightColor.withValues(alpha: 0.10));
+    final Color bg = selected
+        ? (selectedColor ?? selectedFill)
+        : idleFill;
+    // 描边：墨屏选中纯黑、未选中 #767676；彩屏沿用半透明品牌色 / 30% 灰。
+    final Color borderColor = selected
+        ? (ink
+              ? theme.dividerColor
+              : (theme.emphasizeSecondaryColor ??
+                    theme.highlightColor.withValues(alpha: 0.20)))
+        : (ink
+              ? theme.textTertiaryColor
+              : theme.textTertiaryColor.withValues(alpha: 0.3));
     return Material(
       color: bg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: selected
-              ? (theme.emphasizeSecondaryColor ??
-                    theme.highlightColor.withValues(alpha: 0.20))
-              : theme.textTertiaryColor.withValues(alpha: 0.3),
-        ),
+        side: ohosBorderSide(context, borderColor),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

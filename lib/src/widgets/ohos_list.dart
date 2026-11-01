@@ -6,6 +6,12 @@ import 'ohos_list_tile.dart';
 
 /// A grouped list container (列表 in the HarmonyOS guideline) that lays out
 /// [OhosListTile]s on the theme card surface with hairline dividers.
+///
+/// Dividers are the list's business: each row boundary gets exactly one
+/// hairline and the last row gets none. [OhosListTile]s inside the list are told
+/// so through [OhosListDividerScope] and stop drawing their own, which used to
+/// stack two lines of different indents on every boundary. Children that are
+/// not [OhosListTile]s still get a divider inserted here.
 class OhosList extends StatelessWidget {
   const OhosList({
     super.key,
@@ -46,9 +52,16 @@ class OhosList extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    children[i],
-                    if (divider && i < children.length - 1)
-                      const OhosDivider(indent: 56),
+                    OhosListDividerScope(
+                      showBottom: divider && i < children.length - 1,
+                      child: children[i],
+                    ),
+                    // tile 自己会画线（indent 随 leading），只有非 tile 子节点
+                    // 需要列表在这里补一条，避免又叠成两条。
+                    if (divider &&
+                        i < children.length - 1 &&
+                        children[i] is! OhosListTile)
+                      const OhosDivider(indent: 56, endIndent: 16),
                   ],
                 ),
             ],

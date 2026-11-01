@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// Menu style of [showOhosMenu].
@@ -35,6 +36,7 @@ Future<T?> showOhosMenu<T>({
   /// triggering control. When provided the menu is positioned right below it.
   Object? anchor,
 }) {
+  final OhosThemeData theme = OhosTheme.of(context);
   final RelativeRect rect =
       position ??
       _anchorRect(context, anchor) ??
@@ -42,10 +44,16 @@ Future<T?> showOhosMenu<T>({
   return showMenu<T>(
     context: context,
     position: rect,
-    color: OhosTheme.of(context).popupColor,
+    color: theme.popupColor,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
-      side: BorderSide(color: OhosTheme.of(context).dividerColor, width: 0.5),
+      // 彩屏保持发丝级，墨水屏按 1px 算；宽度换算与「画在盒内」都收在
+      // ohosBorderSide 里
+      side: ohosBorderSide(
+        context,
+        theme.dividerColor,
+        width: theme.monochrome ? 1 : 0.5,
+      ),
     ),
     elevation: 8,
     items: <PopupMenuEntry<T>>[

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// Tab / mode of the [OhosColorPicker], mirroring `HdsColorPickerTabType`.
@@ -66,6 +67,9 @@ class OhosColorPicker extends StatefulWidget {
 }
 
 class _OhosColorPickerState extends State<OhosColorPicker> {
+  /// 光谱盒高度：手指坐标换算与指示器布局共用，避免两处各写一个 96。
+  static const double _svHeight = 96;
+
   late OhosColorPickerTab _activeTab;
   late List<Color> _favorites;
   late HSVColor _hsv;
@@ -140,8 +144,12 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                 child: Icon(
                   _isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
                   size: 20,
+                  // 收藏星是唯一的暖色装饰，墨屏上压成浅灰等于没点亮，
+                  // 换成纯黑实心
                   color: _isFavorite
-                      ? const Color(0xFFF7CE00)
+                      ? (theme.monochrome
+                            ? theme.textPrimaryColor
+                            : const Color(0xFFF7CE00))
                       : theme.textTertiaryColor,
                 ),
               ),
@@ -150,6 +158,13 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
         ),
       ],
     );
+  }
+
+  /// 选中态对勾的颜色：跟着色块亮度走。
+  ///
+  /// 白勾画在白 / 浅色块上等于没画（墨屏压成灰阶后更明显），只有深色块才配白勾。
+  Color _checkColor(OhosThemeData theme, Color color) {
+    return color.computeLuminance() > 0.5 ? theme.textPrimaryColor : Colors.white;
   }
 
   Widget _favoritesRow(OhosThemeData theme) {
@@ -169,17 +184,20 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: color.toARGB32() ==
-                              widget.selectedColor.toARGB32()
-                          ? theme.textPrimaryColor
-                          : Colors.transparent,
-                      width: 2,
-                    ),
+                    border: color.toARGB32() ==
+                            widget.selectedColor.toARGB32()
+                        ? Border.all(color: theme.textPrimaryColor, width: 2)
+                        : Border.fromBorderSide(
+                            ohosSwatchOutline(context, theme, color),
+                          ),
                   ),
                   child: color.toARGB32() ==
                           widget.selectedColor.toARGB32()
-                      ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                      ? Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: _checkColor(theme, color),
+                        )
                       : null,
                 ),
               ),
@@ -213,11 +231,19 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
+          // 墨屏：未选中片的 6% 黑底等于没有，按「留白 + 1px 实线」处理
           color: selected
               ? (theme.emphasizeSecondaryColor ??
                     theme.highlightColor.withValues(alpha: 0.12))
-              : theme.textPrimaryColor.withValues(alpha: 0.06),
+              : (theme.monochrome
+                    ? Colors.transparent
+                    : theme.textPrimaryColor.withValues(alpha: 0.06)),
           borderRadius: BorderRadius.circular(12),
+          border: theme.monochrome && !selected
+              ? Border.fromBorderSide(
+                  ohosBorderSide(context, theme.dividerColor),
+                )
+              : null,
         ),
         child: Text(
           label,
@@ -256,20 +282,19 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: color.toARGB32() ==
-                              widget.selectedColor.toARGB32()
-                          ? theme.textPrimaryColor
-                          : Colors.transparent,
-                      width: 3,
-                    ),
+                    border: color.toARGB32() ==
+                            widget.selectedColor.toARGB32()
+                        ? Border.all(color: theme.textPrimaryColor, width: 3)
+                        : Border.fromBorderSide(
+                            ohosSwatchOutline(context, theme, color),
+                          ),
                   ),
                   child: color.toARGB32() ==
                           widget.selectedColor.toARGB32()
-                      ? const Icon(
+                      ? Icon(
                           Icons.check_rounded,
                           size: 18,
-                          color: Colors.white,
+                          color: _checkColor(theme, color),
                         )
                       : null,
                 ),
@@ -317,15 +342,18 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
 
 
   Widget _svBox() {
+    final OhosThemeData theme = OhosTheme.of(context);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final Color base = HSVColor.fromAHSV(1, _hsv.hue, 1, 1).toColor();
+        final Size boxSize = Size(constraints.maxWidth, _svHeight);
         return GestureDetector(
-          onTapDown: (TapDownDetails d) => _svAt(d.localPosition, constraints.maxWidth),
-          onPanDown: (DragDownDetails d) => _svAt(d.localPosition, constraints.maxWidth),
-          onPanUpdate: (DragUpdateDetails d) => _svAt(d.localPosition, constraints.maxWidth),
+          onTapDown: (TapDownDetails d) => _svAt(d.localPosition, boxSize),
+          onPanDown: (DragDownDetails d) => _svAt(d.localPosition, boxSize),
+          onPanUpdate: (DragUpdateDetails d) => _svAt(d.localPosition, boxSize),
           child: SizedBox(
-            height: 96,
+            key: const Key('ohos-color-picker-sv-box'),
+            height: _svHeight,
             width: constraints.maxWidth,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -354,24 +382,22 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                       ),
                     ),
                   ),
-                  Align(
-                    alignment: Alignment(
-                      _hsv.saturation * 2 - 1,
-                      _hsv.value * 2 - 1,
-                    ),
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.transparent,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: const <BoxShadow>[
-                          BoxShadow(color: Colors.black26, blurRadius: 2),
-                        ],
+                  // 左上角是白色，白底卡片上无从分辨，补一条发丝线立住边界；
+                  // 墨屏用纯黑，彩屏用 8% 黑。
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.fromBorderSide(
+                        ohosBorderSide(
+                          context,
+                          theme.monochrome
+                              ? theme.dividerColor
+                              : const Color(0x14000000),
+                        ),
                       ),
                     ),
                   ),
+                  _svIndicator(theme),
                 ],
               ),
             ),
@@ -381,9 +407,49 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
     );
   }
 
-  void _svAt(Offset local, double width) {
-    final double s = (local.dx / width).clamp(0.0, 1.0);
-    final double v = (1 - local.dy / 96).clamp(0.0, 1.0);
+  /// 光谱里的选中指示器。
+  ///
+  /// 纵坐标取反过一次：`Alignment.y = -1` 是**上边**，而 `value = 1`（最亮）
+  /// 也在上边，直接用 `value * 2 - 1` 会让指示器跟手指反向跑。
+  ///
+  /// 白环外面再套一圈深色发丝线 —— 浅色区域靠它、深色区域靠白环，任何底色都
+  /// 能看见（墨屏没有阴影可借用，纯黑发丝线就是唯一的分层手段）。
+  Widget _svIndicator(OhosThemeData theme) {
+    return Align(
+      alignment: Alignment(
+        _hsv.saturation * 2 - 1,
+        1 - _hsv.value * 2,
+      ),
+      child: Container(
+        key: const Key('ohos-color-picker-sv-indicator'),
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.fromBorderSide(
+            ohosBorderSide(
+              context,
+              theme.monochrome
+                  ? theme.dividerColor
+                  : const Color(0x66000000),
+            ),
+          ),
+        ),
+        child: Container(
+          margin: const EdgeInsets.all(1),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _svAt(Offset local, Size size) {
+    final double s = (local.dx / size.width).clamp(0.0, 1.0);
+    // 纵向：上亮下暗，与指示器的 `1 - value * 2` 同一套坐标
+    final double v = (1 - local.dy / size.height).clamp(0.0, 1.0);
     setState(() => _hsv = _hsv.withSaturation(s).withValue(v));
     widget.onChanged(_hsv.toColor());
   }
@@ -472,44 +538,89 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
     );
   }
 
-  /// A tappable / draggable gradient bar with a white thumb, used by the hue
+  /// A tappable / draggable gradient bar with a round thumb, used by the hue
   /// band and the HSB sliders.
+  ///
+  /// 拇指是**比轨道高**的白圆（24 vs 18），不再是「刚好占满轨道高度的一块白」
+  /// —— 后者会把轨道整段切断，看上去像浅色断裂成一块空白。拇指带一圈发丝线，
+  /// 浅色端也能读出边界（墨屏纯黑、彩屏 25% 黑），彩屏另外保留一点投影，
+  /// 墨屏不画（阴影在 16 级灰上只是一圈噪点）。
   Widget _gradientBar({
     required double value,
     required List<Color> colors,
     required double width,
     required ValueChanged<double> onChanged,
   }) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    const double trackHeight = 18;
+    const double thumbSize = 24;
+    final double t = value.clamp(0.0, 1.0);
+    // 拇指圆心留出半径，滑到两端时整圆仍落在轨道内，不会被父级裁掉半边
+    final double centerX = thumbSize / 2 + t * (width - thumbSize);
     double getT(Offset local) => (local.dx / width).clamp(0.0, 1.0);
     return GestureDetector(
       onTapDown: (TapDownDetails d) => onChanged(getT(d.localPosition)),
       onPanDown: (DragDownDetails d) => onChanged(getT(d.localPosition)),
       onPanUpdate: (DragUpdateDetails d) => onChanged(getT(d.localPosition)),
       child: SizedBox(
-        height: 18,
+        height: thumbSize,
         width: width,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              DecoratedBox(
-                decoration: BoxDecoration(gradient: LinearGradient(colors: colors)),
-              ),
-              Align(
-                alignment: Alignment(value.clamp(0.0, 1.0) * 2 - 1, 0),
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: Colors.black26, width: 1),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            Positioned(
+              left: 0,
+              right: 0,
+              top: (thumbSize - trackHeight) / 2,
+              height: trackHeight,
+              child: DecoratedBox(
+                key: const Key('ohos-color-picker-bar-track'),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(trackHeight / 2),
+                  gradient: LinearGradient(colors: colors),
+                  // 渐变两端接近白色，没有这条线时轨道尽头就化进白底
+                  border: Border.fromBorderSide(
+                    ohosBorderSide(
+                      context,
+                      theme.monochrome
+                          ? theme.dividerColor
+                          : const Color(0x14000000),
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: centerX - thumbSize / 2,
+              top: 0,
+              width: thumbSize,
+              height: thumbSize,
+              child: DecoratedBox(
+                key: const Key('ohos-color-picker-bar-thumb'),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.fromBorderSide(
+                    ohosBorderSide(
+                      context,
+                      theme.monochrome
+                          ? theme.dividerColor
+                          : const Color(0x40000000),
+                    ),
+                  ),
+                  boxShadow: theme.monochrome
+                      ? null
+                      : const <BoxShadow>[
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -22,8 +22,8 @@ enum OhosTabBarDividerMode {
   /// No divider.
   none,
 
-  /// The divider fades in as the bound [ScrollController] scrolls past
-  /// `blurEffectiveStartOffset` (跟手滑动效果).
+  /// The divider fades in as the bound [ScrollController] scrolls from
+  /// [followStartOffset] to [followEndOffset] (跟手滑动效果).
   followScroll,
 }
 
@@ -78,7 +78,6 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.showDivider = false,
     this.divider,
-    this.dividerStyle,
     this.scrollController,
   });
 
@@ -104,14 +103,15 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
 
   /// Whether a 1px hairline separates the strip from the content below
-  /// (bottom-tab style). Superseded by [dividerStyle].
+  /// (bottom-tab style). Superseded by [divider], which also carries the
+  /// follow-scroll and colour options.
   final bool showDivider;
 
   /// Optional divider configuration (常显/常隐/跟手滑动).
+  ///
+  /// Null falls back to [showDivider]: a hairline when it is true, nothing
+  /// when it is false — so existing call sites keep their behaviour.
   final OhosTabBarDividerOptions? divider;
-
-  /// Alias of [divider]; kept for readability in call sites.
-  final OhosTabBarDividerOptions? dividerStyle;
 
   /// Listens for the follow-scroll divider mode.
   final ScrollController? scrollController;
@@ -126,77 +126,99 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
         this.controller ?? DefaultTabController.of(context);
     final int length = controller.length;
     if (type == OhosTabBarType.capsule) {
-      return SizedBox(
-        height: height,
-        child: AnimatedBuilder(
-          animation: controller,
-          builder: (BuildContext context, Widget? child) {
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: OhosChipGroup(
-                  items: <OhosChipItem>[
-                    for (int i = 0; i < length; i++) _chipItem(tabs[i]),
-                  ],
-                  selectedIndex: controller.index,
-                  onSelected: (int i) => controller.index = i,
-                  scrollable: isScrollable,
-                  activeColor: indicatorColor,
+      return _fillWidth(
+        SizedBox(
+          height: height,
+          child: AnimatedBuilder(
+            animation: controller,
+            builder: (BuildContext context, Widget? child) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OhosChipGroup(
+                    items: <OhosChipItem>[
+                      for (int i = 0; i < length; i++) _chipItem(tabs[i]),
+                    ],
+                    selectedIndex: controller.index,
+                    onSelected: (int i) => controller.index = i,
+                    scrollable: isScrollable,
+                    activeColor: indicatorColor,
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       );
     }
-    return Material(
-      color: backgroundColor ?? theme.backgroundColor,
-      child: SizedBox(
-        height: height,
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: controller,
-                builder: (BuildContext context, Widget? child) {
-                  final List<Widget> items = <Widget>[
-                    for (int i = 0; i < length; i++)
-                      _tabItem(
-                        context,
-                        tabs[i],
-                        i == controller.index,
-                        () => controller.index = i,
-                      ),
-                  ];
-                  if (isScrollable) {
-                    return ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: <Widget>[
-                        for (int i = 0; i < items.length; i++) ...<Widget>[
-                          SizedBox(width: 96, child: items[i]),
+    return _fillWidth(
+      Material(
+        color: backgroundColor ?? theme.backgroundColor,
+        child: SizedBox(
+          height: height,
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: controller,
+                  builder: (BuildContext context, Widget? child) {
+                    final List<Widget> items = <Widget>[
+                      for (int i = 0; i < length; i++)
+                        _tabItem(
+                          context,
+                          tabs[i],
+                          i == controller.index,
+                          () => controller.index = i,
+                        ),
+                    ];
+                    if (isScrollable) {
+                      return ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: <Widget>[
+                          for (int i = 0; i < items.length; i++) ...<Widget>[
+                            SizedBox(width: 96, child: items[i]),
+                          ],
                         ],
+                      );
+                    }
+                    return Row(
+                      children: <Widget>[
+                        for (int i = 0; i < items.length; i++)
+                          Expanded(child: items[i]),
                       ],
                     );
-                  }
-                  return Row(
-                    children: <Widget>[
-                      for (int i = 0; i < items.length; i++)
-                        Expanded(child: items[i]),
-                    ],
-                  );
-                },
+                  },
+                ),
               ),
-            ),
-            _UnderlineDivider(
-              options: divider ?? dividerStyle,
-              legacyShowDivider: showDivider,
-              dividerColor: theme.dividerColor,
-              scrollController: scrollController,
-            ),
-          ],
+              _UnderlineDivider(
+                options: divider,
+                legacyShowDivider: showDivider,
+                dividerColor: theme.dividerColor,
+                scrollController: scrollController,
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  /// 松宽度约束下也撑满可用宽度。
+  ///
+  /// `Column` / `Center` 这类父级给的 `minWidth` 是 0，而上面两个分支的外壳都是
+  /// 「固定高度 + `Stack`（子节点全是 `Positioned.fill`）」，宽松约束下 `Stack`
+  /// 会取 `constraints.smallest` → 整条页签宽度塌成 0，几个标题挤在正中叠成一坨，
+  /// 高度正常所以不报错。宽度有界时显式顶到 `maxWidth`；无界（横向滚动列表里）
+  /// 保持原样，不去强制一个无限宽。
+  Widget _fillWidth(Widget bar) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (!constraints.hasBoundedWidth) {
+          return bar;
+        }
+        return SizedBox(width: constraints.maxWidth, child: bar);
+      },
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// 即时操作（HdsSnackBar）: a snack bar with an optional action and a
@@ -38,18 +39,23 @@ void showOhosSnackBar(
   messenger.hideCurrentSnackBar();
   final bool hasIcon = icon != null;
   final bool hasTitle = title != null || content != null;
+  final Color surface = backgroundColor ?? theme.cardColor;
+  // 浮条是靠阴影和底色拉开距离的，两样在浅底上都靠不住：墨水屏（灰阶）没有
+  // 阴影，彩屏给一块纯白浮条也只有 6dp 的淡影。凡是浅底都补一条 hairline，
+  // 墨屏用纯黑，彩屏用主题的分隔色（10% 黑），不做成硬边框。
+  final bool lightSurface =
+      ThemeData.estimateBrightnessForColor(surface) == Brightness.light;
   messenger.showSnackBar(
     SnackBar(
       duration: resident ? const Duration(days: 365) : duration,
       behavior: SnackBarBehavior.floating,
-      backgroundColor: backgroundColor ?? theme.cardColor,
-      // 墨水屏：白底浮条 + elevation 会退化成「白底无边界」，改 1px 黑边；
-      // 彩屏继续用浮起阴影。
+      backgroundColor: surface,
       elevation: theme.monochrome ? 0 : 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
-        side: theme.monochrome
-            ? BorderSide(color: theme.dividerColor)
+        // 浅底浮条自己画一条发丝线：墨屏纯黑、彩屏用分隔色
+        side: theme.monochrome || lightSurface
+            ? ohosBorderSide(context, theme.dividerColor)
             : BorderSide.none,
       ),
       content: Row(

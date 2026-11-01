@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// A HarmonyOS switch, the counterpart of Flutter's [Switch] and
@@ -39,9 +40,17 @@ class _OhosSwitchState extends State<OhosSwitch> {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final bool enabled = widget.onChanged != null;
+    final bool ink = theme.monochrome;
     final Color active = widget.activeColor ?? theme.highlightColor;
+    // 墨水屏：30% 灰的轨道落在 16 级灰的第 2 级，关闭态等于只有一个白圆点
+    // 悬在白页面上 —— 轨道改成留白 + 1px 实线，滑块也补轮廓。
     final Color inactive =
-        widget.inactiveColor ?? theme.textTertiaryColor.withValues(alpha: 0.3);
+        widget.inactiveColor ??
+        (ink
+            ? Colors.transparent
+            : theme.textTertiaryColor.withValues(alpha: 0.3));
+    // 轨道 / 滑块共用的轮廓色：启用纯黑，禁用降一档到 #767676
+    final Color inkLine = enabled ? theme.dividerColor : theme.textTertiaryColor;
     final double trackWidth = widget.size.width;
     final double trackHeight = widget.size.height;
     final double thumb = trackHeight - 4;
@@ -56,8 +65,13 @@ class _OhosSwitchState extends State<OhosSwitch> {
           width: trackWidth,
           height: trackHeight,
           decoration: BoxDecoration(
-            color: widget.value ? active : inactive,
+            color: widget.value
+                ? (ink && !enabled ? theme.textTertiaryColor : active)
+                : inactive,
             borderRadius: BorderRadius.circular(trackHeight / 2),
+            border: ink
+                ? Border.all(color: inkLine, width: ohosStrokeWidth(context))
+                : null,
           ),
           padding: EdgeInsets.all((trackHeight - thumb) / 2),
           child: AnimatedAlign(
@@ -69,16 +83,22 @@ class _OhosSwitchState extends State<OhosSwitch> {
             child: Container(
               width: thumb,
               height: thumb,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+                border: ink
+                    ? Border.all(color: inkLine, width: ohosStrokeWidth(context))
+                    : null,
+                // 阴影在墨水屏上不存在，别占一层刷新
+                boxShadow: ink
+                    ? null
+                    : const <BoxShadow>[
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
               ),
             ),
           ),

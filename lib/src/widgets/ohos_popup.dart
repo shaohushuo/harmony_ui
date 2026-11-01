@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// Shows a rounded bubble popup anchored above/around the given widget
@@ -72,7 +73,10 @@ class _OhosPopupOverlayEntry extends StatelessWidget {
               borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
               // 墨水屏上浅阴影在白底上等于没有，改 1px 黑边托住边界。
               border: theme.monochrome
-                  ? Border.all(color: theme.dividerColor)
+                  ? Border.all(
+                      color: theme.dividerColor,
+                      width: ohosStrokeWidth(context),
+                    )
                   : null,
               boxShadow: theme.monochrome
                   ? null

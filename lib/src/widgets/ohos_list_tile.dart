@@ -15,6 +15,35 @@ enum OhosListTileDensity {
   compact,
 }
 
+/// Tells [OhosListTile]s whether the surrounding [OhosList] wants a hairline
+/// under this row.
+///
+/// 分隔线归列表所有：`OhosList` 在行与行之间画一条，列表内的 tile 就不再各画
+/// 一条（否则每个边界会叠出两条 indent 不同的黑线）。不在列表里时
+/// [maybeOf] 返回 `null`，由 tile 自己的 `divider` 决定。
+class OhosListDividerScope extends InheritedWidget {
+  const OhosListDividerScope({
+    super.key,
+    required this.showBottom,
+    required super.child,
+  });
+
+  /// Whether the row draws a hairline below itself.
+  final bool showBottom;
+
+  /// `null` when the row is not inside an [OhosList].
+  static bool? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<OhosListDividerScope>()
+        ?.showBottom;
+  }
+
+  @override
+  bool updateShouldNotify(OhosListDividerScope oldWidget) {
+    return showBottom != oldWidget.showBottom;
+  }
+}
+
 /// A HarmonyOS list item, the counterpart of Flutter's [ListTile].
 ///
 /// Provides [leading], [title], [subtitle] and [trailing] slots on a white
@@ -53,6 +82,10 @@ class OhosListTile extends StatelessWidget {
   final bool selected;
 
   /// Whether to draw the hairline divider below the tile.
+  ///
+  /// Only honoured when the tile stands on its own: inside an [OhosList] the
+  /// list decides (it draws one hairline per row boundary and skips the last
+  /// row), so this flag is ignored there.
   final bool divider;
 
   /// Vertical rhythm; see [OhosListTileDensity].
@@ -120,6 +153,11 @@ class OhosListTile extends StatelessWidget {
       ),
     );
 
+    // 分隔线不贯穿：左侧对齐文字（有 leading 时让到图标之后），右侧留出与
+    // 内容相同的 16vp，两端都收进卡片里比通栏画一条好看。
+    final double dividerIndent = leading == null ? 16 : 56;
+    final bool drawDivider = OhosListDividerScope.maybeOf(context) ?? divider;
+
     final Widget column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -135,8 +173,8 @@ class OhosListTile extends StatelessWidget {
               child: content,
             ),
           ),
-        // 列表里让发丝线与文字左对齐（分隔线自身默认 indent 为 0）
-        if (divider) const OhosDivider(indent: 16),
+        if (drawDivider)
+          OhosDivider(indent: dividerIndent, endIndent: 16),
       ],
     );
 

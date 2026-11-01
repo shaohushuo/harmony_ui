@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// A HarmonyOS card surface with a 24vp corner radius, the counterpart of
@@ -43,40 +44,50 @@ class OhosCard extends StatelessWidget {
     final OhosThemeData theme = OhosTheme.of(context);
     final Color surface = color ?? theme.cardColor;
     final Widget content = Padding(padding: padding, child: child);
+    // 墨水屏上卡片默认面与页面同为纯白、阴影也不存在 —— 一整块内容会浮在
+    // 白底上分不清边界。默认面补 1px 实线；调用方显式给了 color 就不再插手，
+    // 免得把一块有色面（比如反白块）又框一条黑边。
+    final bool outlined = theme.monochrome && color == null;
+    final BoxDecoration decoration = BoxDecoration(
+      color: surface,
+      borderRadius: BorderRadius.circular(borderRadius),
+      boxShadow: elevation == 0 || theme.monochrome
+          ? null
+          : <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+    );
+    // 描边画在子节点**之上**（foreground）：`padding: EdgeInsets.zero` 的卡片
+    // 里，子节点自带整块底色时，它的抗锯齿边缘会把相邻的 1px 边洗掉 —— 直边
+    // 尚存、圆角弧段整段变淡，看起来像「矩形框吃掉了圆角框」。
+    final BoxDecoration? outline = outlined
+        ? BoxDecoration(
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: theme.dividerColor,
+              width: ohosStrokeWidth(context),
+            ),
+          )
+        : null;
     if (onTap == null) {
       return Container(
         margin: margin,
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: BorderRadius.circular(borderRadius),
-          boxShadow: elevation == 0
-              ? null
-              : <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-        ),
+        decoration: decoration,
+        foregroundDecoration: outline,
+        // 子节点也要裁进圆角：`OhosActionBar` 的白底 + 通栏分隔线会把方角露在
+        // 圆角外面，看起来像另有一个矩形框。
+        clipBehavior: outlined ? Clip.antiAlias : Clip.none,
         child: content,
       );
     }
     return Container(
       margin: margin,
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: elevation == 0
-            ? null
-            : <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-      ),
+      decoration: decoration,
+      foregroundDecoration: outline,
       clipBehavior: Clip.antiAlias,
       child: Material(
         color: Colors.transparent,
