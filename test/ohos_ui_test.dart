@@ -761,7 +761,40 @@ void main() {
       );
     });
 
-    testWidgets('墨屏滑块自己画描边，禁用态变灰实心', (WidgetTester tester) async {
+    testWidgets('墨屏禁用态拇指不与已走轨道同灰', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosSlider(
+                  value: 30,
+                  enabled: false,
+                  onChanged: (double _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final SliderThemeData data = SliderTheme.of(
+        tester.element(find.byType(Slider)),
+      );
+      final OhosSliderThumbShape shape =
+          data.thumbShape! as OhosSliderThumbShape;
+
+      // 两者取同一个灰时，拇指左半边会融进已走轨道、描边也一并收敛，
+      // 真机上只剩半圈（读不出拇指中心落在哪）。
+      expect(shape.disabledFillColor, isNot(data.disabledActiveTrackColor));
+      // 禁用态仍要有描边：拇指的灰必然与轨道某一档重合，轮廓是唯一参照。
+      expect(shape.outlineColor, isNotNull);
+    });
+
+    testWidgets('墨屏滑块自己画描边，禁用态换一档灰（不与轨道同色）', (
+      WidgetTester tester,
+    ) async {
       Future<SliderThemeData> themeFor(OhosThemeData data) async {
         await tester.pumpWidget(
           OhosTheme(
@@ -789,8 +822,10 @@ void main() {
       expect(inkShape.outlineColor, ink.dividerColor);
       expect(inkShape.outlineWidth, 1);
       expect(inkShape.elevation, 0);
-      // 禁用态换成灰实心：白圆 + 黑环在禁用时读起来仍然可拖
-      expect(inkShape.disabledFillColor, ink.textTertiaryColor);
+      // 禁用态拇指换成与「已走轨道」不同的一档灰：同色会让左半边彻底融进
+      // 轨道（描边也一并收敛），只剩右半圈，读不出中心落在哪。
+      expect(inkShape.disabledFillColor, OhosColors.inkDisabled);
+      expect(inkShape.disabledFillColor, isNot(ink.textTertiaryColor));
       expect(inkTheme.disabledActiveTrackColor, ink.textTertiaryColor);
       expect(inkTheme.disabledInactiveTrackColor, OhosColors.inkDisabled);
 

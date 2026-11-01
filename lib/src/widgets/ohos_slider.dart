@@ -127,8 +127,10 @@ class _OhosSliderState extends State<OhosSlider> {
             thumbShape: OhosSliderThumbShape(
               outlineColor: theme.monochrome ? theme.dividerColor : null,
               outlineWidth: ohosStrokeWidth(context),
+              // 不能跟 `disabledActiveTrackColor` 取同一个灰：拇指左半边会和
+              // 已走轨道彻底同色，只剩右半圈轮廓，读不出拇指中心落在哪。
               disabledFillColor: theme.monochrome
-                  ? theme.textTertiaryColor
+                  ? OhosColors.inkDisabled
                   : null,
               elevation: theme.monochrome ? 0 : 3,
             ),
@@ -240,13 +242,14 @@ class OhosSliderThumbShape extends SliderComponentShape {
     canvas.drawCircle(center, radius, Paint()..color = fill);
     final Color? outline = outlineColor;
     if (outline != null && outlineWidth > 0) {
-      // 禁用时描边收敛到填充色，视觉上就是「灰实心」，不必再写一条分支
-      final Color stroke = Color.lerp(disabledFill, outline, t)!;
+      // 描边始终用 `outlineColor`，禁用态也不往填充色上收敛：禁用拇指的灰
+      // 必然与轨道某一档重合（已走 #767676 / 未走 #BFBFBF），轮廓一旦跟着
+      // 变成同色，拇指就只剩半圈，看不出位置。
       canvas.drawCircle(
         center,
         radius - outlineWidth / 2,
         Paint()
-          ..color = stroke
+          ..color = outline
           ..style = PaintingStyle.stroke
           ..strokeWidth = outlineWidth,
       );

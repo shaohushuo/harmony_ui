@@ -937,6 +937,8 @@ class _InkThemeDemo extends StatelessWidget {
                 OhosSlider(
                   value: 30,
                   onChanged: _noopDouble,
+                  min: 0,
+                  max: 100,
                   divisions: 20,
                   // 墨屏下气泡与页面同为纯白，靠描边读出来 —— 拖一下就能对照
                   showValueBubble: true,
