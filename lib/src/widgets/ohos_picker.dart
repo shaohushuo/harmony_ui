@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
 
@@ -41,11 +42,16 @@ Future<T?> showOhosPicker<T>({
   required List<OhosPickerItem<T>> items,
   T? initialValue,
 }) {
+  final OhosThemeData sheetTheme = OhosTheme.of(context);
   return showModalBottomSheet<T>(
     context: context,
-    backgroundColor: OhosTheme.of(context).popupColor,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    backgroundColor: sheetTheme.popupColor,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      // 墨水屏：面板与页面同为纯白，顶上那条边只靠 scrim 撑不住 → 1px 实线
+      side: sheetTheme.monochrome
+          ? ohosBorderSide(context, sheetTheme.dividerColor)
+          : BorderSide.none,
     ),
     builder: (BuildContext context) {
       final OhosThemeData theme = OhosTheme.of(context);

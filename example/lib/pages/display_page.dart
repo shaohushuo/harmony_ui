@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../demo_frame.dart';
 import 'demo_scaffold.dart';
 
 /// 展示类：文本 / 子标题 / 分隔器 / 进度条 / 索引条 / 滚动条 / 徽标 /
@@ -423,9 +424,7 @@ class _IndexerDemoState extends State<_IndexerDemo> {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: theme.backgroundColor,
-                      border: Border.all(
-                        color: theme.textTertiaryColor.withValues(alpha: 0.4),
-                      ),
+                      border: demoFrameBorder(context, theme),
                     ),
                     child: ListView.builder(
                       controller: _scroller,
@@ -708,9 +707,7 @@ class _HexBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: swatch.color,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: theme.textTertiaryColor.withValues(alpha: 0.4),
-              ),
+              border: Border.all(color: demoFrameColor(theme)),
             ),
           ),
           const SizedBox(width: 8),
@@ -864,6 +861,90 @@ class _InkThemeDemo extends StatelessWidget {
                     const OhosSwitch(value: true, onChanged: _noop),
                   ],
                 ),
+                // 灰色半透明填充在 16 级灰上的存活情况：这几态最容易整块消失
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    OhosButton(onPressed: null, child: const Text('禁用填充')),
+                    OhosButton(
+                      style: OhosButtonStyle.tonal,
+                      onPressed: null,
+                      child: const Text('禁用 tonal'),
+                    ),
+                    OhosButton(
+                      style: OhosButtonStyle.outlined,
+                      onPressed: null,
+                      child: const Text('禁用描边'),
+                    ),
+                    OhosButton(
+                      onPressed: () {},
+                      loading: true,
+                      child: const Text('加载中'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    OhosCheckbox(value: false, onChanged: _noopBool),
+                    OhosCheckbox(value: true, onChanged: _noopBool),
+                    OhosCheckbox(value: true, onChanged: null),
+                    OhosRadio(value: false, onChanged: _noopBool),
+                    OhosRadio(value: true, onChanged: _noopBool),
+                    const OhosSwitch(value: false, onChanged: _noop),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                OhosSegmentedButton<String>(
+                  segments: const <OhosSegment<String>>[
+                    OhosSegment<String>(label: '日', value: 'day'),
+                    OhosSegment<String>(label: '周', value: 'week'),
+                    OhosSegment<String>(label: '月', value: 'month'),
+                  ],
+                  selected: 'week',
+                  onSelected: _noopSegment,
+                ),
+                const SizedBox(height: 8),
+                OhosProgressIndicator.linear(value: 0.4),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    OhosChip(label: const Text('未选纸片'), onPressed: () {}),
+                    OhosChip(
+                      label: const Text('选中纸片'),
+                      selected: true,
+                      onPressed: () {},
+                    ),
+                    OhosBadge(
+                      count: 3,
+                      child: Icon(
+                        Icons.mail_outline,
+                        color: ink.textPrimaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                OhosSlider(
+                  value: 30,
+                  onChanged: _noopDouble,
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  // 墨屏下气泡与页面同为纯白，靠描边读出来 —— 拖一下就能对照
+                  showValueBubble: true,
+                ),
+                const SizedBox(height: 8),
+                OhosTextField(hintText: '下划线输入框'),
                 const SizedBox(height: 12),
                 OhosDivider(color: ink.dividerColor, indent: 0, thickness: 1),
                 const SizedBox(height: 8),
@@ -878,6 +959,16 @@ class _InkThemeDemo extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                // 默认白底的容器与页面同色：卡片、搜索框胶囊靠 1px 实线立住
+                OhosCard(
+                  child: Text(
+                    '卡片：默认面补 1px 实线',
+                    style: TextStyle(color: ink.textPrimaryColor),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const OhosSearchBar(hintText: '搜索框胶囊也补了描边'),
               ],
             ),
           );
@@ -887,4 +978,10 @@ class _InkThemeDemo extends StatelessWidget {
   }
 
   static void _noop(bool value) {}
+
+  static void _noopBool(bool value) {}
+
+  static void _noopDouble(double value) {}
+
+  static void _noopSegment(String value) {}
 }

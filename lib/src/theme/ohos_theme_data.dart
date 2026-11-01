@@ -231,11 +231,18 @@ class OhosThemeData with Diagnosticable {
   /// **Coverage** — this preset only changes what the components already
   /// branch on [monochrome] for: light material (blur → solid), dialog /
   /// snack bar / popup / slider chrome (1px black outline), the filled text
-  /// field (fill → 1px outline), dividers, shadows and ripples. Surfaces whose
-  /// `cardColor` is the page background keep no outline, so a white
-  /// `OhosCard` or a white `OhosSearchBar` capsule on a white page reads as
-  /// one block: pass `OhosCard.color` (or wrap it) when you need a boundary —
-  /// `OhosSearchBar` has no color parameter yet, so give it a bordered parent.
+  /// field (fill → 1px outline), dividers, shadows and ripples.
+  ///
+  /// The general rule for grey state fills: a translucent black below ~20%
+  /// lands on level 0–3 of the 16-level panel, i.e. it does not exist. So
+  /// anything whose meaning lives in a tinted fill is rewritten here into
+  /// "blank + 1px solid line": disabled buttons, checkbox / radio outlines,
+  /// the switch off track and its thumb, the segmented button track and its
+  /// selected pill, slider / progress tracks (#767676 against black), chip
+  /// and toggle-button outlines, text-field underlines. Surfaces whose
+  /// `cardColor` is the page background — `OhosCard`, the `OhosSearchBar`
+  /// capsule, the bottom sheet — get a 1px outline too; `OhosCard` skips it
+  /// when the caller passes `color` explicitly.
   factory OhosThemeData.ink({String? fontFamily}) {
     return OhosThemeData(
       brightness: Brightness.light,

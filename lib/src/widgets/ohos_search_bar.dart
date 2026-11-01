@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_icon_button.dart';
 
@@ -154,89 +155,111 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
     final OhosThemeData theme = OhosTheme.of(context);
     return SizedBox(
       height: widget.height,
-      child: Material(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: Row(
-            children: <Widget>[
-              IconTheme.merge(
-                data: IconThemeData(color: theme.textSecondaryColor, size: 18),
-                child: widget.prefixIcon ?? const Icon(Icons.search_rounded),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: widget.enabled,
-                  autofocus: widget.autofocus,
-                  textInputAction: TextInputAction.search,
-                  onChanged: widget.onChanged,
-                  onSubmitted: widget.onSubmitted,
-                  style: theme.typography.bodyMedium?.copyWith(
-                    color: theme.textPrimaryColor,
+      child: Container(
+        // 墨水屏：胶囊白底压在白页面上没有任何边界（`cardColor` 与
+        // `backgroundColor` 同一色），补 1px 实线。
+        //
+        // 这条线不能交给 `Material.shape`：它在 1.5x 屏上会和子节点抢同一条
+        // 边（下沿实测只剩 1 个设备像素，上沿却有 2 个），看着「下边框变细」。
+        // 用 `foregroundDecoration` 单独画在最上层，四条边落在同一套几何上。
+        foregroundDecoration: theme.monochrome
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                border: Border.all(
+                  color: theme.dividerColor,
+                  width: ohosStrokeWidth(context),
+                ),
+              )
+            : null,
+        child: Material(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Row(
+              children: <Widget>[
+                IconTheme.merge(
+                  data: IconThemeData(
+                    color: theme.textSecondaryColor,
+                    size: 18,
                   ),
-                  decoration: InputDecoration(
-                    hintText: widget.hintText,
-                    hintStyle: TextStyle(color: theme.textTertiaryColor),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  child: widget.prefixIcon ?? const Icon(Icons.search_rounded),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    enabled: widget.enabled,
+                    autofocus: widget.autofocus,
+                    textInputAction: TextInputAction.search,
+                    onChanged: widget.onChanged,
+                    onSubmitted: widget.onSubmitted,
+                    style: theme.typography.bodyMedium?.copyWith(
+                      color: theme.textPrimaryColor,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: widget.hintText,
+                      hintStyle: TextStyle(color: theme.textTertiaryColor),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
                   ),
                 ),
-              ),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _controller,
-                builder: (BuildContext context, TextEditingValue value, _) {
-                  // 空态占位与清空键同宽（32），否则空↔有字切换时输入区
-                  // 会横向跳 20vp，长关键词末尾的字会抖一下。
-                  return AnimatedSwitcher(
-                    duration: OhosGeometry.durationShort,
-                    child: value.text.isEmpty
-                        ? const SizedBox(
-                            width: 32,
-                            key: ValueKey<String>('empty'),
-                          )
-                        : OhosIconButton(
-                            key: const ValueKey<String>('clear'),
-                            icon: const Icon(Icons.cancel_rounded, size: 16),
-                            size: 32,
-                            iconSize: 16,
-                            color: theme.textTertiaryColor,
-                            onPressed: () {
-                              _controller.clear();
-                              widget.onChanged?.call('');
-                              widget.onClear?.call();
-                            },
-                          ),
-                  );
-                },
-              ),
-              if (_focused && widget.onCancel != null)
-                // 取消是「按钮」而不是一块可点区域：TextButton 自带 button 语义、
-                // 焦点与回车/空格激活，命中区也够 40vp（裸 GestureDetector 三者都没有）。
-                TextButton(
-                  onPressed: _handleCancel,
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.highlightColor,
-                    textStyle:
-                        theme.typography.bodyMedium ??
-                        const TextStyle(fontSize: 15),
-                    // 命中区至少 48×40：`visualDensity` 不压（compact 会再砍 8vp，
-                    // 高 40 的栏里就只剩 32 了），`shrinkWrap` 则是不额外加水波纹余量。
-                    minimumSize: const Size(48, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.standard,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    // 墨水屏：点按时不要半透明灰块（与主题里 interactive* 全透明一致）
-                    overlayColor: theme.monochrome ? Colors.transparent : null,
-                  ),
-                  child: Text(widget.cancelText),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (BuildContext context, TextEditingValue value, _) {
+                    // 空态占位与清空键同宽（32），否则空↔有字切换时输入区
+                    // 会横向跳 20vp，长关键词末尾的字会抖一下。
+                    return AnimatedSwitcher(
+                      duration: OhosGeometry.durationShort,
+                      child: value.text.isEmpty
+                          ? const SizedBox(
+                              width: 32,
+                              key: ValueKey<String>('empty'),
+                            )
+                          : OhosIconButton(
+                              key: const ValueKey<String>('clear'),
+                              icon: const Icon(Icons.cancel_rounded, size: 16),
+                              size: 32,
+                              iconSize: 16,
+                              color: theme.textTertiaryColor,
+                              onPressed: () {
+                                _controller.clear();
+                                widget.onChanged?.call('');
+                                widget.onClear?.call();
+                              },
+                            ),
+                    );
+                  },
                 ),
-              const SizedBox(width: 4),
-            ],
+                if (_focused && widget.onCancel != null)
+                  // 取消是「按钮」而不是一块可点区域：TextButton 自带 button 语义、
+                  // 焦点与回车/空格激活，命中区也够 40vp（裸 GestureDetector 三者都没有）。
+                  TextButton(
+                    onPressed: _handleCancel,
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.highlightColor,
+                      textStyle:
+                          theme.typography.bodyMedium ??
+                          const TextStyle(fontSize: 15),
+                      // 命中区至少 48×40：`visualDensity` 不压（compact 会再砍 8vp，
+                      // 高 40 的栏里就只剩 32 了），`shrinkWrap` 则是不额外加水波纹余量。
+                      minimumSize: const Size(48, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.standard,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      // 墨水屏：点按时不要半透明灰块（与主题里 interactive* 全透明一致）
+                      overlayColor: theme.monochrome
+                          ? Colors.transparent
+                          : null,
+                    ),
+                    child: Text(widget.cancelText),
+                  ),
+                const SizedBox(width: 4),
+              ],
+            ),
           ),
         ),
       ),

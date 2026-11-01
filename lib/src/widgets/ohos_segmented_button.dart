@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// Option model of an [OhosSegmentedButton].
@@ -42,12 +43,23 @@ class OhosSegmentedButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    // 墨水屏：6% 的轨道底与页面同色，选中段的 cardColor 也是纯白 —— 三段会
+    // 糊成一片，只剩字重差别。改成「轨道 + 选中段各一条 1px 实线」。
+    final bool ink = theme.monochrome;
     return Container(
       height: height,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: theme.textPrimaryColor.withValues(alpha: 0.06),
+        color: ink
+            ? Colors.transparent
+            : theme.textPrimaryColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(height / 2),
+        border: ink
+            ? Border.all(
+                color: theme.dividerColor,
+                width: ohosStrokeWidth(context),
+              )
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -62,10 +74,16 @@ class OhosSegmentedButton<T> extends StatelessWidget {
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: segment.value == selected
+                    color: segment.value == selected && !ink
                         ? theme.cardColor
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular((height - 6) / 2),
+                    border: ink && segment.value == selected
+                        ? Border.all(
+                            color: theme.dividerColor,
+                            width: ohosStrokeWidth(context),
+                          )
+                        : null,
                     // No outer shadow: it would bleed onto the neighbouring
                     // segments while tapping/animating.
                   ),

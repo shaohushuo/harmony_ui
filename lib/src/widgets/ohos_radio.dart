@@ -44,9 +44,12 @@ class OhosRadio extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
+              // 未选中的 50% 灰在 16 级灰上几乎不可见，墨水屏改用实色
               color: value && enabled
                   ? active
-                  : theme.textTertiaryColor.withValues(alpha: 0.5),
+                  : (theme.monochrome
+                        ? theme.textTertiaryColor
+                        : theme.textTertiaryColor.withValues(alpha: 0.5)),
               width: 1.5,
             ),
           ),

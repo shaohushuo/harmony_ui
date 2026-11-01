@@ -10,6 +10,7 @@ import 'pages/kit_page.dart';
 import 'pages/layout_page.dart';
 import 'pages/navigation_page.dart';
 import 'pages/selection_page.dart';
+import 'theme_switch.dart';
 
 void main() {
   runApp(const OhosUiGalleryApp());
@@ -20,13 +21,26 @@ class OhosUiGalleryApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'harmony_ui gallery',
-      home: OhosTheme(
-        data: OhosThemeData.light(fontFamily: 'HarmonyOS Sans'),
-        child: const HomePage(),
-      ),
+    // 主题要包在 `MaterialApp` **外面**：push 出去的页面是 Navigator 的兄弟
+    // 节点，挂在 `home:` 里的 OhosTheme 传不到它们，页面会静默退回默认浅色
+    // （切墨主题验证时尤其容易误判成「ink 没生效」）。
+    //
+    // `ValueListenableBuilder` 放在最外层：切主题时 `MaterialApp` 是原地重建
+    // （同一位置、同一类型），Navigator 的 State 会被复用，所以停在第三层演示
+    // 页上点按钮不会把人弹回首页。
+    return ValueListenableBuilder<GalleryTheme>(
+      valueListenable: galleryTheme,
+      builder: (BuildContext context, GalleryTheme theme, Widget? child) {
+        return OhosTheme(
+          data: theme.data,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'harmony_ui gallery',
+            theme: theme.materialTheme,
+            home: const HomePage(),
+          ),
+        );
+      },
     );
   }
 }
@@ -107,6 +121,7 @@ class HomePage extends StatelessWidget {
       appBar: OhosAppBar(
         leading: Icon(OhosIcons.house_fill, color: theme.highlightColor),
         title: const Text('harmony_ui 组件画廊'),
+        actions: const <Widget>[ThemeSwitchButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -120,10 +135,7 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        'HarmonyOS 设计控件全覆盖',
-                        style: theme.typography.titleMedium,
-                      ),
+                      Text('HarmonyOS 设计控件全覆盖', style: theme.typography.titleMedium),
                       const SizedBox(height: 4),
                       Text(
                         '参考华为设计文档「控件概览」6 大类 42 个控件，点击分类查看演示。',
@@ -142,14 +154,9 @@ class HomePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: OhosCard(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(builder: category.builder),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+                onTap: () =>
+                    Navigator.push(context, MaterialPageRoute<void>(builder: category.builder)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: <Widget>[
                     Container(
@@ -159,21 +166,14 @@ class HomePage extends StatelessWidget {
                         color: theme.highlightColor.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(
-                        category.icon,
-                        size: 22,
-                        color: theme.highlightColor,
-                      ),
+                      child: Icon(category.icon, size: 22, color: theme.highlightColor),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
-                            category.title,
-                            style: theme.typography.titleSmall,
-                          ),
+                          Text(category.title, style: theme.typography.titleSmall),
                           const SizedBox(height: 2),
                           Text(
                             category.subtitle,
@@ -184,11 +184,7 @@ class HomePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Icon(
-                      OhosIcons.chevron_right,
-                      size: 20,
-                      color: theme.textTertiaryColor,
-                    ),
+                    Icon(OhosIcons.chevron_right, size: 20, color: theme.textTertiaryColor),
                   ],
                 ),
               ),

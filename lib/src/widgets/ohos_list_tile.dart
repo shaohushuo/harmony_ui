@@ -15,6 +15,35 @@ enum OhosListTileDensity {
   compact,
 }
 
+/// Tells [OhosListTile]s whether the surrounding [OhosList] wants a hairline
+/// under this row.
+///
+/// 分隔线归列表所有：`OhosList` 在行与行之间画一条，列表内的 tile 就不再各画
+/// 一条（否则每个边界会叠出两条 indent 不同的黑线）。不在列表里时
+/// [maybeOf] 返回 `null`，由 tile 自己的 `divider` 决定。
+class OhosListDividerScope extends InheritedWidget {
+  const OhosListDividerScope({
+    super.key,
+    required this.showBottom,
+    required super.child,
+  });
+
+  /// Whether the row draws a hairline below itself.
+  final bool showBottom;
+
+  /// `null` when the row is not inside an [OhosList].
+  static bool? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<OhosListDividerScope>()
+        ?.showBottom;
+  }
+
+  @override
+  bool updateShouldNotify(OhosListDividerScope oldWidget) {
+    return showBottom != oldWidget.showBottom;
+  }
+}
+
 /// A HarmonyOS list item, the counterpart of Flutter's [ListTile].
 ///
 /// Provides [leading], [title], [subtitle] and [trailing] slots on a white
@@ -29,7 +58,7 @@ class OhosListTile extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.selected = false,
-    this.divider = true,
+    this.divider,
     this.density = OhosListTileDensity.regular,
     this.padding,
   });
@@ -53,7 +82,14 @@ class OhosListTile extends StatelessWidget {
   final bool selected;
 
   /// Whether to draw the hairline divider below the tile.
-  final bool divider;
+  ///
+  /// `null` (the default) follows the surrounding [OhosList]: inside a list the
+  /// list owns the dividers — one hairline per row boundary, none under the
+  /// last row — and a tile standing on its own draws one.
+  ///
+  /// Pass `false` to force the line off even inside a list (a header row or a
+  /// grouped section, say), or `true` to force it on.
+  final bool? divider;
 
   /// Vertical rhythm; see [OhosListTileDensity].
   final OhosListTileDensity density;
@@ -120,6 +156,14 @@ class OhosListTile extends StatelessWidget {
       ),
     );
 
+    // 分隔线不贯穿：左侧对齐文字（有 leading 时让到图标之后），右侧留出与
+    // 内容相同的 16vp，两端都收进卡片里比通栏画一条好看。
+    final double dividerIndent = leading == null ? 16 : 56;
+    // 显式传值优先（`false` 就是关掉），没传才跟随所在列表，列表里也没人
+    // 表态时默认画一条 —— 与 `divider` 原来的「默认 true」一致。
+    final bool drawDivider =
+        divider ?? OhosListDividerScope.maybeOf(context) ?? true;
+
     final Widget column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -135,8 +179,8 @@ class OhosListTile extends StatelessWidget {
               child: content,
             ),
           ),
-        // 列表里让发丝线与文字左对齐（分隔线自身默认 indent 为 0）
-        if (divider) const OhosDivider(indent: 16),
+        if (drawDivider)
+          OhosDivider(indent: dividerIndent, endIndent: 16),
       ],
     );
 

@@ -510,12 +510,21 @@ class _TabDividerDemo extends StatefulWidget {
 }
 
 class _TabDividerDemoState extends State<_TabDividerDemo> {
-  final ScrollController _scroller = ScrollController();
+  // 每页一个 controller：`TabBarView` 在切换动画里会同时挂着两页，一份
+  // `ScrollController` 只能 attach 一个 `ScrollPosition`，共用一个会在切页瞬间
+  // 抛 "ScrollController attached to multiple scroll views"（debug 下红屏闪烁）。
+  final List<ScrollController> _scrollers = <ScrollController>[
+    ScrollController(),
+    ScrollController(),
+    ScrollController(),
+  ];
   OhosTabBarDividerMode _mode = OhosTabBarDividerMode.followScroll;
 
   @override
   void dispose() {
-    _scroller.dispose();
+    for (final ScrollController scroller in _scrollers) {
+      scroller.dispose();
+    }
     super.dispose();
   }
 
@@ -526,12 +535,17 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
       children: <Widget>[
         OhosCard(
           padding: const EdgeInsets.all(10),
-          child: Row(
-            children: <Widget>[
-              for (final OhosTabBarDividerMode mode in OhosTabBarDividerMode.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
+          // 这三个是演示自己的切换控件，用库里的 OhosChip：Material 的 ChoiceChip
+          // 靠浅色底/浅描边表意，压到 16 级灰阶上整块看不见；OhosChip 在墨屏
+          // 已经走「留白 + 1px 实线」，选中的一档再补个对勾，灰阶下也分得清。
+          child: SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final OhosTabBarDividerMode mode in OhosTabBarDividerMode.values)
+                  OhosChip(
                     label: Text(
                       switch (mode) {
                         OhosTabBarDividerMode.visible => '常显',
@@ -540,10 +554,11 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
                       },
                     ),
                     selected: _mode == mode,
-                    onSelected: (_) => setState(() => _mode = mode),
+                    icon: _mode == mode ? const Icon(Icons.check_rounded) : null,
+                    onPressed: () => setState(() => _mode = mode),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -551,12 +566,27 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
           length: 3,
           child: Column(
             children: <Widget>[
-              OhosTabBar(
-                tabs: const <Widget>[Tab(text: '推荐'), Tab(text: '关注'), Tab(text: '热榜')],
-                divider: OhosTabBarDividerOptions(mode: _mode),
-                scrollController: _mode == OhosTabBarDividerMode.followScroll
-                    ? _scroller
-                    : null,
+              // 跟手分割线要盯「当前页」的滚动位置：切页后换成那一页的 controller。
+              Builder(
+                builder: (BuildContext tabContext) {
+                  final TabController controller =
+                      DefaultTabController.of(tabContext);
+                  return AnimatedBuilder(
+                    animation: controller,
+                    builder: (BuildContext context, Widget? child) => OhosTabBar(
+                      tabs: const <Widget>[
+                        Tab(text: '推荐'),
+                        Tab(text: '关注'),
+                        Tab(text: '热榜'),
+                      ],
+                      divider: OhosTabBarDividerOptions(mode: _mode),
+                      scrollController:
+                          _mode == OhosTabBarDividerMode.followScroll
+                          ? _scrollers[controller.index]
+                          : null,
+                    ),
+                  );
+                },
               ),
               Container(
                 height: 180,
@@ -579,7 +609,7 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
 
   Widget _scrollList(int page) {
     return ListView(
-      controller: _scroller,
+      controller: _scrollers[page],
       padding: const EdgeInsets.all(6),
       children: <Widget>[
         for (int i = 0; i < 20; i++)
@@ -775,8 +805,11 @@ class _ExpandableActionBarDemoState extends State<_ExpandableActionBarDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Container(
-      color: const Color(0xFFF1F3F5),
+      // 底板跟着主题走：固定浅灰配主题配色的图标按钮，深色主题下会变成
+      // 浅灰底 + 近白图标。
+      color: theme.compBackgroundGrayColor ?? OhosColors.compBackgroundGray,
       height: 88,
       alignment: Alignment.bottomRight,
       padding: const EdgeInsets.all(12),

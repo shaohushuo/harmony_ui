@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// Shows a HarmonyOS alert dialog and returns the value of the pressed action.
@@ -56,7 +57,7 @@ class OhosAlertDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         // 墨水屏：弹层与页面同为纯白，只剩遮罩提供边界 → 补 1px 黑描边。
         side: theme.monochrome
-            ? BorderSide(color: theme.dividerColor)
+            ? ohosBorderSide(context, theme.dividerColor)
             : BorderSide.none,
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 40),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
 
@@ -66,6 +67,10 @@ class OhosSelect<T> extends StatelessWidget {
                   borderRadius: BorderRadius.circular(
                     OhosGeometry.radiusMedium,
                   ),
+                  // 墨水屏：下拉面板与页面同为纯白，阴影不存在 → 1px 实线
+                  side: theme.monochrome
+                      ? ohosBorderSide(context, theme.dividerColor)
+                      : BorderSide.none,
                 ),
                 items: <PopupMenuEntry<T>>[
                   for (final OhosSelectOption<T> option in options)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// A HarmonyOS sidebar container (侧边栏), the counterpart of `HdsSideBar`.
@@ -72,10 +73,15 @@ class OhosSideBar extends StatelessWidget {
       elevation: overlay ? elevation : 0,
       clipBehavior: overlay ? Clip.antiAlias : Clip.none,
       shape: overlay
-          ? const RoundedRectangleBorder(
-              borderRadius: BorderRadius.horizontal(
+          ? RoundedRectangleBorder(
+              borderRadius: const BorderRadius.horizontal(
                 right: Radius.circular(OhosGeometry.radiusLarge),
               ),
+              // overlay 模式本来靠阴影与遮罩分层；遮罩被关掉、或正文浅色时
+              // 只剩一块白板，墨水屏上再补 1px 实线
+              side: theme.monochrome
+                  ? ohosBorderSide(context, theme.dividerColor)
+                  : BorderSide.none,
             )
           : null,
       child: SizedBox(

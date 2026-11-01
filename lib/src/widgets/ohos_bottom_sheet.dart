@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
 import 'ohos_divider.dart';
@@ -100,10 +101,21 @@ Future<void> showOhosBottomSheet({
 
       if (!lightMaterial || theme.monochrome) {
         // 关掉毛玻璃，或墨水屏上本来就不该做整层模糊：退化成纯色面板。
+        // 墨水屏上面板与页面同为纯白，顶上那条边会整个消失 → 补 1px 实线。
         return Material(
           color: theme.cardColor,
           clipBehavior: Clip.antiAlias,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          shape: theme.monochrome
+              ? RoundedRectangleBorder(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                  side: ohosBorderSide(context, theme.dividerColor),
+                )
+              : null,
+          borderRadius: theme.monochrome
+              ? null
+              : const BorderRadius.vertical(top: Radius.circular(24)),
           child: panel,
         );
       }

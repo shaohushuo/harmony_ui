@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// A two-state toggle button (状态按钮 in the HarmonyOS guideline).
@@ -32,16 +33,24 @@ class OhosToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    // 墨水屏：12% 的选中底与页面同色、50% / 35% 的边也淡掉，改成一实白底
+    // + 描边，选中时描边由 #767676 提到纯黑。
+    final bool ink = theme.monochrome;
     final Color highlight = theme.highlightColor;
     final Color fg = value ? highlight : theme.textSecondaryColor;
     return Material(
-      color: value ? highlight.withValues(alpha: 0.12) : theme.cardColor,
+      color: ink
+          ? Colors.transparent
+          : (value ? highlight.withValues(alpha: 0.12) : theme.cardColor),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OhosGeometry.radiusCapsule),
-        side: BorderSide(
-          color: value
-              ? highlight.withValues(alpha: 0.5)
-              : theme.textTertiaryColor.withValues(alpha: 0.35),
+        side: ohosBorderSide(
+          context,
+          ink
+              ? (value ? theme.dividerColor : theme.textTertiaryColor)
+              : (value
+                    ? highlight.withValues(alpha: 0.5)
+                    : theme.textTertiaryColor.withValues(alpha: 0.35)),
         ),
       ),
       clipBehavior: Clip.antiAlias,

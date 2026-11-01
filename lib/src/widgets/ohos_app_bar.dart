@@ -312,6 +312,11 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         ? toolbar
         : Column(
             mainAxisSize: MainAxisSize.min,
+            // 必须 stretch：默认的 `center` 给 bottom 的是**松**宽度约束
+            // （minWidth 0）。`OhosTabBar` 的 Stack 里全是 `Positioned.fill`，
+            // 松约束下会取 `constraints.smallest` → 宽度塌成 0，几个页签
+            // 的标题挤在正中叠成一坨（高度还对，所以不报错）。
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[toolbar, bottomWidget],
           );
     final Color? bandColor = statusBarBackgroundColor;

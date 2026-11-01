@@ -182,6 +182,15 @@ class OhosColors {
   /// (`interactivePressed`) flattens into the background.
   static const Color inkInteractive = Color(0x33000000);
 
+  /// Fill of a disabled shape on the ink preset: 25% black.
+  ///
+  /// [OhosColors.inkForeground] carries shapes that must stay loud, and
+  /// `textTertiaryColor` (50% black) the "present but muted" ones such as the
+  /// unplayed part of a slider track. A *disabled* track needs one step weaker
+  /// still: it keeps its outline on the 16-level panel without merging into
+  /// the muted step above it.
+  static const Color inkDisabled = Color(0xFFBFBFBF);
+
   /// 11-step grayscale for the multi-color system, one slot per [multiLight]
   /// entry so indices keep their meaning.
   static const List<Color> multiInk = <Color>[

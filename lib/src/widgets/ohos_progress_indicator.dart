@@ -39,8 +39,13 @@ class OhosProgressIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final Color active = color ?? theme.highlightColor;
+    // 墨水屏：15% 的轨道等于没有，「已走 / 未走」的分界会消失 —— 换成实色
+    // #767676（16 级灰第 9 级），与纯黑的已走段仍拉得开。
     final Color track =
-        backgroundColor ?? theme.highlightColor.withValues(alpha: 0.15);
+        backgroundColor ??
+        (theme.monochrome
+            ? theme.textTertiaryColor
+            : theme.highlightColor.withValues(alpha: 0.15));
     switch (variant) {
       case OhosProgressIndicatorVariant.circular:
         return SizedBox(

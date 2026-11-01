@@ -24,6 +24,10 @@ Color? paintedColor(WidgetTester tester, String label) {
 
 void _noop() {}
 
+void _noopBool(bool value) {}
+
+void _noopString(String value) {}
+
 void main() {
   group('OhosTheme', () {
     testWidgets('of() provides the theme to descendants', (
@@ -236,6 +240,99 @@ void main() {
       expect(pressed, 0);
     });
 
+    testWidgets('ink 主题下禁用按钮：浅底换成实线描边，字也不再是白色', (
+      WidgetTester tester,
+    ) async {
+      // 墨水屏（highlightColor 为纯黑）上两件事同时失效：
+      // 1. 淡到 20% 的填充等于没有，按钮连形状都留不住；
+      // 2. 白字压在这种浅底上，16 级灰阶里直接看不见。
+      // 所以禁用态改成透明底 + 实色描边，前景与其它三种样式对齐。
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosButton(
+                  onPressed: null,
+                  child: const Text('提交 (0)'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final DefaultTextStyle label = tester.widget<DefaultTextStyle>(
+        find
+            .ancestor(
+              of: find.text('提交 (0)'),
+              matching: find.byType(DefaultTextStyle),
+            )
+            .first,
+      );
+      expect(label.style.color, ink.textTertiaryColor);
+      expect(label.style.color, isNot(Colors.white));
+
+      final Material material = tester.widget<Material>(
+        find
+            .ancestor(
+              of: find.text('提交 (0)'),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(material.color, Colors.transparent, reason: '20% 的填充在灰阶上等于没有');
+      final ShapeBorder? shape = material.shape;
+      final BorderSide side = switch (shape) {
+        StadiumBorder(:final side) => side,
+        RoundedRectangleBorder(:final side) => side,
+        _ => fail('未预期的形状：$shape'),
+      };
+      expect(side.color, ink.textTertiaryColor);
+      expect(side.width, 1);
+    });
+
+    testWidgets('ink 主题下 filled + loading：仍是实底，白转圈不压白', (
+      WidgetTester tester,
+    ) async {
+      // loading 只是暂时不能点，不该连配色一起退成禁用态：那会让 filled 的
+      // 底变浅，而转圈颜色写死的是 white70 —— 真机上只剩一个空白药丸。
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosButton(
+                  onPressed: () {},
+                  loading: true,
+                  child: const Text('加载中'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Material material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(OhosButton),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(material.color, ink.highlightColor, reason: 'loading 不该退成禁用态的浅底');
+      final CircularProgressIndicator spinner = tester
+          .widget<CircularProgressIndicator>(
+            find.byType(CircularProgressIndicator),
+          );
+      expect(spinner.color, Colors.white70);
+    });
+
     testWidgets('窄容器里的长标签不溢出，标签默认单行省略', (
       WidgetTester tester,
     ) async {
@@ -301,6 +398,579 @@ void main() {
         wrap(const SizedBox(width: 200, child: OhosDivider(indent: 16))),
       );
       expect(lineWidth(), 184);
+    });
+  });
+
+  // 墨水屏：凡是靠「浅色填充」表达状态的组件，填充一律换成留白 + 1px 实线。
+  // 依据是 16 级灰阶下 20% 以内的黑落在第 0–3 级，等于没有。
+  group('墨水屏灰阶填充', () {
+    testWidgets('ink 勾选框：未选中描边与禁用勾都用实色', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosCheckbox(value: false, onChanged: _noopBool),
+              ),
+            ),
+          ),
+        ),
+      );
+      final AnimatedContainer box = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+      final BoxDecoration decoration = box.decoration! as BoxDecoration;
+      expect(
+        decoration.border!.top.color,
+        ink.textTertiaryColor,
+        reason: '50% 灰在 16 级灰上等于没有',
+      );
+
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: const MaterialApp(
+            home: OhosScaffold(
+              body: Center(child: OhosCheckbox(value: true)),
+            ),
+          ),
+        ),
+      );
+      final Icon check = tester.widget<Icon>(find.byType(Icon));
+      expect(check.color, ink.textTertiaryColor, reason: '白勾压不到浅灰底上');
+    });
+
+    testWidgets('ink 开关关闭态：轨道与滑块都有 1px 轮廓', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosSwitch(value: false, onChanged: _noopBool),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final AnimatedContainer track = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer).first,
+      );
+      final BoxDecoration trackDecoration = track.decoration! as BoxDecoration;
+      expect(trackDecoration.color, Colors.transparent);
+      expect(
+        trackDecoration.border,
+        isNull,
+        reason: '边框走 decoration 会占掉内边距，把滑块压成椭圆',
+      );
+
+      final BoxDecoration trackOutline =
+          track.foregroundDecoration! as BoxDecoration;
+      expect(trackOutline.border!.top.color, ink.dividerColor);
+
+      final Finder thumbFinder = find
+          .descendant(
+            of: find.byType(AnimatedAlign),
+            matching: find.byType(Container),
+          )
+          .first;
+      final Container thumb = tester.widget<Container>(thumbFinder);
+      final BoxDecoration thumbDecoration = thumb.decoration! as BoxDecoration;
+      expect(thumbDecoration.border, isNotNull);
+      expect(thumbDecoration.boxShadow, isNull, reason: '墨水屏没有阴影可画');
+
+      // 轨道加 1px 边之后滑块仍是正圆（26×26），没有被压成 26×24
+      final Size thumbSize = tester.getSize(thumbFinder);
+      expect(thumbSize.width, thumbSize.height);
+      expect(thumbSize.height, 26);
+    });
+
+    testWidgets('ink 卡片默认面补 1px 实线，自定义色不框', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: const MaterialApp(
+            home: OhosScaffold(
+              body: Center(child: OhosCard(child: Text('卡片'))),
+            ),
+          ),
+        ),
+      );
+      final Container card = tester.widget<Container>(
+        find
+            .ancestor(of: find.text('卡片'), matching: find.byType(Container))
+            .first,
+      );
+      final BoxDecoration decoration = card.decoration! as BoxDecoration;
+      // 描边画在子节点之上，否则圆角弧会被子节点的抗锯齿边缘洗掉
+      expect(decoration.border, isNull);
+      expect(card.foregroundDecoration, isNotNull);
+      final BoxDecoration outline = card.foregroundDecoration! as BoxDecoration;
+      expect(outline.border!.top.color, ink.dividerColor);
+      expect(decoration.boxShadow, isNull);
+
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: const MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosCard(color: Colors.black, child: Text('反白块')),
+              ),
+            ),
+          ),
+        ),
+      );
+      final Container inverted = tester.widget<Container>(
+        find
+            .ancestor(of: find.text('反白块'), matching: find.byType(Container))
+            .first,
+      );
+      expect((inverted.decoration! as BoxDecoration).border, isNull);
+      expect(inverted.foregroundDecoration, isNull);
+      expect(
+        inverted.clipBehavior,
+        Clip.none,
+        reason: '没描边就不裁子节点，溢出行为保持原样',
+      );
+    });
+
+    testWidgets('ink 描边卡片把子节点的方角裁进圆角', (
+      WidgetTester tester,
+    ) async {
+      // 子节点自带整块底色时（OhosActionBar 的白底 + 通栏分隔线），方角会盖住
+      // 卡片的圆角和 1px 边，只剩两条直线的端头探出圆角外。
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: const MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosCard(
+                  padding: EdgeInsets.zero,
+                  borderRadius: 24,
+                  child: SizedBox(height: 56, width: 320),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final Container card = tester.widget<Container>(
+        find.byType(Container).first,
+      );
+      expect(card.clipBehavior, Clip.antiAlias);
+      final BoxDecoration outline = card.foregroundDecoration! as BoxDecoration;
+      expect(outline.border, isNotNull);
+      expect(outline.borderRadius, BorderRadius.circular(24));
+    });
+
+    testWidgets('ink 分段按钮：轨道与选中段各一条实线', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosSegmentedButton<String>(
+                  segments: const <OhosSegment<String>>[
+                    OhosSegment<String>(label: '日', value: 'day'),
+                    OhosSegment<String>(label: '周', value: 'week'),
+                  ],
+                  selected: 'week',
+                  onSelected: _noopString,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Container track = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(OhosSegmentedButton<String>),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final BoxDecoration trackDecoration = track.decoration! as BoxDecoration;
+      expect(trackDecoration.color, Colors.transparent);
+      expect(trackDecoration.border!.top.color, ink.dividerColor);
+
+      final List<AnimatedContainer> segments = tester
+          .widgetList<AnimatedContainer>(
+            find.descendant(
+              of: find.byType(OhosSegmentedButton<String>),
+              matching: find.byType(AnimatedContainer),
+            ),
+          )
+          .toList();
+      expect(segments.length, 2);
+      expect(
+        (segments.first.decoration! as BoxDecoration).border,
+        isNull,
+        reason: '未选中段不加框',
+      );
+      expect(
+        (segments.last.decoration! as BoxDecoration).border!.top.color,
+        ink.dividerColor,
+        reason: '选中段（第二段）用实线标出',
+      );
+    });
+  });
+
+  group('ohosBorderSide', () {
+    testWidgets('宽度取整到整数设备像素，且显式画在盒内', (
+      WidgetTester tester,
+    ) async {
+      // DPR 2 / 3 上结果仍是 1vp（视觉不变）；1.5 / 2.625 这类非整数 DPR 上
+      // 原来 1vp 会被摊成两三行灰，取整后正好压在整数个物理像素上。
+      const List<(double, double)> widths = <(double, double)>[
+        (1.5, 1.3333),
+        (2, 1),
+        (2.625, 1.1429),
+        (3, 1),
+      ];
+
+      for (final (double dpr, double expected) in widths) {
+        tester.view.devicePixelRatio = dpr;
+        addTearDown(tester.view.reset);
+        BorderSide? side;
+        await tester.pumpWidget(
+          wrap(
+            Builder(
+              builder: (BuildContext context) {
+                side = ohosBorderSide(context, const Color(0xFF000000));
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        expect(
+          side!.width,
+          closeTo(expected, 0.001),
+          reason: 'DPR $dpr 下 1vp 应取整到整数设备像素',
+        );
+        // 画到盒外会被祖先 clip 吃掉半条，四条边就不再同宽
+        expect(side!.strokeAlign, BorderSide.strokeAlignInside);
+      }
+    });
+
+    testWidgets('发丝线按逻辑宽度换算（0.5px 在 3x 屏上就是 2px）', (
+      WidgetTester tester,
+    ) async {
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      BorderSide? side;
+      await tester.pumpWidget(
+        wrap(
+          Builder(
+            builder: (BuildContext context) {
+              side = ohosBorderSide(
+                context,
+                const Color(0xFF000000),
+                width: 0.5,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      expect(side!.width, closeTo(2 / 3, 0.001));
+    });
+  });
+
+  group('OhosSlider', () {
+    testWidgets('墨屏下只留自绘气泡，且补 1px 实线', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: OhosSlider(
+                    value: 30,
+                    onChanged: (double value) {},
+                    divisions: 20,
+                    showValueBubble: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 有 divisions + label 时 Material 会额外画一个白底无描边的 value
+      // indicator：墨屏上贴在白页面里整个消失，还和自绘气泡重影。
+      expect(
+        SliderTheme.of(tester.element(find.byType(Slider))).showValueIndicator,
+        ShowValueIndicator.never,
+      );
+
+      final TestGesture gesture = await tester.startGesture(
+        tester.getCenter(find.byType(Slider)),
+      );
+      await gesture.moveBy(const Offset(24, 0));
+      await tester.pump();
+
+      final Container bubble = tester.widget<Container>(
+        find.byKey(const ValueKey<String>('bubble')),
+      );
+      final BoxDecoration decoration = bubble.decoration! as BoxDecoration;
+      expect(decoration.border!.top.color, ink.dividerColor);
+      expect(decoration.border!.top.width, 1);
+      expect(decoration.boxShadow, isNull, reason: '墨水屏没有阴影可画');
+
+      // 松手后气泡收起，回到「只有轨道和滑块」
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey<String>('bubble')), findsNothing);
+    });
+
+    testWidgets('彩屏离散滑条保留 Material 的数值指示器', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosSlider(
+                  value: 30,
+                  divisions: 20,
+                  onChanged: (double _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 只有墨屏要关（白底无描边会消失）；彩屏离散滑条还得有拖动时的数值反馈，
+      // 否则 `divisions` 一给，气泡就没了。
+      expect(
+        SliderTheme.of(tester.element(find.byType(Slider))).showValueIndicator,
+        ShowValueIndicator.onlyForDiscrete,
+      );
+    });
+
+    testWidgets('墨屏禁用态拇指不与已走轨道同灰', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosSlider(
+                  value: 30,
+                  enabled: false,
+                  onChanged: (double _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final SliderThemeData data = SliderTheme.of(
+        tester.element(find.byType(Slider)),
+      );
+      final OhosSliderThumbShape shape =
+          data.thumbShape! as OhosSliderThumbShape;
+
+      // 两者取同一个灰时，拇指左半边会融进已走轨道、描边也一并收敛，
+      // 真机上只剩半圈（读不出拇指中心落在哪）。
+      expect(shape.disabledFillColor, isNot(data.disabledActiveTrackColor));
+      // 禁用态仍要有描边：拇指的灰必然与轨道某一档重合，轮廓是唯一参照。
+      expect(shape.outlineColor, isNotNull);
+    });
+
+    testWidgets('墨屏滑块自己画描边，禁用态换一档灰（不与轨道同色）', (
+      WidgetTester tester,
+    ) async {
+      Future<SliderThemeData> themeFor(OhosThemeData data) async {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: data,
+            child: MaterialApp(
+              home: OhosScaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 320,
+                    child: OhosSlider(value: 30, onChanged: (double v) {}),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        return SliderTheme.of(tester.element(find.byType(Slider)));
+      }
+
+      final OhosThemeData ink = OhosThemeData.ink();
+      final SliderThemeData inkTheme = await themeFor(ink);
+      final OhosSliderThumbShape inkShape =
+          inkTheme.thumbShape! as OhosSliderThumbShape;
+      // 白滑块贴在白页面上：墨屏没有阴影可画，只能靠圆内描边读出来
+      expect(inkShape.outlineColor, ink.dividerColor);
+      expect(inkShape.outlineWidth, 1);
+      expect(inkShape.elevation, 0);
+      // 禁用态拇指换成与「已走轨道」不同的一档灰：同色会让左半边彻底融进
+      // 轨道（描边也一并收敛），只剩右半圈，读不出中心落在哪。
+      expect(inkShape.disabledFillColor, OhosColors.inkDisabled);
+      expect(inkShape.disabledFillColor, isNot(ink.textTertiaryColor));
+      expect(inkTheme.disabledActiveTrackColor, ink.textTertiaryColor);
+      expect(inkTheme.disabledInactiveTrackColor, OhosColors.inkDisabled);
+
+      final SliderThemeData lightTheme = await themeFor(OhosThemeData.light());
+      final OhosSliderThumbShape lightShape =
+          lightTheme.thumbShape! as OhosSliderThumbShape;
+      expect(lightShape.outlineColor, isNull);
+      expect(lightShape.disabledFillColor, isNull);
+      expect(lightShape.elevation, greaterThan(0));
+      expect(lightTheme.disabledInactiveTrackColor, isNull);
+    });
+  });
+
+  group('OhosColorPicker', () {
+    testWidgets('墨屏模式页签：选中反相成黑底白字，未选中留白 + 1px 线', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: OhosColorPicker(
+                colors: const <Color>[Colors.red, Colors.green],
+                selectedColor: Colors.red,
+                onChanged: (Color _) {},
+                tabs: const <OhosColorPickerTab>[
+                  OhosColorPickerTab.grid,
+                  OhosColorPickerTab.spectrum,
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      BoxDecoration chipOf(String label) =>
+          tester
+                  .widget<Container>(
+                    find
+                        .ancestor(
+                          of: find.text(label),
+                          matching: find.byType(Container),
+                        )
+                        .first,
+                  )
+                  .decoration!
+              as BoxDecoration;
+
+      // 选中：黑底。原来的 12% 黑在 16 级灰上只到第 2 级，比「留白 + 1px 线」
+      // 的未选中片还弱，选中态反而看不出来。
+      expect(chipOf('网格').color, ink.dividerColor);
+      // 未选中：留白 + 实线
+      expect(chipOf('光谱').color, Colors.transparent);
+      expect(chipOf('光谱').border, isNotNull);
+      // 黑底上的文字必须反相
+      expect(tester.widget<Text>(find.text('网格')).style?.color, ink.backgroundColor);
+    });
+
+    testWidgets('未选中的浅色色块补描边，深色不描；墨屏用纯黑', (
+      WidgetTester tester,
+    ) async {
+      const Color lite = Color(0xFFE0E0E0);
+
+      Future<Map<Color, BoxDecoration>> pumpGrid(
+        OhosThemeData data,
+        Color selected,
+      ) async {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: data,
+            child: MaterialApp(
+              home: OhosScaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 320,
+                    child: OhosColorPicker(
+                      colors: const <Color>[Colors.white, lite, Colors.black],
+                      selectedColor: selected,
+                      onChanged: (Color color) {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final Map<Color, BoxDecoration> found = <Color, BoxDecoration>{};
+        for (final Element box
+            in find
+                .descendant(
+                  of: find.byType(OhosColorPicker),
+                  matching: find.byType(Container),
+                )
+                .evaluate()) {
+          final Decoration? decoration = (box.widget as Container).decoration;
+          if (decoration is BoxDecoration && decoration.shape == BoxShape.circle) {
+            found[decoration.color!] = decoration;
+          }
+        }
+        return found;
+      }
+
+      final OhosThemeData ink = OhosThemeData.ink();
+      final Map<Color, BoxDecoration> inkGrid = await pumpGrid(ink, Colors.black);
+
+      // 白块 / 浅灰块落在白底上等于消失：补一条纯黑发丝线
+      expect(inkGrid[Colors.white]!.border!.top.color, ink.dividerColor);
+      expect(inkGrid[Colors.white]!.border!.top.width, 1);
+      expect(inkGrid[lite]!.border!.top.color, ink.dividerColor);
+      // 深色块自己有边界，不描；选中的走原来的粗框
+      expect(inkGrid[Colors.black]!.border!.top.color, ink.textPrimaryColor);
+      expect(inkGrid[Colors.black]!.border!.top.width, 3);
+
+      // 对勾跟着色块亮度走：深色配白勾，浅色换成前景色
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.check_rounded)).color,
+        Colors.white,
+      );
+      await pumpGrid(ink, Colors.white);
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.check_rounded)).color,
+        ink.textPrimaryColor,
+        reason: '白勾画在白块上等于没画',
+      );
+
+      final Map<Color, BoxDecoration> lightGrid = await pumpGrid(
+        OhosThemeData.light(),
+        Colors.black,
+      );
+      // 彩屏白底上的浅色块同样要描，但用 26% 黑而不是纯黑
+      expect(lightGrid[Colors.white]!.border!.top.color, Colors.black26);
     });
   });
 
@@ -781,6 +1451,73 @@ void main() {
       expect(size.width, greaterThanOrEqualTo(48));
       handle.dispose();
     });
+
+    testWidgets('ink 胶囊补 1px 实线，且四边同宽、画在子节点之上', (
+      WidgetTester tester,
+    ) async {
+      final TextEditingController controller = TextEditingController();
+      addTearDown(controller.dispose);
+      final OhosThemeData ink = OhosThemeData.ink();
+
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: OhosSearchBar(controller: controller),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Container bar = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(OhosSearchBar),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      // 白胶囊压在白页面上没有边界，补一条实线
+      expect(bar.decoration, isNull, reason: '底色归 Material，边不跟着 shape 走');
+      final BoxDecoration outline = bar.foregroundDecoration! as BoxDecoration;
+      final Border border = outline.border! as Border;
+      expect(border.top.color, ink.dividerColor);
+      // Material.shape 会和子节点抢同一条边（1.5x 屏上沿 2px、下沿只剩 1px），
+      // 换成 foregroundDecoration 后四条边必须落在同一套几何上。
+      expect(border.top.width, 1);
+      expect(border.bottom.width, border.top.width);
+      expect(border.left.width, border.top.width);
+      expect(border.right.width, border.top.width);
+      expect(
+        outline.borderRadius,
+        BorderRadius.circular(OhosGeometry.radiusCapsule),
+      );
+
+      // 彩屏不加框：胶囊靠底色分层
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 320,
+            child: OhosSearchBar(controller: controller),
+          ),
+        ),
+      );
+      final Container plain = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(OhosSearchBar),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(plain.foregroundDecoration, isNull);
+    });
   });
 
   group('OhosAlertDialog', () {
@@ -938,6 +1675,258 @@ void main() {
     });
   });
 
+  group('OhosList', () {
+    List<OhosDivider> dividersOf(WidgetTester tester) =>
+        tester.widgetList<OhosDivider>(find.byType(OhosDivider)).toList();
+
+    testWidgets('每个行边界只有一条线，末行不画（不叠双线）', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              OhosListTile(title: Text('A')),
+              OhosListTile(title: Text('B')),
+              OhosListTile(title: Text('C')),
+            ],
+          ),
+        ),
+      );
+
+      // 3 行 → 2 条；修复前是 2×3−1 = 5 条（tile 各画一条 + 列表插一条）
+      expect(dividersOf(tester).length, 2);
+    });
+
+    testWidgets('indent 跟着 leading 走，两端都不贯穿', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              OhosListTile(
+                leading: Icon(Icons.wifi),
+                title: Text('带图标'),
+              ),
+              OhosListTile(title: Text('不带图标')),
+            ],
+          ),
+        ),
+      );
+
+      final List<OhosDivider> dividers = dividersOf(tester);
+      expect(dividers.length, 1);
+      // 有 leading：16 内容边距 + 24 图标 + 16 间距
+      expect(dividers.single.indent, 56);
+      expect(dividers.single.endIndent, 16);
+
+      // 线的左端落在文字左端上，而不是压在图标下面
+      final Rect line = tester.getRect(find.byType(OhosDivider));
+      expect(
+        line.left + dividers.single.indent,
+        moreOrLessEquals(tester.getRect(find.text('带图标')).left, epsilon: 0.01),
+      );
+      // 右端留出 16vp，不贯穿到卡片边
+      expect(line.right - dividers.single.endIndent, lessThan(line.right));
+    });
+
+    testWidgets('divider: false 时整列都不画', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            divider: false,
+            children: <Widget>[
+              OhosListTile(title: Text('A')),
+              OhosListTile(title: Text('B')),
+            ],
+          ),
+        ),
+      );
+
+      expect(dividersOf(tester), isEmpty);
+    });
+
+    testWidgets('tile 显式 divider: false 在列表内也生效', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              OhosListTile(title: Text('A'), divider: false),
+              OhosListTile(title: Text('B')),
+            ],
+          ),
+        ),
+      );
+
+      // A 是第一行（scope 本来让它画一条），显式 false 必须压过 scope ——
+      // 否则「列表接管分隔线」就变成没法逐行关掉的静默回归。B 是末行，不画。
+      expect(dividersOf(tester), isEmpty);
+    });
+
+    testWidgets('非 tile 子节点仍由列表补线', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              SizedBox(height: 40),
+              SizedBox(height: 40),
+            ],
+          ),
+        ),
+      );
+
+      final List<OhosDivider> dividers = dividersOf(tester);
+      expect(dividers.length, 1);
+      expect(dividers.single.indent, 56);
+      expect(dividers.single.endIndent, 16);
+    });
+
+    testWidgets('包了一层的 tile 不会叠出两条线', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosList(
+            children: <Widget>[
+              Padding(
+                padding: EdgeInsets.zero,
+                child: OhosListTile(title: Text('A')),
+              ),
+              OhosListTile(title: Text('B')),
+            ],
+          ),
+        ),
+      );
+
+      // 第 0 行不是直接的 tile 子节点：列表会替它补一条（indent 56），
+      // 里面那条就必须被 scope 压掉，否则同一个边界上是两条线。
+      final List<OhosDivider> dividers = dividersOf(tester);
+      expect(dividers.length, 1);
+      expect(dividers.single.indent, 56);
+    });
+  });
+
+  group('OhosBadge', () {
+    testWidgets('行高有界时仍是 18×18 的圆，不会拉成竖胶囊', (
+      WidgetTester tester,
+    ) async {
+      // Row 的非弹性子节点拿到的是「宽度无界、高度有界」的约束 —— 老实现里
+      // 内部的 Align 会把高度撑满，宽度却跟着文字收缩。
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            height: 48,
+            child: Row(children: <Widget>[OhosBadge(count: 8)]),
+          ),
+        ),
+      );
+
+      final Size size = tester.getSize(find.byType(OhosBadge));
+      // 高度必须锁在自己的 18vp 上（修复前被拉到 46）；宽度不小于高度 ——
+      // 竖胶囊正是「宽 < 高」。测试里 `flutter_tester` 用 Ahem，字形是方形，
+      // 所以宽度会略大于 18，真实字体下宽 = 高 = 18 的圆。
+      expect(size.height, 18);
+      expect(size.width, greaterThanOrEqualTo(size.height));
+    });
+
+    testWidgets('多位数横向长成胶囊，而不是竖起来', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            height: 48,
+            child: Row(children: <Widget>[OhosBadge(count: 500)]),
+          ),
+        ),
+      );
+
+      final Size size = tester.getSize(find.byType(OhosBadge));
+      expect(size.height, 18);
+      expect(size.width, greaterThan(18));
+    });
+
+    testWidgets('点在 8×8，没有 count 也没有 child 时收成零', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          const Row(
+            children: <Widget>[
+              OhosBadge(isDot: true),
+              OhosBadge(),
+            ],
+          ),
+        ),
+      );
+
+      expect(tester.getSize(find.byType(OhosBadge).first), const Size(8, 8));
+      expect(tester.getSize(find.byType(OhosBadge).last), Size.zero);
+    });
+  });
+
+  group('OhosColorPicker', () {
+    Widget picker({
+      required OhosColorPickerTab tab,
+      required Color color,
+      ValueChanged<Color>? onChanged,
+    }) {
+      return wrap(
+        OhosColorPicker(
+          colors: const <Color>[Colors.red],
+          selectedColor: color,
+          tabs: <OhosColorPickerTab>[tab],
+          activeTab: tab,
+          onChanged: onChanged ?? (Color _) {},
+        ),
+      );
+    }
+
+    testWidgets('光谱：指示器与手指同向（上方 = 更亮）', (WidgetTester tester) async {
+      Color? picked;
+      await tester.pumpWidget(
+        picker(
+          tab: OhosColorPickerTab.spectrum,
+          color: const Color(0xFF000000), // V = 0，指示器初始在最下方
+          onChanged: (Color c) => picked = c,
+        ),
+      );
+
+      final Rect box = tester.getRect(
+        find.byKey(const Key('ohos-color-picker-sv-box')),
+      );
+      final Offset before = tester.getCenter(
+        find.byKey(const Key('ohos-color-picker-sv-indicator')),
+      );
+      expect(before.dy, greaterThan(box.center.dy));
+
+      await tester.tapAt(Offset(box.center.dx, box.top + 6));
+      await tester.pump();
+
+      // 点在盒子上沿：值应升到最亮，指示器也要跟着往上走（不是反向跑）
+      final Offset after = tester.getCenter(
+        find.byKey(const Key('ohos-color-picker-sv-indicator')),
+      );
+      expect(after.dy, lessThan(box.center.dy));
+      expect(HSVColor.fromColor(picked!).value, greaterThan(0.9));
+    });
+
+    testWidgets('滑块：拇指是圆且高于轨道，不会把轨道切出一道白口', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        picker(
+          tab: OhosColorPickerTab.sliders,
+          color: const Color(0xFF0A59F7),
+        ),
+      );
+
+      final Size thumb = tester.getSize(
+        find.byKey(const Key('ohos-color-picker-bar-thumb')).first,
+      );
+      final Size track = tester.getSize(
+        find.byKey(const Key('ohos-color-picker-bar-track')).first,
+      );
+      expect(thumb.width, thumb.height);
+      expect(thumb.height, greaterThan(track.height));
+    });
+  });
+
   group('showOhosBottomSheet', () {
     testWidgets('ink 主题下退化成纯色面板，不再做整层模糊', (
       WidgetTester tester,
@@ -1053,6 +2042,48 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('浅底浮条自己画 hairline：墨屏纯黑，彩屏用分隔色', (
+      WidgetTester tester,
+    ) async {
+      // 浮条靠阴影 + 底色分层。墨水屏没有阴影（白底浮条直接消失），彩屏上
+      // 6dp 淡影罩纯白底也只剩一道模糊 —— 浅底一律补线。
+      Future<BorderSide> sideFor(OhosThemeData data) async {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: data,
+            child: MaterialApp(
+              home: OhosScaffold(
+                body: Center(
+                  child: Builder(
+                    builder: (BuildContext context) => OhosButton(
+                      onPressed: () =>
+                          showOhosSnackBar(context, message: '已保存'),
+                      child: const Text('保存'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('保存'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        final SnackBar bar = tester.widget<SnackBar>(find.byType(SnackBar));
+        return (bar.shape! as RoundedRectangleBorder).side;
+      }
+
+      final OhosThemeData ink = OhosThemeData.ink();
+      final BorderSide inkSide = await sideFor(ink);
+      expect(inkSide.color, ink.dividerColor);
+      expect(inkSide.width, 1);
+
+      final OhosThemeData light = OhosThemeData.light();
+      final BorderSide lightSide = await sideFor(light);
+      expect(lightSide.color, light.dividerColor, reason: '白底在灰阶上只能靠线');
+      expect(lightSide.width, 1);
     });
   });
 
@@ -1206,6 +2237,140 @@ void main() {
     });
   });
 
+  group('OhosTabBar', () {
+    testWidgets('松宽度约束下也撑满父宽（不再塌成 0 宽）', (WidgetTester tester) async {
+      // 宿主是 `Center` + 未 stretch 的 `Column`：两层给的都是 `minWidth = 0`
+      // 的松约束。组件外壳是「固定高度 + 全 `Positioned.fill` 的 Stack」，不兜
+      // 一下会取 `constraints.smallest` → 宽度 0，三个标题叠在正中。
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 360,
+            child: DefaultTabController(
+              length: 3,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const <Widget>[
+                  OhosTabBar(tabs: <Widget>[Text('文件'), Text('提交'), Text('分支')]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Rect bar = tester.getRect(find.byType(OhosTabBar));
+      expect(bar.width, 360);
+      expect(tester.getCenter(find.text('文件')).dx, moreOrLessEquals(bar.left + 60));
+      expect(tester.getCenter(find.text('提交')).dx, moreOrLessEquals(bar.center.dx));
+      expect(tester.getCenter(find.text('分支')).dx, moreOrLessEquals(bar.right - 60));
+    });
+
+    testWidgets('跟手分割线按 followStartOffset → followEndOffset 淡入', (
+      WidgetTester tester,
+    ) async {
+      final ScrollController scroller = ScrollController();
+      addTearDown(scroller.dispose);
+
+      await tester.pumpWidget(
+        wrap(
+          DefaultTabController(
+            length: 2,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                OhosTabBar(
+                  tabs: const <Widget>[Text('一'), Text('二')],
+                  divider: const OhosTabBarDividerOptions(
+                    mode: OhosTabBarDividerMode.followScroll,
+                    followStartOffset: 0,
+                    followEndOffset: 20,
+                  ),
+                  scrollController: scroller,
+                ),
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    controller: scroller,
+                    itemCount: 40,
+                    itemBuilder: (BuildContext context, int i) =>
+                        SizedBox(height: 40, child: Text('行 $i')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      double dividerOpacity() => tester
+          .widget<Opacity>(
+            find.descendant(
+              of: find.byType(OhosTabBar),
+              matching: find.byType(Opacity),
+            ),
+          )
+          .opacity;
+
+      // 停在顶部时整条线不可见（列表还没被页签压住）
+      expect(dividerOpacity(), 0);
+
+      scroller.jumpTo(10);
+      await tester.pump();
+      expect(dividerOpacity(), moreOrLessEquals(0.5, epsilon: 0.01));
+
+      scroller.jumpTo(20);
+      await tester.pump();
+      expect(dividerOpacity(), 1);
+    });
+
+    testWidgets('none 模式不画线，visible 模式常显', (WidgetTester tester) async {
+      final Color dividerColor = OhosThemeData.light().dividerColor;
+      Finder dividerLine() => find.descendant(
+        of: find.byType(OhosTabBar),
+        matching: find.byWidgetPredicate(
+          (Widget w) => w is Container && w.color == dividerColor,
+        ),
+      );
+
+      Future<void> pumpWithMode(OhosTabBarDividerMode mode) async {
+        await tester.pumpWidget(
+          wrap(
+            DefaultTabController(
+              length: 2,
+              child: OhosTabBar(
+                tabs: const <Widget>[Text('一'), Text('二')],
+                divider: OhosTabBarDividerOptions(mode: mode),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // 常隐：线本身不构建，连跟手那层 Opacity 壳都不在
+      await pumpWithMode(OhosTabBarDividerMode.none);
+      expect(dividerLine(), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(OhosTabBar),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
+
+      // 常显：线直接画出来，不经过 Opacity（否则 0 透明度会被当成「有但看不见」）
+      await pumpWithMode(OhosTabBarDividerMode.visible);
+      expect(dividerLine(), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(OhosTabBar),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
+    });
+  });
+
   group('OhosResponsiveBuilder', () {
     testWidgets('resolves breakpoints from window width', (
       WidgetTester tester,
@@ -1236,6 +2401,118 @@ void main() {
       expect(OhosWindowSize.fromWidth(840).type, OhosWindowSizeType.large);
       expect(OhosWindowSize.fromWidth(840).columns, 12);
       expect(OhosWindowSize.fromWidth(840).margin, 32);
+    });
+  });
+
+  group('OhosGrid', () {
+    // 宿主宽度固定，并在网格下方留一个标记：`Align` 在无界高度下会收缩包裹
+    // 网格，于是标记的顶点就等于网格的真实高度（含或不含末行行距）。
+    Widget host(Widget child) {
+      return OhosTheme(
+        data: OhosThemeData.light(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                Container(key: const ValueKey<String>('after'), height: 10),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    OhosGridItem cell(String id, int span, {double height = 40}) {
+      return OhosGridItem(
+        columnSpan: span,
+        child: Container(key: ValueKey<String>(id), height: height),
+      );
+    }
+
+    double widthOf(WidgetTester tester, String id) =>
+        tester.getSize(find.byKey(ValueKey<String>(id))).width;
+
+    testWidgets('末行不满时保留空列，单元宽度与满行一致', (WidgetTester tester) async {
+      // 1000vp → 12 列、margin 32、gutter 16；内容区 936vp、单列 63.33vp，
+      // 跨 3 列的单元因此是 3×63.33 + 2×16 = 222vp（不是整行的 936vp）。
+      await tester.binding.setSurfaceSize(const Size(1000, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        host(
+          OhosGrid(
+            children: <Widget>[
+              cell('a', 3),
+              cell('b', 3),
+              cell('c', 3),
+              cell('d', 3),
+              cell('e', 3),
+            ],
+          ),
+        ),
+      );
+
+      expect(widthOf(tester, 'a'), moreOrLessEquals(222, epsilon: 0.01));
+      for (final String id in <String>['b', 'c', 'd', 'e']) {
+        expect(
+          widthOf(tester, id),
+          moreOrLessEquals(widthOf(tester, 'a'), epsilon: 0.01),
+          reason: '单元宽度不应随本行单元个数变化（$id）',
+        );
+      }
+      // 第二行只有一格，左边缘要与第一行对齐
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey<String>('e'))).dx,
+        moreOrLessEquals(
+          tester.getTopLeft(find.byKey(const ValueKey<String>('a'))).dx,
+          epsilon: 0.01,
+        ),
+      );
+      // 首格贴页面边距（不是内缩半个 gutter）
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey<String>('a'))).dx,
+        moreOrLessEquals(32, epsilon: 0.01),
+      );
+    });
+
+    testWidgets('行距只出现在行与行之间', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        host(
+          OhosGrid(
+            children: <Widget>[cell('a', 6), cell('b', 6), cell('c', 6)],
+          ),
+        ),
+      );
+
+      final double firstTop = tester
+          .getTopLeft(find.byKey(const ValueKey<String>('a')))
+          .dy;
+      // 两行 × 40 + 一条 gutter 16 = 96；末行再加一条就是 112
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey<String>('after'))).dy,
+        moreOrLessEquals(96, epsilon: 0.01),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey<String>('c'))).dy,
+        moreOrLessEquals(firstTop + 40 + 16, epsilon: 0.01),
+      );
+    });
+
+    testWidgets('maxWidth 限制的是单元区，边距在外', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(2400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        host(OhosGrid(maxWidth: 1000, children: <Widget>[cell('a', 12)])),
+      );
+
+      // 跨满 12 列 = 内容区宽度，正好等于 maxWidth，不扣除两侧 margin
+      expect(widthOf(tester, 'a'), moreOrLessEquals(1000, epsilon: 0.01));
     });
   });
 
@@ -3024,6 +4301,41 @@ void main() {
       // 标题仍在 56vp 的工具栏里，不会被 bottom 挤下去
       expect(tester.getCenter(find.text('标题')).dy, 28);
       expect(tester.getRect(find.text('标签')).top, greaterThanOrEqualTo(56));
+    });
+
+    testWidgets('bottom 里的 OhosTabBar 铺满整宽：三个页签均分，不挤成一坨', (
+      WidgetTester tester,
+    ) async {
+      // `OhosTabBar` 内部是 `Stack` + 全 `Positioned.fill` 子节点：父级若给的是
+      // **松**宽度约束（minWidth 0），它会取 `constraints.smallest` → 宽度塌成
+      // 0，几个页签的标题堆在正中叠成一坨。AppBar 的 content 是 Column，默认
+      // `center` 正好给的就是松约束，所以这里必须走真实 bottom 链路验证。
+      const OhosAppBar bar = OhosAppBar(
+        title: Text('标题'),
+        bottom: OhosTabBar(tabs: <Widget>[Text('文件'), Text('提交'), Text('分支')]),
+      );
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: DefaultTabController(
+              length: 3,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 360,
+                  child: Scaffold(appBar: bar, body: const SizedBox.expand()),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.getSize(find.byType(OhosTabBar)).width, 360);
+      expect(tester.getCenter(find.text('文件')).dx, moreOrLessEquals(60));
+      expect(tester.getCenter(find.text('提交')).dx, moreOrLessEquals(180));
+      expect(tester.getCenter(find.text('分支')).dx, moreOrLessEquals(300));
     });
 
     testWidgets('systemOverlayStyle 通过 AnnotatedRegion 交给系统状态栏',

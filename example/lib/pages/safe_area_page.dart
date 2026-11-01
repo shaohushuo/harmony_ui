@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../demo_frame.dart';
+import '../theme_switch.dart';
+
 /// 对照页：`OhosScaffold.body` 里再套 `SafeArea` 不该叠出第二份安全区。
 ///
 /// 两栏内容完全一样，右栏只是多包了一层 `SafeArea`：
@@ -28,7 +31,10 @@ class _SafeAreaPageState extends State<SafeAreaPage> {
     final bool simulate = _simulate ?? MediaQuery.paddingOf(context).top == 0;
 
     Widget page = OhosScaffold(
-      appBar: const OhosAppBar(title: Text('body 内层 SafeArea')),
+      appBar: const OhosAppBar(
+        title: Text('body 内层 SafeArea'),
+        actions: <Widget>[ThemeSwitchButton()],
+      ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         child: Column(
@@ -134,9 +140,7 @@ class _Pane extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.cardColor,
-          border: Border.all(
-            color: theme.textTertiaryColor.withValues(alpha: 0.4),
-          ),
+          border: demoFrameBorder(context, theme),
           borderRadius: BorderRadius.circular(12),
         ),
         // 关键：只有右栏多这一层，它不该再让出任何内边距。
