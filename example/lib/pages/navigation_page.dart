@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../demo_frame.dart';
 import 'demo_scaffold.dart';
 import 'safe_area_page.dart';
 
@@ -124,9 +125,7 @@ class _StatusBarInsetDemo extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: theme.textTertiaryColor.withValues(alpha: 0.4),
-          ),
+          border: demoFrameBorder(context, theme),
           borderRadius: BorderRadius.circular(12),
         ),
         child: ClipRRect(
@@ -136,10 +135,7 @@ class _StatusBarInsetDemo extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               _bar(context, primary: true, caption: 'primary: true（默认）· 高 80vp'),
-              Divider(
-                height: 1,
-                color: theme.textTertiaryColor.withValues(alpha: 0.4),
-              ),
+              Divider(height: 1, color: demoFrameColor(theme)),
               _bar(context, primary: false, caption: 'primary: false · 高 56vp'),
             ],
           ),
@@ -257,9 +253,7 @@ class _StatusBarColorDemoBody extends StatelessWidget {
         const SizedBox(height: 6),
         DecoratedBox(
           decoration: BoxDecoration(
-            border: Border.all(
-              color: theme.textTertiaryColor.withValues(alpha: 0.4),
-            ),
+            border: demoFrameBorder(context, theme),
             borderRadius: BorderRadius.circular(12),
           ),
           child: ClipRRect(
@@ -342,9 +336,7 @@ class _AppBarSlotsDemoState extends State<_AppBarSlotsDemo>
     final OhosThemeData theme = OhosTheme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border.all(
-          color: theme.textTertiaryColor.withValues(alpha: 0.4),
-        ),
+        border: demoFrameBorder(context, theme),
         borderRadius: BorderRadius.circular(12),
       ),
       child: ClipRRect(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:ohos_icons/ohos_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../demo_frame.dart';
 import 'demo_scaffold.dart';
 
 /// 展示类：文本 / 子标题 / 分隔器 / 进度条 / 索引条 / 滚动条 / 徽标 /
@@ -423,9 +424,7 @@ class _IndexerDemoState extends State<_IndexerDemo> {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: theme.backgroundColor,
-                      border: Border.all(
-                        color: theme.textTertiaryColor.withValues(alpha: 0.4),
-                      ),
+                      border: demoFrameBorder(context, theme),
                     ),
                     child: ListView.builder(
                       controller: _scroller,
@@ -708,9 +707,7 @@ class _HexBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: swatch.color,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: theme.textTertiaryColor.withValues(alpha: 0.4),
-              ),
+              border: Border.all(color: demoFrameColor(theme)),
             ),
           ),
           const SizedBox(width: 8),
