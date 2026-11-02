@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
 /// Size of an [OhosChipGroup] item (ChipItemStyle.Size).
@@ -144,6 +145,7 @@ class OhosChipGroup extends StatelessWidget {
 
   Widget _item(BuildContext context, int index) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final OhosVisualPolicy policy = theme.policy;
     final bool selected = multiple
         ? selectedIndexes?.contains(index) ?? false
         : selectedIndex == index;
@@ -153,6 +155,13 @@ class OhosChipGroup extends StatelessWidget {
     final Color fg = selected
         ? theme.onHighlightColor
         : theme.textSecondaryColor;
+    // 未选中态原先只有填充、没有描边。彩屏上填充自己够得着（灰底压白页），
+    // 但墨水屏的 compBackgroundGrayColor 就是纸色 —— 芯片与页面同色、又没有线，
+    // 一排里只有选中那颗有形状，其余散成纯文字，读者分不出哪个能点。
+    // 描边取色与 OhosChip 保持一致：选中用品牌色，未选中用提示色。
+    final Color borderColor = selected
+        ? policy.line(theme.highlightColor, 0.20)
+        : policy.line(theme.textTertiaryColor, 0.3);
     return GestureDetector(
       onTap: () {
         if (multiple) {
@@ -177,6 +186,9 @@ class OhosChipGroup extends StatelessWidget {
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(_height / 2),
+          border: Border.fromBorderSide(
+            ohosBorderSide(context, borderColor),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/ohos_colors.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
@@ -63,6 +62,7 @@ class _OhosSliderState extends State<OhosSlider> {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final OhosVisualPolicy policy = theme.policy;
     final Color active = widget.activeColor ?? theme.highlightColor;
     final bool showBubble = widget.showValueBubble && _dragValue != null;
     return Column(
@@ -76,22 +76,22 @@ class _OhosSliderState extends State<OhosSlider> {
             decoration: BoxDecoration(
               color: theme.popupColor,
               borderRadius: BorderRadius.circular(16),
-              // 墨水屏：气泡与页面同为纯白，用 1px 黑边代替看不见的浅阴影。
-              border: theme.monochrome
+              // 墨屏：气泡与页面同为纯白，用实线代替看不见的浅阴影。
+              border: theme.usesOutlines
                   ? Border.all(
                       color: theme.dividerColor,
-                      width: ohosStrokeWidth(context),
+                      width: ohosStrokeWidth(context, theme.outlineWidth),
                     )
                   : null,
-              boxShadow: theme.monochrome
-                  ? null
-                  : <BoxShadow>[
+              boxShadow: policy.allowsShadow
+                  ? <BoxShadow>[
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
-                    ],
+                    ]
+                  : null,
             ),
             child: Text(
               _bubble,
@@ -103,43 +103,42 @@ class _OhosSliderState extends State<OhosSlider> {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: active,
-            // 墨水屏：15% 的未走轨道看不见，滑块就悬在半空中；换成实色
-            // #767676，白色滑块靠两侧的黑 / 灰分界读出来。elevation 也不再
-            // 有阴影可画，归零省一次刷新。
-            inactiveTrackColor: theme.monochrome
+            // 15% 的未走轨道在灰阶屏上看不见，滑块会悬在半空中；策略判成
+            // 透明后换成提示色实线，白滑块靠两侧的黑 / 灰分界读出来。
+            inactiveTrackColor: policy.tint(active, 0.15) == Colors.transparent
                 ? theme.textTertiaryColor
                 : active.withValues(alpha: 0.15),
             thumbColor: Colors.white,
-            // 墨水屏：点按后的半透明灰块会留一整块，且刷新慢
-            overlayColor: theme.monochrome
-                ? Colors.transparent
-                : active.withValues(alpha: 0.12),
+            // 点按后的半透明灰块会留一整块，且刷新慢
+            overlayColor: policy.allowsRipple
+                ? active.withValues(alpha: 0.12)
+                : Colors.transparent,
             trackHeight: 4,
-            // 墨水屏下没有阴影可画，白滑块贴在白页面上等于没有滑块 —— 自己画
+            // 墨屏下没有阴影可画，白滑块贴在白页面上等于没有滑块 —— 自己画
             // 一条落在圆内的描边（`RoundSliderThumbShape` 只有 elevation）。
             // 禁用态：滑块变灰实心、轨道降一档灰，一眼看出拖不动
-            disabledActiveTrackColor: theme.monochrome
+            disabledActiveTrackColor: theme.usesOutlines
                 ? theme.textTertiaryColor
                 : null,
-            disabledInactiveTrackColor: theme.monochrome
-                ? OhosColors.inkDisabled
+            disabledInactiveTrackColor: theme.usesOutlines
+                ? policy.disabledFill(theme.textTertiaryColor)
                 : null,
             thumbShape: OhosSliderThumbShape(
-              outlineColor: theme.monochrome ? theme.dividerColor : null,
-              outlineWidth: ohosStrokeWidth(context),
+              outlineColor: theme.usesOutlines ? theme.dividerColor : null,
+              outlineWidth: ohosStrokeWidth(context, theme.outlineWidth),
               // 不能跟 `disabledActiveTrackColor` 取同一个灰：拇指左半边会和
               // 已走轨道彻底同色，只剩右半圈轮廓，读不出拇指中心落在哪。
-              disabledFillColor: theme.monochrome
-                  ? OhosColors.inkDisabled
+              disabledFillColor: theme.usesOutlines
+                  ? policy.disabledFill(theme.textTertiaryColor)
                   : null,
-              elevation: theme.monochrome ? 0 : 3,
+              elevation: policy.allowsShadow ? 3 : 0,
             ),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
             // Material 自己还会画一个 value indicator（`divisions` + `label`
-            // 时默认 onlyForDiscrete）：墨屏下它是白底、没有描边，贴在白页面上
-            // 整个消失，而且跟上面自绘的气泡重影。只在墨屏关掉，彩屏保持
-            // Material 的默认 —— 离散滑条在彩屏上仍要那块数值反馈。
-            showValueIndicator: theme.monochrome
+            // 时默认 onlyForDiscrete）：灰阶屏下它是白底、没有描边，贴在白页面
+            // 上整个消失，而且跟上面自绘的气泡重影。只在用描边的主题关掉，
+            // 彩屏保持 Material 的默认 —— 离散滑条在彩屏上仍要那块数值反馈。
+            showValueIndicator: theme.usesOutlines
                 ? ShowValueIndicator.never
                 : ShowValueIndicator.onlyForDiscrete,
           ),

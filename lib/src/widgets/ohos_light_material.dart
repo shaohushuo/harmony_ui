@@ -344,9 +344,13 @@ class OhosLightMaterial extends StatelessWidget {
     final double blurSigma = spec.blurSigma * tuning.blurScale;
     final BorderRadius border = borderRadius ?? BorderRadius.zero;
 
-    if (theme.monochrome) {
-      // 墨水屏：`BackdropFilter` 是每帧全屏合成，投影像拖尾 —— 两者都不做，
-      // 直接退化成一块纯色，边界交给调用方自己的 1px 线。
+    if (!theme.policy.allowsBlur || !theme.policy.allowsGlow) {
+      // 不做模糊的主题（墨水屏）：`BackdropFilter` 是每帧全屏合成，投影像
+      // 拖尾 —— 直接退化成一块纯色，边界交给调用方自己的实线。
+      //
+      // 不允许光晕的主题走同一条路：边缘光 / 高光 / 散射都是纯明度叠加，
+      // 在灰阶屏上只会把正文糊成一片。两者分开判断是因为能力独立 ——
+      // 将来可能出现「能模糊但不能叠光」的屏，那时这里自然就对了。
       return ClipRRect(
         borderRadius: border,
         child: ColoredBox(

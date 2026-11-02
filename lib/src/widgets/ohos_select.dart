@@ -68,8 +68,12 @@ class OhosSelect<T> extends StatelessWidget {
                     OhosGeometry.radiusMedium,
                   ),
                   // 墨水屏：下拉面板与页面同为纯白，阴影不存在 → 1px 实线
-                  side: theme.monochrome
-                      ? ohosBorderSide(context, theme.dividerColor)
+                  side: theme.usesOutlines
+                      ? ohosBorderSide(
+                          context,
+                          theme.dividerColor,
+                          width: theme.outlineWidth,
+                        )
                       : BorderSide.none,
                 ),
                 items: <PopupMenuEntry<T>>[

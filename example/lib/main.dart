@@ -28,17 +28,16 @@ class OhosUiGalleryApp extends StatelessWidget {
     // `ValueListenableBuilder` 放在最外层：切主题时 `MaterialApp` 是原地重建
     // （同一位置、同一类型），Navigator 的 State 会被复用，所以停在第三层演示
     // 页上点按钮不会把人弹回首页。
-    return ValueListenableBuilder<GalleryTheme>(
-      valueListenable: galleryTheme,
-      builder: (BuildContext context, GalleryTheme theme, Widget? child) {
-        return OhosTheme(
-          data: theme.data,
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'harmony_ui gallery',
-            theme: theme.materialTheme,
-            home: const HomePage(),
-          ),
+    return OhosThemeSwitcher(
+      controller: galleryTheme,
+      // `MaterialApp` 是原地重建（同一位置、同一类型），Navigator 的 State 会被
+      // 复用，所以停在第三层演示页上点按钮不会把人弹回首页。
+      builder: (BuildContext context, ThemeData materialTheme) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'harmony_ui gallery',
+          theme: materialTheme,
+          home: const HomePage(),
         );
       },
     );

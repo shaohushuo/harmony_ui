@@ -192,6 +192,13 @@ class OhosIlluminated extends StatelessWidget {
       return child;
     }
     final OhosThemeData theme = OhosTheme.of(context);
+    // 灰阶屏上没有「光」这个隐喻：白晕叠上去只是一块浅灰，压在纯黑字上会
+    // 直接糊掉正文。策略允许才画那一层，child 本身照常渲染。
+    if (!theme.policy.allowsGlow) {
+      return clipContent
+          ? ClipRRect(borderRadius: borderRadius, child: child)
+          : child;
+    }
     final double intensity = options.intensity.clamp(0, 100).toDouble();
     return Stack(
       fit: StackFit.passthrough,

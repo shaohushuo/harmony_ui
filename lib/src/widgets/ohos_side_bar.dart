@@ -79,8 +79,12 @@ class OhosSideBar extends StatelessWidget {
               ),
               // overlay 模式本来靠阴影与遮罩分层；遮罩被关掉、或正文浅色时
               // 只剩一块白板，墨水屏上再补 1px 实线
-              side: theme.monochrome
-                  ? ohosBorderSide(context, theme.dividerColor)
+              side: theme.usesOutlines
+                  ? ohosBorderSide(
+                      context,
+                      theme.dividerColor,
+                      width: theme.outlineWidth,
+                    )
                   : BorderSide.none,
             )
           : null,

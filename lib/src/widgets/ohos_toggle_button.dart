@@ -33,24 +33,22 @@ class OhosToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    // 墨水屏：12% 的选中底与页面同色、50% / 35% 的边也淡掉，改成一实白底
-    // + 描边，选中时描边由 #767676 提到纯黑。
-    final bool ink = theme.monochrome;
+    final OhosVisualPolicy policy = theme.policy;
     final Color highlight = theme.highlightColor;
     final Color fg = value ? highlight : theme.textSecondaryColor;
     return Material(
-      color: ink
-          ? Colors.transparent
-          : (value ? highlight.withValues(alpha: 0.12) : theme.cardColor),
+      // 12% 的选中底在墨屏上与页面同色，策略判成透明后由描边接手。
+      color: value
+          ? policy.tint(highlight, 0.12)
+          : theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OhosGeometry.radiusCapsule),
+        // 50% / 35% 的边在灰阶屏上会淡掉，策略换成实色，选中时提到纯黑。
         side: ohosBorderSide(
           context,
-          ink
-              ? (value ? theme.dividerColor : theme.textTertiaryColor)
-              : (value
-                    ? highlight.withValues(alpha: 0.5)
-                    : theme.textTertiaryColor.withValues(alpha: 0.35)),
+          value
+              ? policy.line(highlight, 0.5)
+              : policy.line(theme.textTertiaryColor, 0.35),
         ),
       ),
       clipBehavior: Clip.antiAlias,

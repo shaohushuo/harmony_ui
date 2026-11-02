@@ -38,7 +38,8 @@ flutter pub get
 
 | 库版本 | 分支 / TAG | Flutter 版本 |
 | --- | --- | --- |
-| 0.4.0 | `main` / `v0.4.0` | oh-3.35.7-release |
+| 0.5.0 | `main` / `v0.5.0` | oh-3.35.7-release |
+| 0.4.0 | `v0.4.0` | oh-3.35.7-release |
 | 0.3.0 | `v0.3.0` | oh-3.35.7-release |
 | 0.2.0 | 历史提交 | oh-3.35.7-release |
 | 0.1.0 | 历史提交 | oh-3.35.7-release |

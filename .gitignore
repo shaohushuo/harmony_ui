@@ -21,3 +21,6 @@ example/ohos/entry/oh_modules/
 example/ohos/node_modules/
 example/ohos/entry/build/
 example/ohos/local.properties
+
+# Local agent workspace (not part of the package)
+.workbuddy/

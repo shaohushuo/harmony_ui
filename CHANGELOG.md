@@ -1,6 +1,38 @@
-## Unreleased
+## 0.5.0
 
-- 破坏性变更（源码兼容）：`OhosListTile.divider` 由 `bool`（默认 `true`）改为 `bool?`（默认 `null`）。`null` 表示跟随所在的 `OhosList` —— 列表接管分隔线，行边界恰好一条、末行不画；显式传 `true` / `false` 的行为与以前一致（原来 `false` 会被列表的 scope 静默忽略）。改类型是为了修掉「列表内每行各画一条、行边界变成双线」，同时保留逐行关掉分隔线的能力
+Release date: 2026-11-01
+
+- 修复：`OhosChipGroup` 未选中芯片没有描边 —— `_item` 自己搭 `AnimatedContainer`，`decoration` 里只有色和圆角，漏了 `OhosChip` 那套 `policy.line` 描边。彩屏上填充自己够得着（灰底压白页），但墨水屏的 `compBackgroundGrayColor` 就是纸色，芯片与页面同色又没有线，一排里只有选中那颗有形状、其余散成纯文字，读者分不出哪个能点。现在描边取色与 `OhosChip` 完全一致（选中品牌色 20%、未选中提示色 30%，经策略换成实色），彩屏上淡成发丝线不影响观感。根因是同一件事在两个组件里各写了一遍 —— 长期应让 `OhosChipGroup` 复用 `OhosChip`（两者的 padding 与圆角目前也不一致：chip 16/7、group 按高度取半径），本次只补齐缺失的那一处
+- 修复：`OhosSearchBar` 内部 `TextField` 的边框状态槽位被宿主主题改写，胶囊里叠出第二道框。组件原来只写了 `border: InputBorder.none`，但 `InputDecoration.applyDefaults` 用的是 `enabledBorder ?? theme.enabledBorder` —— 装饰器自己的 `border` **不会**回填状态槽位，而 `_getBorder` 先按状态取槽位、取到了就压根不去读 `border`。宿主只要给 `inputDecorationTheme` 配过 `enabledBorder`（墨水屏上很常见：没有填充色可用，只能靠 1px 描边分层）就会中招。现在六个槽位逐个钉成 `none`，并显式 `filled: false`（同一处 `applyDefaults` 还会把宿主的 `filled: true` 带进来，在胶囊里多一块填充矩形）。外层胶囊已在 `foregroundDecoration` 里自己画 1px 边，内层永远不该再画
+- 测试：新增 `test/downstream_issues_test.dart`（11 例），对应下游实测反馈的三个 issue。写法上刻意做成一件事：**断言落在「组件真的画出来了」而不是「组件里有了这个字段」** —— 字段存在却没被用上，正是这三个 bug 的形态。其中搜索框一例直接调用 `InputDecoration.applyDefaults(宿主主题)` 断言合并后的结果不再是 `OutlineInputBorder`，而不是只检查组件自己写的槽位是否为 `none`（后者在 bug 存在时也照样通过）。已验证：回退修复后这 6 例（ChipGroup 3 + SearchBar 3）全部变红
+- 修复：深色档 `compBackgroundGray` 由 `#E5E5EA` 改为 `#202224`（本项随 `brightness` 语义拆分一并落地，此处记录以免遗漏）。原先那个值抄自官方 token 表，在 ArkUI 语境里成立（配的是深色**字** `#FFE5E5E5`），而本库把它当输入框 / chip 的**填充面**，上面画的是 `textPrimaryColor`（深色档 `0xE5FFFFFF` 半透明白），白字落在这块浅灰上实测 1.15:1 —— **token 抄对 ≠ 用对**。改后 6.59:1。配套加一条「深浅两档的同名**面**令牌不得近似同值」自查，只扫面令牌不扫彩色令牌（深色档的品牌色、交互色本来就该提亮，按「深色必须更暗」一刀切会把正确设计判成错误）
+- 示例：`example` 的主题按钮改为「点按循环 浅色 → 深色 → 墨水屏，长按选全部五档（含深色墨水屏）」。此前直接用库里的 `OhosThemeToggleButton`，它的点按语义是「当前彩屏档位 ↔ 墨水屏」，深色只能进长按菜单 —— 结果是点一下就从浅色跳到黑底白字的电子纸，**深色那一档在画廊里根本走不到**。对一个专门用来看组件外观的应用来说，深色和墨水屏是并列的一等对照项，不该藏在长按里（`example/lib/theme_switch.dart`）
+- 文档：README 头部截图区补上**深色档**五张对照（与墨水屏并列），并新增「深色（dark 主题）」小节 —— 深色只翻令牌明暗、表现规则仍是彩屏（有阴影/模糊/水波纹），与墨水屏正交；另收录一张**深色墨水屏**截图，把「两个维度同时成立」从说明变成可看的图
+- 测试：`example/test/theme_switch_test.dart` 重写（7 例），钉住点按循环、深色档纸色真的换了、`toggle` 从墨屏回来落在深色、菜单能选到深色墨水屏、自定义主题下点按不是空操作。用例在 `runTest` 内部把默认平台临时换成 iOS —— Material 在 Android 平台用水波纹 `InkSparkle`，它首次绘制时加载 `shaders/ink_sparkle.frag`，本仓库的 `flutter_tester` 解析该 asset 会抛 `manifest could not be decoded`（既有环境问题，与主题无关，切墨水屏同样触发）；iOS 的 `InkRipple` 是纯 Dart 实现，不碰 shader
+
+- **破坏性变更**：`OhosThemeData` 构造函数的 `monochrome` 参数（`bool`，默认 `false`）改为 `policy`（`OhosVisualPolicy`，默认 `ColorVisualPolicy()`）。这是本次唯一一处**编译期**不兼容 —— 直接写 `OhosThemeData(monochrome: true, ...)` 手搓主题的调用方会报「没有名为 monochrome 的命名参数」，改为 `policy: const InkVisualPolicy()` 即可（用工厂 `OhosThemeData.ink()` 的调用方不受影响）。改的理由：单色只是「这块屏怎么表现」的一个取值，用 bool 表达等于把 24 个组件的分支逻辑焊死在「彩色 / 单色」这一对上，再加高对比、深色墨水屏就要回头改组件
+- 新增：视觉策略层 `OhosVisualPolicy` —— 把「这块屏上怎么表现才看得见」从色值里拆出来，两个实现 `ColorVisualPolicy`（彩屏：叠色 / 阴影 / 模糊 / 波纹）与 `InkVisualPolicy`（墨水屏：1px 实色线、无动效、灰阶量化）。接口是 `tint` / `line` / `quantize` / `outlineWidth` / `allowsShadow` / `allowsBlur` / `allowsRipple` / `scaleMotion`。**新增一类屏幕 = 新增一个子类 + 一份色值，组件层不动**
+- 调整：`OhosThemeData.monochrome` 由字段改为 getter（`policy.isMonochrome`），读取侧全部兼容，但不能再被赋值；新增语义化 getter `usesOutlines` / `outlineWidth` / `outlineColor`，组件判断「要不要描边」改读这三个，不再摸 `monochrome`。`copyWith` 同时接受 `policy:` 与 `monochrome:`（后者内部换算成策略），旧调用点不用改
+- 重构：24 个组件内部的 `theme.monochrome ? A : B` 分支全部消除，改为向策略提问。公开 API 与构造参数无变化。`tint()` 返回全透明表示「这层底托不住形体」，调用方据此改画线 —— 这一条约定替代了原来的往返判断；但「彩屏无、墨屏有」这类纯形状判断（如 plain 按钮禁用态的边框）仍显式写成 `theme.usesOutlines ? ... : ...`，不藏在 `tint` 的返回值里
+- 新增：一键切换三件套 —— `OhosThemeController`（`ChangeNotifier`，`mode` / `toggle()` 记住上次彩屏档位）、`OhosThemeSwitcher`（包在 `MaterialApp` 外层，切换时原地重建以复用 Navigator State，不弹回首页）、`OhosThemeToggleButton`（默认点按翻转、长按弹三选一菜单）。配套 `OhosThemeMode` 枚举（`light` / `dark` / `ink`，带 `label` 与 `theme()`）
+- 修复：`tint` 的透明阈值取 `<= 0.20` 而不是 `< 0.20` —— 20% 黑恰好落在 16 级灰阶第 3 级，与白底不可分，边界值必须一起改判
+- 测试：新增 `test/theme_switch_test.dart`（15 例）把策略行为固化下来 —— `tint` 阈值、`line` 丢 alpha、`quantize` 不吸附灰阶格子、切换不丢页面栈、`toggle` 记住上次彩屏档位
+- 新增：`OhosThemeData.id` —— 稳定的字符串标识（`'light'` / `'dark'` / `'ink'`），供应用侧做主题持久化。核心库仍不依赖任何存储插件，只给一个能存下来的 key；`copyWith` 会继承来源 id
+- 新增：`OhosThemeData` / `OhosTypography` / `OhosVisualPolicy` 的 `==` 与 `hashCode`（按值比较）。此前 `OhosTheme.updateShouldNotify` 全靠引用比较，而 `light()` 每次调用都会新建 13 个 `TextStyle`，于是「字段完全相同的两份主题」被判成不同 —— 键盘弹出、旋转屏幕、宿主 `setState` 引起的任何重建都会让整棵 `OhosTheme.of(context)` 依赖树全量重建。实测 `OhosThemeData.light() == OhosThemeData.light()` 现在为 `true`
+- 新增：`OhosThemeController.custom(OhosThemeData)` 与 `useTheme` / `setColorTheme` —— 自定义主题（品牌色、第四种屏幕）现在也能进切换流程，不再被枚举锁死。`toggle()` 记住的是**上一次的彩屏主题**而不只是档位，所以从自定义主题切到墨水屏再切回来，回到的仍是那份自定义主题
+- 调整：`OhosThemeController.mode` 由 `OhosThemeMode` 改为 `OhosThemeMode?` —— 自定义主题没有档位。读它的地方需判空（或用 `isInk`）；`OhosThemeToggleButton` 内部已处理，无档位时按策略推导图标
+- 调整：`OhosThemeSwitcher.materialThemeBuilder` 的入参由 `OhosThemeMode` 改为 `OhosThemeData`。自定义主题没有枚举可选，只能看主题本身
+- 新增：`OhosThemeController.useMode(OhosThemeMode)` —— 选档位时自动分流「彩屏档位要记住 / 墨水屏不记住」，菜单类 UI 不必自己判断
+- 新增：`OhosVisualPolicy.disabledFill(base)` —— 「被禁用的实心形状该填什么色」。此前 `OhosSlider` 直接引用了 `OhosColors.inkDisabled`，这是组件层最后一处硬编码的墨水屏令牌；现在组件只说「这是个禁用形状」，具体灰由策略决定
+- 新增：`InkVisualPolicy.paper` —— 灰阶量化的合成底色，默认纯白。深色墨水屏传一块深色纸即可，不必另写策略子类（色值仍需另给一份）
+- 修复：`OhosThemeToggleButton` 的图标原本对 `OhosThemeMode` 做穷举 `switch`，给枚举加第四档会让这个 widget 编译失败 —— 等于把「加主题」变成「改组件」。改为非穷举的兜底推导
+- 测试：新增 `test/theme_extension_test.dart`（11 例）。核心用例在测试文件内**从零定义一个仓库里不存在的高对比主题**（自定义 `OhosVisualPolicy` + `copyWith` 出来的色值），驱动 `OhosButton` / `OhosCard` / `OhosSwitch` / `OhosSlider` / `OhosAppBar` 正常渲染并参与切换 —— 以此把「新增主题不需要改 widget」固化成回归约束，而不是口头承诺
+- 新增：`OhosVisualPolicy.underlinesTextActions` —— `text` 按钮（无底色、无边框）在墨水屏上自带下划线。墨水屏的 `highlightColor` 与 `textPrimaryColor` 都是纯黑，一个纯黑的「了解更多」和一句纯黑的正文读者分不出哪个能点，下划线是这块屏上唯一剩下的可供性线索。判定交给策略而非 `usesOutlines`：描边宽度和文字可供性是两件事，高对比主题有 2px 描边也不该被顺带划线。禁用态不划线（否则读起来还能点）。配套测试 `test/text_button_affordance_test.dart`（9 例）
+- 新增：`OhosVisualPolicy.litFill(base)` —— 「已激活 / 已选中」时点亮一个小图标取什么色，**保证比未激活态更醒目**。不能用 `quantize` 或 `line`：两者都走灰阶量化，高亮黄 `#F7CE00` 会变成 `#C3C3C3`（亮度 0.55），比未选中态的 `#767676`（0.18）还淡，状态语义直接反转。彩色的信息在灰阶屏上本就存不住，只能换成明暗对比：`InkVisualPolicy` 按纸面明暗取纯黑 / 纯白。用于 `OhosColorPicker` 的收藏星
+- 修复：以墨水屏档位初始化控制器后，第一次 `toggle()` 回彩屏会丢掉 `fontFamily`，整个字阶掉回系统字体（example 默认停在 ink，点一下就能触发）；用 `dark` 初始化时档位也会被一起改写成 light。`_lastColorTheme` / `_lastColorMode` 原本用字段初始化器写死成浅色，现改为在构造函数里按 `initialMode` 播种。`OhosThemeController.custom()` 则把传入的主题本身播种为「普通」一侧
+- 修复：`OhosCheckbox` 启用但未勾选时被铺了一层 15% 灰底 —— 把 `enabled || ink ? transparent : ...` 压成一次 `policy.tint(...)` 时丢了 `enabled` 这一维，而 `ColorVisualPolicy.tint` 在彩屏上恒返回带 alpha 的颜色。现恢复为「只有禁用态才铺灰底」
+- 修复：`plain` 按钮禁用态底色基准从黑 `0x14000000` 变成 `cardColor`，而浅色档的 `cardColor` 就是白色 —— 白 8% 铺在白页面 / 白卡上等于没有，禁用与启用的区分度下降。基准色改回黑色
+- 破坏性变更（源码兼容）：`OhosListTile.divider` 由 `bool`（默认 `true`）改为 `bool?`（默认 `null`）。
 - 修复：墨水屏（`OhosThemeData.ink()`）下靠浅色填充表达状态的控件整块消失 —— 16 级灰阶里 20% 以内的黑落在第 0–3 级，禁用按钮的「20% 底 + 白字」等于什么都没有。禁用态改透明底 + 实色描边，并把同一类问题一起收掉：勾选框 / 单选框未选中描边、开关关闭态轨道与滑块、分段按钮轨道与选中段、进度条与滑动条未走轨道、纸片与状态按钮描边、输入框下划线，统一成「留白 + 1px 实线」，禁用降一档到 `#767676`
 - 修复：`filled` 按钮 `loading` 时被当成禁用态（底色变浅、转圈却是写死的白色），真机上只剩一个空白药丸。现在 `loading` 只关掉点击，配色仍走主按钮
 - 修复：墨水屏下默认白底的容器与页面同色、阴影也不存在，`OhosCard`（未显式传 `color`）、`OhosSearchBar` 胶囊与底部面板补 1px 黑描边
@@ -14,6 +46,25 @@
 - 修复：`OhosColorPicker` 在墨水屏下的显示 —— 光谱盒、色相/饱和/明度轨道各补一条发丝线（渐变两端接近白色，墨屏上直接化进白底），光谱指示器在白环外再套一圈深色发丝线（浅色区域靠它、深色区域靠白环），未选中的模式片从 6% 黑底改成「透明 + 1px 实线」，收藏星点亮色从品牌黄改成纯黑
 - 修复：`OhosBadge` 的计数徽标在「高度有界、宽度无界」的父级里被拉成**竖胶囊** —— 标签容器用了 `Container(alignment:)`，它内部的 `Align` 在宽度无界时收缩、在有界高度上撑满，侧边菜单 48vp 的行因此把「8」画成 18×46 的黑条（`OhosBadge` 单独演示因为四周都是松约束所以看不出来）。改用 `Center(widthFactor: 1, heightFactor: 1)`，两个方向都只包住内容：一两位数字仍是 18vp 圆，多位数字横向长成胶囊
 - 修复：`OhosList` 里每个行边界叠着两条分隔线 —— `OhosListTile` 自己画一条（`indent: 16`）、`OhosList` 又在行间插一条（`indent: 56`），左端不一致，看上去是「两条线错位叠加」；最后一个 tile 底下还多出一条压在卡片圆角里（n 行共 2n−1 条线）。现在线归列表所有：`OhosList` 通过 `OhosListDividerScope` 告诉每个 tile「在列表里 / 是不是最后一项」，tile 在列表内不再自己画，`OhosListTile.divider` 只在单独使用时生效
+- **破坏性变更**：`OhosThemeMode` 由三档扩为四档，新增 `system`（`OhosThemeMode.values` 的首位）。遍历 `values` 建菜单的地方会自动多出一项；对枚举做穷举 `switch` 且未留兜底分支的调用方会编译失败（库内部已全部改为非穷举推导，加档不会再让 widget 挂掉）
+- 新增：`OhosThemeController.resolveTheme({systemBrightness})` / `materialThemeOf({systemBrightness})` —— 按给定的系统亮度**现算**当前应生效的主题。两者都是纯函数（不写状态、不通知），因此可以安全地在 `build()` 里调用；系统亮度不进 controller 状态，而是像 `MediaQuery` 一样由 Widget 树提供。若在 `build` 期间把亮度喂回 controller 再 `notifyListeners()`，监听者会在当前构建过程中触发重建，直接抛 `setState() or markNeedsBuild() called during build`
+- 新增：`OhosThemeSwitcher` 自动读取 `MediaQuery.platformBrightnessOf` 并传给 `resolveTheme`，`system` 档因此能响应系统浅/深色切换，用户改完系统设置界面立刻跟着翻
+- 修复：`OhosThemeController.toggle()` 在 `system` 档下进入墨水屏时，把 `system` 原样存进了「上一次彩屏档位」，导致切回来永远停在「跟随系统」上，丢掉离开时那个具体明暗 —— 切换按钮实际上成了单向门。现在按离开那一刻解析出的亮度落成 `dark` / `light`
+- **修复**：`OhosTypography.monochrome` 把字阶硬编码成纯黑，深色墨水屏下正文是「黑字压黑纸」，对比度约 1.1:1，整段消失（`AppBar` 标题、裸 `OhosText` 这些不自己 `copyWith` 颜色的地方全中招）。新增 `brightness` 参数，深色纸取纯白字阶 `textPrimaryMonochromeDark`；之所以要参数而不能让 `copyWith` 派生：字阶是 13 个 `TextStyle`，`copyWith` 做的是字段替换，不会有调用方去逐个改
+- 新增：`OhosThemeData.ink(brightness: Brightness.dark)` —— 一行拿到完整的深色墨水屏（纸色 `#1A1A1A`、纯白字阶、禁用灰 `#4D4D4D`、多色系统反向）。此前做深色墨水屏要同时改对 6 个色值 + 13 个 `TextStyle` + 策略里的 `paper`，少改任何一处都是「某处黑字压黑纸」，而且窄到跑一遍看不出来
+- 修复：`InkVisualPolicy.disabledFill` 硬编码 `#BFBFBF`，在深色纸上变成「禁用态比可用态更亮」，读者会去点它 —— 比「看不见」更糟的失败方式。改为按 `paper` 明暗分流（白纸 `#BFBFBF` / 深色纸 `#4D4D4D`）
+- 修复：`OhosThemeController.custom()` 传入的主题**本身就是墨屏**时（如品牌定制的电子纸主题），它被播种成「普通」一侧，`toggle()` 切过去仍是墨屏，按钮看起来完全失灵。现在这种情况「普通」侧播种为内置浅色，与 `initialMode: OhosThemeMode.ink` 的处理保持一致
+- 调整：`OhosThemeData.brightness` 文档重写，明确它**只描述令牌明暗** —— 不表示系统深色模式、不表示档位、不表示是否跟随系统。拆开之前 `ink()` 恒为 `Brightness.light`、`isDark` 恒假，「深色墨水屏」这个组合根本表达不出来
+- 新增：`OhosVisualPolicy.allowsGlow` —— 「是否允许光这类纯装饰性的明度叠加」（点光源、按压缩放高光、沉浸光感边缘光晕）。与 `allowsShadow` 分开而不是合并，因为两者在这块屏上的**失败方式不同**：阴影不存在只是「少了点立体感」，而白色光晕叠在纯黑字上会直接糊掉正文，黑底场景下又完全看不见。灰阶屏上「光」这个隐喻本身不成立 —— 它没有背光可言。接入 `OhosPointLight` / `OhosPressShadow` / `OhosLightMaterial`，挡住的是装饰层，信息载体（底色、描边、图标）不受影响
+- 新增：`OhosColors.inkBackgroundDark` / `inkTertiaryDark` / `inkInteractiveDark` / `inkDisabledDark` / `inkForegroundDark` / `multiInkDark` —— 深色纸那一侧的色值。这些不能靠白纸侧反相算出来：`#1A1A1A` 反相得到 `#E5E5E5`，那块面在环境光下比纸本身还刺眼
+- 调整：`OhosVisualPolicy.allowsGlow` 在基类给默认 `true` 而非声明成抽象成员 —— 本库承诺「加一块屏 = 写一个子类」，外部已存在的自定义策略（高对比主题等）不该因为这里多一个能力声明就编译失败
+- 测试：新增 `test/dark_ink_test.dart`（17 例）守「深色墨水屏真正可用」：`isDark` 与 `monochrome` 同时为真、正文/三级文字/字阶对比度达标、禁用灰比纸亮比正文暗、点亮态方向不反转、`multiInkDark` 下标语义不变、`copyWith` 也能拼、组件层能渲染。其中「字阶跟着翻」一例专门盯 `typography` 漏改导致的「黑字压黑纸」
+- 测试：新增 `test/system_theme_test.dart`（17 例）守「跟随系统」：`resolveTheme` 是纯函数（反复解析不同亮度零通知）、非 `system` 档无视外部亮度、`materialThemeOf` 与 `resolveTheme` 亮度对齐、系统亮度变化后界面自动翻且不抛 build 期异常、切到墨屏后系统亮度变化不会推翻用户选择
+- 测试：新增「组件层不判断具体主题类型」回归约束 —— 静态扫描 `lib/src/widgets/` 下所有源码（剥掉注释后再扫，否则文档里提到的 `OhosThemeData.monochrome` 会被误判），确保没有 `OhosThemeMode.` / `isMonochrome` / `.monochrome` 分支，只允许主题切换按钮自身例外。这条是「新增一种屏不改组件」从承诺变成可验证事实的关键
+- 测试：`test/theme_extension_test.dart` 增补「自定义主题 × 墨水屏策略」6 例 —— 品牌色 + 灰阶表现规则同时成立、`custom()` 能识别自定义灰阶主题、`toggle` 来回不丢品牌色、老的自定义策略不覆写 `allowsGlow` 时行为不变
+- 修复：`compBackgroundGrayDark` 由官方 token 表的 `#FFE5E5EA` 改为 `#202224`。那个值在 ArkUI 语境里成立（配的是深色**字** `#FFE5E5E5`），本库把它当输入框 / chip 的**填充面**，上面画的是 `textPrimaryColor`（深色档为 `0xE5FFFFFF` 半透明白），白字落在这块浅灰上实测对比度只有 1.23:1。**token 抄对 ≠ 用对**
+- 文档：README 新增「应用案例」章节，收录第一个真实应用 **bige-editor**（代码阅读器 / 编辑器 + Git 客户端，鸿蒙 hap 与 Android apk 双形态）。含 logo、三张实机截图（仓库列表 / 变更与提交 / 同一份错误态在浅色·深色·墨水屏三档下的对照）与华为应用市场下载二维码。这一节同时是「普通深色不回归、墨水屏可用、深色墨屏不再是理论组合」三条验收标准的应用侧佐证
+- 测试：新增 `test/dark_contrast_audit_test.dart`（9 例）用 WCAG 相对亮度公式对深色档做量化审计 —— 文字落页面底、功能色、输入类填充面、弹层、组件实际取色分组断言，半透明前景先 `Color.alphaBlend` 合成再算比值。`_luminance` 用 sRGB 直接加权而非 `computeLuminance()`（后者做线性化会算偏）
 - 调整：分隔线两端不再贯穿 —— 左端对齐文字（有 `leading` 时让到图标之后，16 / 56vp）、右端统一留 16vp（`endIndent: 16`）；列表给非 `OhosListTile` 子节点补的线同样改成两端内缩
 - 修复：`OhosGrid` 的栅格几何 —— ①末行不满时剩下的单元被拉伸铺满整行（12 列的网格里单个 `columnSpan: 3` 占满一整行，与上面满行行的单元边缘全都对不上），现在右侧保留空列，列宽统一为 `span·colWidth + (span−1)·gutter` 且与同行单元个数无关：每格左右各吃 `gutter/2` 内边距、外层 `padding` 让回半格，单元边缘仍精确落在页面边距上；②`maxWidth`（栅格最大使用宽度 2220vp）原来把两侧 margin 也算进上限，改为只限制单元区；③`runSpacing` 连末行也补一段，网格底部凭空多出一条行距；④`_emitRow` 的 `remaining` 参数声明了却没用上。配套 3 条用例（`test/ohos_ui_test.dart` 的 `OhosGrid` 组）
 - 示例：布局与动效页在墨水屏下全部改走灰阶 —— 栅格 / 响应式 / 动效单元原来用「浅灰 `#F1F3F5` + 10% 品牌蓝」，压到 16 级灰阶上等于白色、整块看不见，现在保留同样的实心圆角块，只把颜色换成读得出来的灰阶（取值都是 17 的倍数，落在灰阶格子上、不出抖动噪点）；共享元素三张卡（蓝 / 绿 / 橙 + 白字）压成中灰后字读不出来，墨屏换深灰阶 + 保持白字，放大转场后的浮层底色改浅灰、去掉看不见的阴影；沉浸光感的粉紫蓝渐变压成一块实心深灰，THICK 退化成纯白后按库的约定自己补 1px 线，`+` 图标改读 `theme.highlightColor`

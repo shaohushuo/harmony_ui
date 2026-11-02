@@ -47,9 +47,7 @@ class OhosRadio extends StatelessWidget {
               // 未选中的 50% 灰在 16 级灰上几乎不可见，墨水屏改用实色
               color: value && enabled
                   ? active
-                  : (theme.monochrome
-                        ? theme.textTertiaryColor
-                        : theme.textTertiaryColor.withValues(alpha: 0.5)),
+                  : theme.policy.line(theme.textTertiaryColor, 0.5),
               width: 1.5,
             ),
           ),

@@ -49,7 +49,7 @@ Future<T?> showOhosPicker<T>({
     shape: RoundedRectangleBorder(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       // 墨水屏：面板与页面同为纯白，顶上那条边只靠 scrim 撑不住 → 1px 实线
-      side: sheetTheme.monochrome
+      side: sheetTheme.usesOutlines
           ? ohosBorderSide(context, sheetTheme.dividerColor)
           : BorderSide.none,
     ),

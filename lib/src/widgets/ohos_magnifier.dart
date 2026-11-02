@@ -62,7 +62,7 @@ class OhosMagnifier extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    final bool ink = theme.monochrome;
+    final OhosVisualPolicy policy = theme.policy;
     final BorderRadius radius = BorderRadius.all(
       Radius.circular(size.height / 2),
     );
@@ -72,7 +72,7 @@ class OhosMagnifier extends StatelessWidget {
           fontSize: size.height * 0.55,
           height: 1,
           fontWeight: FontWeight.w600,
-          color: ink ? theme.textPrimaryColor : theme.highlightColor,
+          color: policy.quantize(theme.highlightColor),
         );
     final Widget content =
         child ??
@@ -95,25 +95,21 @@ class OhosMagnifier extends StatelessWidget {
     final TextStyle contentStyle = style.copyWith(
       inherit: false,
       decoration: style.decoration ?? TextDecoration.none,
-      color: style.color ?? (ink ? theme.textPrimaryColor : theme.highlightColor),
+      color: style.color ?? policy.quantize(theme.highlightColor),
     );
     final Widget bubble = Container(
       width: size.width,
       height: size.height,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color:
-            backgroundColor ??
-            (ink ? theme.backgroundColor : theme.cardColor),
+        color: backgroundColor ?? theme.cardColor,
         borderRadius: radius,
-        // 单色主题靠 1px 纯黑描边划出边界（墨水屏没有阴影可用），彩色主题
-        // 用一条很淡的 hairline，避免与卡片面糊在一起。
+        // 用描边的主题靠实线划边界（墨水屏没有阴影可用），彩色主题用一条很
+        // 淡的 hairline，避免与卡片面糊在一起。
         border: Border.all(
           color:
               borderColor ??
-              (ink
-                  ? Colors.black
-                  : theme.textTertiaryColor.withValues(alpha: 0.3)),
+              theme.outlineColor,
         ),
       ),
       // 大字号（textScale 1.3）时内容会比泡泡高，缩下来而不是溢出。
@@ -122,7 +118,8 @@ class OhosMagnifier extends StatelessWidget {
         child: DefaultTextStyle(style: contentStyle, child: content),
       ),
     );
-    final Widget body = animate && !ink
+    // 动画在灰阶屏上会留拖影，策略说不能动就一次到位
+    final Widget body = animate && policy.scaleMotion(OhosGeometry.durationShort) != Duration.zero
         ? TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: 1),
             duration: OhosGeometry.durationShort,

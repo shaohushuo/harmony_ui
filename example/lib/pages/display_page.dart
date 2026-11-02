@@ -35,12 +35,13 @@ class DisplayPage extends StatelessWidget {
           ),
         ),
         const DemoSection(
-          title: '墨主题 OhosThemeData.ink（墨水屏）',
+          title: '墨水屏主题 OhosThemeData.ink（16 级灰）',
           description:
               '纯黑 + 纯白、去掉中间调：分隔线是 1px 纯黑（light 预设的 10% 黑在 16 级灰上'
               '等于没有），水波纹 / 悬停 / 阴影全关，三级色留 #767676 给占位文字。'
-              'brightness 仍是 light，组件要用 monochrome 判断而不是 isDark；'
-              'OhosLightMaterial 在该主题下退化成纯色，不再做每帧全屏模糊。',
+              'brightness 仍是 light，判断屏幕类型请读 theme.policy 的 isMonochrome / '
+              'allowsShadow，不要用 isDark；OhosLightMaterial 在该主题下退化成纯色，'
+              '不再做每帧全屏模糊。',
           child: _InkThemeDemo(),
         ),
         const DemoSection(

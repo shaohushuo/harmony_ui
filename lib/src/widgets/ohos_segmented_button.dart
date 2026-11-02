@@ -43,23 +43,21 @@ class OhosSegmentedButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    // 墨水屏：6% 的轨道底与页面同色，选中段的 cardColor 也是纯白 —— 三段会
-    // 糊成一片，只剩字重差别。改成「轨道 + 选中段各一条 1px 实线」。
-    final bool ink = theme.monochrome;
+    final OhosVisualPolicy policy = theme.policy;
+    // 6% 的轨道底与选中段的 cardColor 同为纯白 → 三段会糊成一片，只剩字重
+    // 差别。策略把 6% 判成透明，下面改成「轨道 + 选中段各一条实线」。
     return Container(
       height: height,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: ink
-            ? Colors.transparent
-            : theme.textPrimaryColor.withValues(alpha: 0.06),
+        color: policy.tint(theme.textPrimaryColor, 0.06),
         borderRadius: BorderRadius.circular(height / 2),
-        border: ink
-            ? Border.all(
+        border: policy.outlineWidth == null
+            ? null
+            : Border.all(
                 color: theme.dividerColor,
-                width: ohosStrokeWidth(context),
-              )
-            : null,
+                width: ohosStrokeWidth(context, policy.outlineWidth!),
+              ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -74,14 +72,19 @@ class OhosSegmentedButton<T> extends StatelessWidget {
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: segment.value == selected && !ink
+                    // 选中段：彩屏是浮起的白药丸，墨屏是同样的一块白，只能靠线
+                    color: segment.value == selected
                         ? theme.cardColor
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular((height - 6) / 2),
-                    border: ink && segment.value == selected
+                    border: policy.outlineWidth != null &&
+                            segment.value == selected
                         ? Border.all(
                             color: theme.dividerColor,
-                            width: ohosStrokeWidth(context),
+                            width: ohosStrokeWidth(
+                              context,
+                              policy.outlineWidth!,
+                            ),
                           )
                         : null,
                     // No outer shadow: it would bleed onto the neighbouring

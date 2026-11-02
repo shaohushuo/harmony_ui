@@ -64,7 +64,18 @@ class OhosColors {
   static const Color compBackgroundGray = Color(0xFFF1F3F5);
 
   /// Component gray background (`comp_background_gray`, 深色).
-  static const Color compBackgroundGrayDark = Color(0xFFE5E5EA);
+  ///
+  /// **刻意偏离官方 token 表**。官方深色值是 `#FFE5E5EA` —— 一块接近白的
+  /// 浅灰面。那个值在 ArkUI 的语境里成立（它的作为「灰色背景」配的是
+  /// `comp_foreground_primary` 深色档 `#FFE5E5E5`，也就是深色**字**），但本库
+  /// 把这个 token 当作输入框 / chip 的**填充面**，上面画的是
+  /// `textPrimaryColor`（深色档为 `0xE5FFFFFF` 半透明白）。白字落在这块浅灰
+  /// 上，实测对比度只有 1.23:1，整块输入内容不可读 —— 这是深色档最容易被
+  /// 漏掉、也最影响可用性的一处，由 test/dark_contrast_audit_test.dart 兜住。
+  ///
+  /// 取值对齐深色档的 `cardColor`（`#202224`）：填充控件与卡片同层，既比
+  /// 页面底（纯黑）亮一档分得出轮廓，又足够暗以承载浅色文字。
+  static const Color compBackgroundGrayDark = Color(0xFF202224);
 
   /// 20% brand highlight background (`comp_emphasize_secondary`, 浅色),
   /// used for the filled / high-brightness state of controls.
@@ -191,6 +202,44 @@ class OhosColors {
   /// the muted step above it.
   static const Color inkDisabled = Color(0xFFBFBFBF);
 
+  // --- 深色纸墨水屏 ---------------------------------------------------------
+  //
+  // 同一套「纯底 + 两极」的规则，只是把极端翻过来。这些值不能靠上面那批
+  // 反相算出来：纸色 #1A1A1A 反转得到 #E5E5E5，那是一块接近白的面，
+  // 在 ambiente 光下比纸本身还刺眼，而墨水屏没有背光可以压住它。
+
+  /// 深色纸墨水屏的纸面：`#1A1A1A`。
+  ///
+  /// 不用纯黑 —— 纯黑面板在环境光下的反射几乎为零，读者会觉得「屏幕没开」，
+  /// 而 `#1A1A1A` 保留一点点面板本身的灰，仍落在 16 级灰的第 1～2 级。
+  static const Color inkBackgroundDark = Color(0xFF1A1A1A);
+
+  /// 深色纸墨水屏的正文极端：纯白。与 [inkForeground] 对称。
+  static const Color inkForegroundDark = Color(0xFFFFFFFF);
+
+  /// 深色纸上「存在但不强调」的那一档：`#999999`。
+  ///
+  /// 对纸面 `#1A1A1A` 的对比度约 4.3:1（按 sRGB 直接加权算），比白纸侧的
+  /// `#767676`（约 2.1:1）**高得多** —— 这个不对称是故意的，不是配错：
+  /// 深色纸上要把弱化文字压到 2:1 需要 `#434343` 这种几乎不可见的灰，
+  /// 而低对比正文在环境光下本来就更易糊。所以深色侧的下限抬一档，仍比
+  /// 正文（约 6.9:1）低一截，层级分得开。
+  ///
+  /// 用 `#8C8C8C` 时实测只有 3.9:1，压着「弱化但读得出」的边界，故调亮一档。
+  static const Color inkTertiaryDark = Color(0xFF999999);
+
+  /// 深色纸上唯一的中间调：20% 白。
+  ///
+  /// 与 [inkInteractive] 成对，只是把「压一层黑」换成「提一层白」—— 深色纸
+  /// 上 20% 黑等于不存在，而 20% 白刚好落在第 2～3 级，看得见又不刺眼。
+  static const Color inkInteractiveDark = Color(0x33FFFFFF);
+
+  /// 深色纸上禁用形状的实灰：`#4D4D4D`。
+  ///
+  /// [inkDisabled] 的 `#BFBFBF` 挪到深色纸上会变成「禁用态比可用态更亮」，
+  /// 读者会去点它。这里取一档比纸面亮、比正文暗的灰。
+  static const Color inkDisabledDark = Color(0xFF4D4D4D);
+
   /// 11-step grayscale for the multi-color system, one slot per [multiLight]
   /// entry so indices keep their meaning.
   static const List<Color> multiInk = <Color>[
@@ -205,5 +254,30 @@ class OhosColors {
     Color(0xFFCCCCCC),
     Color(0xFFE6E6E6),
     Color(0xFFFFFFFF),
+  ];
+
+  /// [multiInk] 在深色纸上的版本：同一根 11 级灰轴，方向反过来。
+  ///
+  /// 下标含义必须和 [multiInk] 一致（第 0 位都是「最极端的深」），所以这里
+  /// 不是简单倒序 —— 倒序会让 `multiColors[0]` 在白纸侧是最深、在深色纸侧
+  /// 变成最浅，任何按下标取色（如用 `multiColors[0]` 当强调色）的地方都会
+  /// 静默反转语义。
+  ///
+  /// 因此取值是「把每个灰按纸面反相」的结果，两端仍锚在最极端：0 号纯黑
+  /// 不翻（在深色纸上纯黑是「比纸更暗」的一端，仍可用于压深），10 号纯白
+  /// 是正文极端。中间七级的明暗顺序与白纸侧**一致**，只是整体抬高 —— 深色纸
+  /// 上第 4 级 `#666666` 与纸面几乎同色，必须提到 `#B3B3B3` 才看得见。
+  static const List<Color> multiInkDark = <Color>[
+    Color(0xFF000000),
+    Color(0xFFFFFFFF),
+    Color(0xFFF2F2F2),
+    Color(0xFFE6E6E6),
+    Color(0xFFD9D9D9),
+    Color(0xFFCCCCCC),
+    Color(0xFFBFBFBF),
+    Color(0xFFB3B3B3),
+    Color(0xFFA6A6A6),
+    Color(0xFF999999),
+    Color(0xFF8C8C8C),
   ];
 }
