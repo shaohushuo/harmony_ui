@@ -71,6 +71,18 @@ abstract class OhosVisualPolicy {
   /// 声明，前者才是组件真正要问的问题。
   Color disabledFill(Color base) => line(base, 1);
 
+  /// 没有底色、没有边框的可点击文字，要不要自己划一条下划线。
+  ///
+  /// 问的是「这块屏上靠什么认出这是可点的字」，不是「这块屏有没有某种能力」。
+  /// 彩屏的 `text` 按钮靠品牌蓝就够了；灰阶屏上品牌色被压成纯黑，与正文
+  /// 同色 —— 一个纯黑的「了解更多」和一句纯黑的正文，读者分不出哪个能点。
+  /// 这时下划线不是装饰，是**唯一**的可供性线索。
+  ///
+  /// 默认跟随 [isMonochrome]：彩屏不加，墨水屏加。高对比主题如果靠粗描边或
+  /// 加粗就能区分，覆写成 `false` 即可 —— 这正是它不该写成
+  /// `usesOutlines ? ...` 的原因：描边与否和文字可供性是两件事。
+  bool get underlinesTextActions => isMonochrome;
+
   @override
   String toString() => '$runtimeType';
 }

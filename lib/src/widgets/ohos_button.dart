@@ -154,6 +154,14 @@ class OhosButton extends StatelessWidget {
         shapeBorder = CircleBorder(side: borderSide);
     }
 
+    // 无底色 + 无边框的文字按钮，在灰阶屏上与正文同色（ink 主题的
+    // highlightColor 和 textPrimaryColor 都是纯黑），读者分不出哪个能点。
+    // 下划线不是装饰，是这块屏上唯一剩下的可供性线索 —— 交给策略判断，
+    // 因为「要不要划线」取决于这块屏的其他线索够不够，不是取决于描边宽度。
+    final bool underline = style == OhosButtonStyle.text &&
+        !dimmed &&
+        theme.policy.underlinesTextActions;
+
     final Widget label = loading
         ? SizedBox(
             width: 18,
@@ -168,7 +176,22 @@ class OhosButton extends StatelessWidget {
         : DefaultTextStyle.merge(
             style:
                 (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
-                    .copyWith(color: foreground),
+                    .copyWith(
+                      color: foreground,
+                      // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
+                      // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
+                      // 放行下来。Material 3 的默认 DefaultTextStyle 恰好是
+                      // `TextDecoration.none`，所以彩屏看着没问题 —— 那是巧合，
+                      // 不是保证。可供性既然归按钮判断，就不该外泄给祖先。
+                      decoration: underline
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                      // 实色下划线：墨水屏上半透明的线会化进白底。
+                      decorationColor: underline ? foreground : null,
+                      decorationStyle: underline
+                          ? TextDecorationStyle.solid
+                          : null,
+                    ),
             // 按钮标签按惯例是单行：给 Text 默认省略号，配合上面的
             // Flexible 收缩，窄容器不会再报 overflow。
             maxLines: 1,
