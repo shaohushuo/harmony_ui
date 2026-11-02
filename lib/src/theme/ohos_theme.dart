@@ -111,7 +111,18 @@ class OhosThemeController extends ChangeNotifier {
     OhosThemeMode initialMode = OhosThemeMode.light,
     this.fontFamily,
   }) : _theme = initialMode.theme(fontFamily: fontFamily),
-       _mode = initialMode;
+       _mode = initialMode,
+       // 「普通」那一侧必须随构造一起播种：
+       // 若初值写死成 `OhosThemeData.light()`，用 `initialMode: ink`（example
+       // 的默认档位）构造出来的控制器，点一次 toggle 就回落到一个 fontFamily
+       // 为 null 的浅色主题 —— 整个字阶掉回系统字体。用 `dark` 初始化时更糟：
+       // 档位也会被一起改写成 light。
+       _lastColorTheme = initialMode.isMonochrome
+           ? OhosThemeData.light(fontFamily: fontFamily)
+           : initialMode.theme(fontFamily: fontFamily),
+       _lastColorMode = initialMode.isMonochrome
+           ? OhosThemeMode.light
+           : initialMode;
 
   /// 用任意主题数据初始化 —— 自定义主题、以及将来新增的主题预设都走这里。
   ///
@@ -119,7 +130,11 @@ class OhosThemeController extends ChangeNotifier {
   /// 一份。切换按钮在 [mode] 为 null 时只显示当前主题，不提供三选一菜单。
   OhosThemeController.custom(OhosThemeData theme, {this.fontFamily})
     : _theme = theme,
-      _mode = null;
+      _mode = null,
+      // 自定义主题本身就是「普通」那一侧：先进入墨水屏再切回来，回到的应该
+      // 是这份主题，而不是内置浅色。
+      _lastColorTheme = theme,
+      _lastColorMode = null;
 
   /// 当前档位。用 [OhosThemeController.custom] 构造时为 null。
   OhosThemeMode? _mode;
@@ -131,10 +146,13 @@ class OhosThemeController extends ChangeNotifier {
   ///
   /// 存的是 [OhosThemeData] 而不是档位：从自定义主题切到墨水屏再切回来，
   /// 应该回到那份自定义主题，而不是掉回某个内置预设。
-  OhosThemeData _lastColorTheme = OhosThemeData.light();
+  ///
+  /// 由构造函数播种，不用字段初始化器 —— 初始化器拿不到 [fontFamily]，
+  /// 会造出一份丢掉字体族的主题。
+  OhosThemeData _lastColorTheme;
 
   /// 与 [_lastColorTheme] 配套的档位。自定义主题没有档位，所以是 nullable。
-  OhosThemeMode? _lastColorMode = OhosThemeMode.light;
+  OhosThemeMode? _lastColorMode;
 
   /// 字体族，透传给 [OhosTypography]。
   final String? fontFamily;

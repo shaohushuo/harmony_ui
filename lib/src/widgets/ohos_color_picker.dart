@@ -144,10 +144,13 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                 child: Icon(
                   _isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
                   size: 20,
-                  // 收藏星是唯一的暖色装饰，灰阶屏上压成浅灰等于没点亮，
-                  // 换成正文实色。
+                  // 收藏星是唯一的暖色装饰，灰阶屏上压成浅灰等于没点亮 ——
+                  // 所以走「点亮」通道：`quantize(#F7CE00)` 约等于 #C3C3C3，
+                  // 比未选中的 #767676 还淡，状态语义会反过来。`line()` 也不行，
+                  // 它内部同样走量化。彩屏原样保留黄色，灰阶屏给与纸面反差
+                  // 最大的实色。
                   color: _isFavorite
-                      ? theme.policy.quantize(const Color(0xFFF7CE00))
+                      ? theme.policy.litFill(const Color(0xFFF7CE00))
                       : theme.textTertiaryColor,
                 ),
               ),

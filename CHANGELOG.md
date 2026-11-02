@@ -20,7 +20,10 @@ Release date: 2026-11-01
 - 修复：`OhosThemeToggleButton` 的图标原本对 `OhosThemeMode` 做穷举 `switch`，给枚举加第四档会让这个 widget 编译失败 —— 等于把「加主题」变成「改组件」。改为非穷举的兜底推导
 - 测试：新增 `test/theme_extension_test.dart`（11 例）。核心用例在测试文件内**从零定义一个仓库里不存在的高对比主题**（自定义 `OhosVisualPolicy` + `copyWith` 出来的色值），驱动 `OhosButton` / `OhosCard` / `OhosSwitch` / `OhosSlider` / `OhosAppBar` 正常渲染并参与切换 —— 以此把「新增主题不需要改 widget」固化成回归约束，而不是口头承诺
 - 新增：`OhosVisualPolicy.underlinesTextActions` —— `text` 按钮（无底色、无边框）在墨水屏上自带下划线。墨水屏的 `highlightColor` 与 `textPrimaryColor` 都是纯黑，一个纯黑的「了解更多」和一句纯黑的正文读者分不出哪个能点，下划线是这块屏上唯一剩下的可供性线索。判定交给策略而非 `usesOutlines`：描边宽度和文字可供性是两件事，高对比主题有 2px 描边也不该被顺带划线。禁用态不划线（否则读起来还能点）。配套测试 `test/text_button_affordance_test.dart`（9 例）
-- 修复：`OhosButton` 的非下划线分支原本写 `decoration: null`，而 `DefaultTextStyle.merge` 只覆盖非 null 字段 —— 等于把祖先的 `decoration` 放行到按钮文字上。Material 3 的默认 `DefaultTextStyle` 恰好是 `TextDecoration.none`，所以平时看不出来；一旦宿主 `DefaultTextStyle` 带了装饰（富文本编辑器、正文链接区），彩屏按钮就会被传染。两个分支现均显式赋值
+- 新增：`OhosVisualPolicy.litFill(base)` —— 「已激活 / 已选中」时点亮一个小图标取什么色，**保证比未激活态更醒目**。不能用 `quantize` 或 `line`：两者都走灰阶量化，高亮黄 `#F7CE00` 会变成 `#C3C3C3`（亮度 0.55），比未选中态的 `#767676`（0.18）还淡，状态语义直接反转。彩色的信息在灰阶屏上本就存不住，只能换成明暗对比：`InkVisualPolicy` 按纸面明暗取纯黑 / 纯白。用于 `OhosColorPicker` 的收藏星
+- 修复：以墨水屏档位初始化控制器后，第一次 `toggle()` 回彩屏会丢掉 `fontFamily`，整个字阶掉回系统字体（example 默认停在 ink，点一下就能触发）；用 `dark` 初始化时档位也会被一起改写成 light。`_lastColorTheme` / `_lastColorMode` 原本用字段初始化器写死成浅色，现改为在构造函数里按 `initialMode` 播种。`OhosThemeController.custom()` 则把传入的主题本身播种为「普通」一侧
+- 修复：`OhosCheckbox` 启用但未勾选时被铺了一层 15% 灰底 —— 把 `enabled || ink ? transparent : ...` 压成一次 `policy.tint(...)` 时丢了 `enabled` 这一维，而 `ColorVisualPolicy.tint` 在彩屏上恒返回带 alpha 的颜色。现恢复为「只有禁用态才铺灰底」
+- 修复：`plain` 按钮禁用态底色基准从黑 `0x14000000` 变成 `cardColor`，而浅色档的 `cardColor` 就是白色 —— 白 8% 铺在白页面 / 白卡上等于没有，禁用与启用的区分度下降。基准色改回黑色
 - 破坏性变更（源码兼容）：`OhosListTile.divider` 由 `bool`（默认 `true`）改为 `bool?`（默认 `null`）。
 - 修复：墨水屏（`OhosThemeData.ink()`）下靠浅色填充表达状态的控件整块消失 —— 16 级灰阶里 20% 以内的黑落在第 0–3 级，禁用按钮的「20% 底 + 白字」等于什么都没有。禁用态改透明底 + 实色描边，并把同一类问题一起收掉：勾选框 / 单选框未选中描边、开关关闭态轨道与滑块、分段按钮轨道与选中段、进度条与滑动条未走轨道、纸片与状态按钮描边、输入框下划线，统一成「留白 + 1px 实线」，禁用降一档到 `#767676`
 - 修复：`filled` 按钮 `loading` 时被当成禁用态（底色变浅、转圈却是写死的白色），真机上只剩一个空白药丸。现在 `loading` 只关掉点击，配色仍走主按钮

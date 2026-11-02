@@ -71,6 +71,19 @@ abstract class OhosVisualPolicy {
   /// 声明，前者才是组件真正要问的问题。
   Color disabledFill(Color base) => line(base, 1);
 
+  /// 「已激活 / 已选中」时，用这抹颜色点亮一个小图标该取什么色。
+  ///
+  /// 与 [quantize] / [line] 的关键区别：**它保证结果比未激活态更醒目**。
+  /// 灰阶量化会让高亮黄 `#F7CE00` 变成 `#C3C3C3`（亮度 0.55），比未选中态的
+  /// `#767676`（亮度 0.18）**更淡** —— 语义直接反转，读者以为没点亮。
+  /// 彩色的信息在灰阶屏上本来就存不住，只能换成明度对比，不是换一种灰。
+  ///
+  /// 之所以不复用 [disabledFill]：那个的语义是「降一档让位于可用态」，方向
+  /// 恰好相反；叫 `disabledFill` 的地方将来也会按各自的语义演化。
+  ///
+  /// 默认原样返回 —— 彩屏的这抹黄本身就是「点亮」。
+  Color litFill(Color base) => base;
+
   /// 没有底色、没有边框的可点击文字，要不要自己划一条下划线。
   ///
   /// 问的是「这块屏上靠什么认出这是可点的字」，不是「这块屏有没有某种能力」。
@@ -200,6 +213,20 @@ class InkVisualPolicy extends OhosVisualPolicy {
   /// 策略里：组件只说「这是个禁用形状」，不关心这块屏的灰有多深。
   @override
   Color disabledFill(Color base) => quantize(const Color(0xFFBFBFBF));
+
+  /// 灰阶屏上「点亮」= 与纸面反差最大那一档实色，而不是量化出来的灰。
+  ///
+  /// 量化走的是感知明度（黄 ≈ 0.76），落在中间调，作为「已选中」比未选中的
+  /// #767676 还淡。灰阶屏没有色相可用，唯一的强度轴就是明暗，所以直接取
+  /// 纸面的反面：白纸上给纯黑、深色纸上给纯白。
+  ///
+  /// 依据面板特性：16 级灰里第 15 与第 0 级的反差最稳，中间档反而容易因为
+  /// 抖动/温度漂移糊成一片。
+  @override
+  Color litFill(Color base) =>
+      paper.computeLuminance() > 0.5
+      ? const Color(0xFF000000)
+      : const Color(0xFFFFFFFF);
 
   /// 策略按值比较：[paper] 不同的两个墨水屏策略不是同一个东西。
   @override

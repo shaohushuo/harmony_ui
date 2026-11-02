@@ -145,6 +145,66 @@ void main() {
       expect(controller.materialTheme.textTheme.bodyMedium?.fontFamily,
           'HarmonyOS Sans');
     });
+
+    // 以墨水屏初始化时，第一次 toggle 直接走「切回普通」那条分支，拿的是
+    // 构造函数播种的「普通」一侧 —— 这一侧必须自己带上 fontFamily、且档位
+    // 必须真的是用户上次的彩屏档位。用字段初始化器写死 `OhosThemeData.light()`
+    // 会让整个字阶掉回系统字体（example 默认就停在 ink，点一下就能触发）。
+    test('以墨水屏初始化时，toggle 回彩屏仍保留档位与字体族', () {
+      final OhosThemeController controller = OhosThemeController(
+        initialMode: OhosThemeMode.ink,
+        fontFamily: 'HarmonyOS Sans',
+      );
+      expect(controller.isInk, isTrue);
+
+      controller.toggle();
+
+      expect(controller.mode, OhosThemeMode.light);
+      expect(controller.themeData.isDark, isFalse);
+      expect(
+        controller.themeData.typography.fontFamily,
+        'HarmonyOS Sans',
+        reason: 'toggle 回彩屏不能丢掉 fontFamily，否则 13 个 TextStyle 全部回落',
+      );
+    });
+
+    test('以深色墨水屏策略初始化时，toggle 回彩屏同样带字体族', () {
+      final OhosThemeController controller = OhosThemeController(
+        initialMode: OhosThemeMode.ink,
+        fontFamily: 'HarmonyOS Sans',
+      );
+      // 先切到深色，再进墨水屏，再回来 —— 应当回到深色
+      controller.setColorMode(OhosThemeMode.dark);
+      controller.toggle();
+      expect(controller.isInk, isTrue);
+      controller.toggle();
+
+      expect(controller.mode, OhosThemeMode.dark);
+      expect(controller.themeData.typography.fontFamily, 'HarmonyOS Sans');
+    });
+
+    // 自定义主题本身就是「普通」那一侧：从它切到墨水屏再切回来，回到的必须
+    // 是那份自定义主题，而不是内置浅色。
+    test('custom() 进墨水屏再 toggle 回来，回到那份自定义主题', () {
+      final OhosThemeData brand = OhosThemeData.light().copyWith(
+        id: 'brand',
+        highlightColor: const Color(0xFF7B3FF2),
+      );
+      final OhosThemeController controller = OhosThemeController.custom(
+        brand,
+        fontFamily: 'HarmonyOS Sans',
+      );
+      expect(controller.mode, isNull);
+
+      controller.mode = OhosThemeMode.ink;
+      expect(controller.isInk, isTrue);
+
+      controller.toggle();
+
+      expect(controller.themeData.highlightColor, const Color(0xFF7B3FF2));
+      expect(controller.themeData.id, 'brand');
+      expect(controller.mode, isNull, reason: '自定义主题没有档位');
+    });
   });
 
   group('OhosThemeSwitcher', () {
@@ -282,6 +342,115 @@ void main() {
       controller.toggle();
       await tester.pumpAndSettle();
       expect(currentIcon().icon, Icons.contrast_rounded);
+    });
+  });
+
+  // 这一组守的是「策略化改造时最容易丢的那一维」：把三分支条件压成一次
+  // `policy.tint(...)` 调用，逻辑上看是「统一交给策略」，实际上把某个分支
+  // 专有的前提（enabled / 黑色基准 / 实色 vs 量化）一起丢了。这些回归全在
+  // 彩屏档位，墨屏因为策略兜底反而正常，所以只测墨水屏是测不出来的。
+  group('策略化没有改变彩屏的既有观感', () {
+    /// 取一个组件渲染出的 `BoxDecoration.color`。
+    Color fillOf(WidgetTester tester, Finder finder) {
+      final AnimatedContainer box = tester.widget<AnimatedContainer>(
+        finder,
+      );
+      return (box.decoration! as BoxDecoration).color!;
+    }
+
+    Widget wrap(Widget child, {OhosThemeData? theme}) => OhosTheme(
+      data: theme ?? OhosThemeData.light(),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(child: child),
+      ),
+    );
+
+    testWidgets('启用但未勾选的复选框保持透明，不铺 15% 灰底',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(OhosCheckbox(value: false, onChanged: (_) {})),
+      );
+      expect(
+        fillOf(tester, find.byType(AnimatedContainer).first).a,
+        0,
+        reason: '铺了灰底会削弱与选中态实心色的对比度',
+      );
+    });
+
+    testWidgets('禁用且未勾选的复选框仍然铺 15% 灰底',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(wrap(const OhosCheckbox(value: false)));
+      expect(
+        fillOf(tester, find.byType(AnimatedContainer).first).a,
+        closeTo(0.15, 0.01),
+      );
+    });
+
+    testWidgets('plain 按钮禁用态在浅色底上是「黑 8%」而不是「白 8%」',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OhosButton(
+            style: OhosButtonStyle.plain,
+            onPressed: null,
+            child: Text('x'),
+          ),
+        ),
+      );
+      final Material material = tester.widget<Material>(
+        find.byType(Material).first,
+      );
+      final Color background = material.color!;
+      // 白 8% 铺在白页面上等于没有；基准必须是黑，才在浅底上留得下一块灰。
+      expect(background.a, closeTo(0.08, 0.01));
+      expect(
+        background.r,
+        closeTo(0, 0.001),
+        reason: '基准色是黑，不是 cardColor（浅色档下即纯白）',
+      );
+    });
+  });
+
+  // 「点亮」与「量化」是两件事：量化只负责去掉半透明，它按感知明度取灰，
+  // 高亮黄的明度落在中间调，结果比未激活态还淡 —— 语义直接反转。
+  group('点亮态的对比方向', () {
+    const Color litYellow = Color(0xFFF7CE00);
+
+    test('彩屏原样保留那抹亮色', () {
+      expect(const ColorVisualPolicy().litFill(litYellow), litYellow);
+    });
+
+    test('墨水屏点亮态必须比未激活态更暗（白纸上）', () {
+      final OhosThemeData ink = OhosThemeData.ink();
+      final Color lit = const InkVisualPolicy().litFill(litYellow);
+      final Color idle = ink.textTertiaryColor;
+
+      expect(lit.a, 1.0, reason: '灰阶屏没有半透明，必须是实色');
+      expect(
+        lit.computeLuminance(),
+        lessThan(idle.computeLuminance()),
+        reason: '点亮态比未激活态更淡的话，读者以为根本没点亮',
+      );
+    });
+
+    test('量化本身会给出更淡的灰 —— 这就是不能用它的原因', () {
+      const InkVisualPolicy ink = InkVisualPolicy();
+      // 记录这个反例：如果谁把 litFill 改回 quantize / line，这条会解释代价
+      expect(ink.quantize(litYellow), ink.line(litYellow, 1));
+      expect(
+        ink.quantize(litYellow).computeLuminance(),
+        greaterThan(ink.litFill(litYellow).computeLuminance()),
+      );
+    });
+
+    test('深色墨水屏反向：点亮态取纯白', () {
+      const InkVisualPolicy darkInk = InkVisualPolicy(
+        paper: Color(0xFF1A1A1A),
+      );
+      final Color lit = darkInk.litFill(litYellow);
+      expect(lit, const Color(0xFFFFFFFF));
+      expect(lit.computeLuminance(), greaterThan(darkInk.paper.computeLuminance()));
     });
   });
 }

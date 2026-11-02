@@ -128,8 +128,12 @@ class OhosButton extends StatelessWidget {
         foreground = dimmed ? theme.textTertiaryColor : highlight;
         border = Colors.transparent;
       case OhosButtonStyle.plain:
+        // 基准色必须是**黑**而不是 cardColor：浅色档的 cardColor 就是白色，
+        // 白 8% 铺在白页 / 白卡上等于没有（旧实现是 `0x14000000`，黑 8%，
+        // 在浅底上是一块看得见的灰）。墨水屏下 alpha ≤ 0.20 仍被判成透明，
+        // 与旧行为一致，禁用态靠下面那条描边区分。
         background = dimmed
-            ? policy.tint(theme.cardColor, 0.08)
+            ? policy.tint(const Color(0xFF000000), 0.08)
             : theme.cardColor;
         foreground = dimmed ? theme.textTertiaryColor : textPrimary;
         // 彩屏的 plain 是「白底 + 发丝线」，禁用时连那条线也淡掉；极浅的底

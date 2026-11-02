@@ -45,10 +45,16 @@ class OhosCheckbox extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            // 禁用态的 15% 灰底没有任何信息量：策略把它判成透明，交给描边。
+            // 只有**禁用**态才铺那层 15% 灰底。启用但未选中必须留白：
+            // `policy.tint` 在彩屏上恒返回带 alpha 的颜色（`ColorVisualPolicy`
+            // 不判透明），少了 `enabled` 这一维，所有「启用未勾选」的复选框
+            // 会在 light / dark 下多出一块浅灰，跟选中态的实心色抢对比度。
+            // 墨水屏上这层灰本来就会被策略判成透明，交回描边。
             color: enabled && value
                 ? active
-                : policy.tint(theme.textTertiaryColor, 0.15),
+                : (enabled
+                      ? Colors.transparent
+                      : policy.tint(theme.textTertiaryColor, 0.15)),
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
               // 未选中的 50% 灰（≈#BBB）在 16 级灰上是第 3 级，几乎等于没有；
