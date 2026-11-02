@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_theme.dart';
 
 /// 按压阴影类型 of [OhosPressShadow], mirroring
 /// `hdsEffect.PressShadowType`:
@@ -107,6 +108,10 @@ class _OhosPressShadowState extends State<OhosPressShadow>
 
   @override
   Widget build(BuildContext context) {
+    // 灰阶屏没有「背光」这回事：白色高光叠上去只是一块不该出现的浅灰，
+    // 压在正文上会糊掉。策略说了不画就整层不挂，Listener 仍然保留 ——
+    // 按压反馈的语义（哪怕看不见）不该由这里决定。
+    final bool glow = OhosTheme.of(context).policy.allowsGlow;
     return Listener(
       onPointerDown: _onDown,
       onPointerMove: _onMove,
@@ -118,7 +123,7 @@ class _OhosPressShadowState extends State<OhosPressShadow>
           fit: StackFit.passthrough,
           children: <Widget>[
             widget.child,
-            if (widget.type != OhosPressShadowType.none)
+            if (glow && widget.type != OhosPressShadowType.none)
               IgnorePointer(
                 child: AnimatedBuilder(
                   animation: _controller,

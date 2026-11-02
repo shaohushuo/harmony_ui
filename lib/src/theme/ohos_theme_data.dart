@@ -46,7 +46,20 @@ class OhosThemeData with Diagnosticable {
     this.textFourthColor,
   });
 
-  /// Whether this theme targets a light or dark interface.
+  /// 这套**令牌**的明暗语义：浅底深字，还是深底浅字。
+  ///
+  /// 注意它回答的范围 —— **只描述令牌本身，不描述系统**：
+  /// - 它**不**表示「用户开启了系统深色模式」；
+  /// - 它**不**表示「这一档是 light / dark / system」；
+  /// - 它**不**表示「是否跟随系统」。
+  ///
+  /// 后三件事属于 [OhosThemeMode] 与 [OhosThemeController]（用户选择），
+  /// 以及 `MediaQuery.platformBrightnessOf`（系统事实）。把系统亮度塞进本字段
+  /// 会让「深色墨水屏」这类组合失效 —— 那块屏 `brightness` 是 dark、`policy`
+  /// 是墨水屏，两者互不干涉，正是本字段只谈令牌的价值。
+  ///
+  /// 判断「要不要做深色专用的取色」时读 [isDark]，此时它和
+  /// [OhosVisualPolicy] 无关 —— 深色纸的墨水屏同样应当取浅色图标。
   final Brightness brightness;
 
   /// 这套主题的「表现规则」：彩屏靠分层，墨水屏靠描边。
@@ -253,72 +266,138 @@ class OhosThemeData with Diagnosticable {
   /// from 1px black lines (`dividerColor` is pure black here) rather than from
   /// layered surfaces and shadows.
   ///
-  /// [brightness] stays [Brightness.light] (black on white) so existing
-  /// `isDark` branches keep working; detect this preset with [monochrome]
-  /// (or `policy.isMonochrome`).
-  ///
-  /// Colors are copied from the reference implementation in issue feedback:
-  /// tertiary text keeps `#767676` because it also drives hint text — pure
-  /// black would make "not yet typed" look identical to "typed", while
-  /// `#767676` still sits on level 9 of 16. The type scale is
-  /// [OhosTypography.monochrome] (pure black) instead of the light preset's
-  /// `90%` black, so component defaults that do not pick a color themselves
-  /// (app bar titles, plain `OhosText`) stay on level 16.
-  ///
-  /// **Coverage** — 这个预设只给值，行为差异全部由
-  /// [InkVisualPolicy] 表达：关掉模糊 / 阴影 / 水波纹、把浅底改画成实线、
-  /// 把半透明线换成实色。组件层不出现「墨水屏」字样，因此新增一种屏只需要
-  /// 新增一个 [OhosVisualPolicy] 子类 + 一份色值。
-  ///
-  /// The general rule for grey state fills: a translucent black below ~20%
-  /// lands on level 0–3 of the 16-level panel, i.e. it does not exist. 策略因此
-  /// 把 20% 以下的 [OhosVisualPolicy.tint] 判成透明，组件收到透明就改画实线 ——
-  /// 涉及禁用按钮、勾选 / 单选描边、开关轨道与滑块、分段按钮轨道与选中片、
-  /// 滑动条 / 进度轨道、chip 与状态按钮描边、输入框下划线。`cardColor` 与页面
-  /// 同为纯白的面（`OhosCard`、`OhosSearchBar` 胶囊、半模态）也补一条实线；
-  /// `OhosCard` 在调用方显式传 `color` 时不补。
-  factory OhosThemeData.ink({String? fontFamily}) {
+/// 默认是白纸黑字，因此 [brightness] 为 [Brightness.light]，检测这一预设用
+  /// [monochrome]（或 `policy.isMonochrome`）—— **不要**靠 [isDark] 判断是不是
+  /// 墨水屏。
+///
+/// **深色墨水屏**（黑底白字）传 `brightness: Brightness.dark` 即可 —— 纸色、
+/// 字阶、禁用灰、选中态全部一起翻到另一个极端：
+///
+/// ```dart
+/// final darkInk = OhosThemeData.ink(brightness: Brightness.dark);
+/// // 此时 darkInk.isDark == true、darkInk.monochrome == true
+/// // policy.paper == #1A1A1A、字阶纯白、禁用灰 #4D4D4D
+/// ```
+///
+/// 为什么需要这个参数而不是让调用方自己 `copyWith` 一批色值：一份可用的
+/// 深色墨水屏至少要同时改对 6 个色值（纸面 / 卡面 / 弹层 / 正文 / 三级文字 /
+/// 分隔线）+ 13 个 `TextStyle` + 策略里的 `paper`。少改任何一个都是「某处黑字
+/// 压黑纸」，而且窄到跑一遍看不出来。这些值之间有约束（见下），拆给调用方
+/// 逐字段拼就是在把约束泄露出去。
+///
+/// `policy.paper` 必须跟着纸色走 —— [InkVisualPolicy] 靠它决定叠色该合成到
+/// 哪一层，也靠它判断 [OhosVisualPolicy.litFill] 与
+/// [OhosVisualPolicy.disabledFill] 该取黑还是取白。只改色值不改 `paper`，
+/// 量化出来的灰会全部偏向白纸那一侧。
+///
+/// 需要别的纸色（如 `#202020`）时，用 [copyWith] 同时换 `brightness`、
+/// `policy` 与那一批色值；语义仍然成立，只是本工厂不再替你兜底。
+///
+/// Colors are copied from the reference implementation in issue feedback:
+/// tertiary text keeps `#767676` because it also drives hint text — pure
+/// black would make "not yet typed" look identical to "typed", while
+/// `#767676` still sits on level 9 of 16. The type scale is
+/// [OhosTypography.monochrome] (pure black) instead of the light preset's
+/// `90%` black, so component defaults that do not pick a color themselves
+/// (app bar titles, plain `OhosText`) stay on level 16.
+///
+/// **Coverage** — 这个预设只给值，行为差异全部由
+/// [InkVisualPolicy] 表达：关掉模糊 / 阴影 / 水波纹 / 光效、把浅底改画成实线、
+/// 把半透明线换成实色。组件层不出现「墨水屏」字样，因此新增一种屏只需要
+/// 新增一个 [OhosVisualPolicy] 子类 + 一份色值。
+///
+/// The general rule for grey state fills: a translucent black below ~20%
+/// lands on level 0–3 of the 16-level panel, i.e. it does not exist. 策略因此
+/// 把 20% 以下的 [OhosVisualPolicy.tint] 判成透明，组件收到透明就改画实线 ——
+/// 涉及禁用按钮、勾选 / 单选描边、开关轨道与滑块、分段按钮轨道与选中片、
+/// 滑动条 / 进度轨道、chip 与状态按钮描边、输入框下划线。`cardColor` 与页面
+/// 同为纯白的面（`OhosCard`、`OhosSearchBar` 胶囊、半模态）也补一条实线；
+/// `OhosCard` 在调用方显式传 `color` 时不补。
+factory OhosThemeData.ink({
+  String? fontFamily,
+  Brightness brightness = Brightness.light,
+}) {
+  if (brightness == Brightness.dark) {
+    // 深色纸：把上面那套「纯底 + 两极」整体翻过来。每个值都有对应的
+    // `inkXxxDark` 常量，两侧保持对称可读。
     return OhosThemeData(
-      brightness: Brightness.light,
-      id: 'ink',
-      policy: const InkVisualPolicy(),
-      highlightColor: OhosColors.inkForeground,
-      onHighlightColor: OhosColors.inkBackground,
-      highlightTextColor: OhosColors.inkForeground,
-      backgroundColor: OhosColors.inkBackground,
-      backgroundSecondaryColor: OhosColors.inkBackground,
-      backgroundTertiaryColor: OhosColors.inkBackground,
-      cardColor: OhosColors.inkBackground,
-      compBackgroundPrimaryColor: OhosColors.inkBackground,
-      compBackgroundGrayColor: OhosColors.inkBackground,
-      popupColor: OhosColors.inkBackground,
-      textPrimaryColor: OhosColors.inkForeground,
-      textSecondaryColor: OhosColors.inkForeground,
-      textTertiaryColor: const Color(0xFF767676),
-      textFourthColor: OhosColors.inkInteractive,
-      multiColors: OhosColors.multiInk,
-      // 功能色也压成黑：红色在 16 级灰上变中灰，与正文糊在一起，
-      // 不如「黑字 + 文案说清楚」，需要强调时加粗或加图标。
-      successColor: OhosColors.inkForeground,
-      warningColor: OhosColors.inkForeground,
-      dangerColor: OhosColors.inkForeground,
-      emphasizeSecondaryColor: OhosColors.inkInteractive,
-      emphasizeTertiaryColor: const Color(0x1F000000),
-      // 水波纹 / hover / focus 在墨水屏上是半透明灰块且刷新慢，全部关掉；
-      // 点按反馈只留选中态（实心 20% 黑）。
+      brightness: Brightness.dark,
+      id: 'ink_dark',
+      policy: const InkVisualPolicy(paper: OhosColors.inkBackgroundDark),
+      highlightColor: OhosColors.inkForegroundDark,
+      onHighlightColor: OhosColors.inkBackgroundDark,
+      highlightTextColor: OhosColors.inkForegroundDark,
+      backgroundColor: OhosColors.inkBackgroundDark,
+      backgroundSecondaryColor: OhosColors.inkBackgroundDark,
+      backgroundTertiaryColor: OhosColors.inkBackgroundDark,
+      cardColor: OhosColors.inkBackgroundDark,
+      compBackgroundPrimaryColor: OhosColors.inkBackgroundDark,
+      compBackgroundGrayColor: OhosColors.inkBackgroundDark,
+      popupColor: OhosColors.inkBackgroundDark,
+      textPrimaryColor: OhosColors.inkForegroundDark,
+      textSecondaryColor: OhosColors.inkForegroundDark,
+      textTertiaryColor: OhosColors.inkTertiaryDark,
+      textFourthColor: OhosColors.inkInteractiveDark,
+      multiColors: OhosColors.multiInkDark,
+      // 功能色同样压成白：理由与白纸侧一致 —— 色相在 16 级灰上留不住。
+      successColor: OhosColors.inkForegroundDark,
+      warningColor: OhosColors.inkForegroundDark,
+      dangerColor: OhosColors.inkForegroundDark,
+      emphasizeSecondaryColor: OhosColors.inkInteractiveDark,
+      emphasizeTertiaryColor: const Color(0x1FFFFFFF),
       interactiveHoverColor: Colors.transparent,
       interactivePressedColor: Colors.transparent,
       interactiveFocusColor: Colors.transparent,
-      interactiveSelectColor: OhosColors.inkInteractive,
-      // 关键：light 预设用 10% 黑做分隔线，墨水屏上等于没有。
-      dividerColor: OhosColors.inkForeground,
+      interactiveSelectColor: OhosColors.inkInteractiveDark,
+      dividerColor: OhosColors.inkForegroundDark,
       scrimColor: const Color(0x80000000),
-      // light 的字阶是 90% 黑（0xE6000000），在 16 级灰上会淡成中灰，与「纯黑
-      // + 纯白」的目标不符 —— 凡是没自己 copyWith 颜色的地方（AppBar 标题、
-      // 裸 OhosText）都会露出来，所以这里换纯黑字阶。
-      typography: OhosTypography.monochrome(fontFamily: fontFamily),
+      typography: OhosTypography.monochrome(
+        fontFamily: fontFamily,
+        brightness: Brightness.dark,
+      ),
     );
   }
+  return OhosThemeData(
+    brightness: Brightness.light,
+    id: 'ink',
+    policy: const InkVisualPolicy(),
+    highlightColor: OhosColors.inkForeground,
+    onHighlightColor: OhosColors.inkBackground,
+    highlightTextColor: OhosColors.inkForeground,
+    backgroundColor: OhosColors.inkBackground,
+    backgroundSecondaryColor: OhosColors.inkBackground,
+    backgroundTertiaryColor: OhosColors.inkBackground,
+    cardColor: OhosColors.inkBackground,
+    compBackgroundPrimaryColor: OhosColors.inkBackground,
+    compBackgroundGrayColor: OhosColors.inkBackground,
+    popupColor: OhosColors.inkBackground,
+    textPrimaryColor: OhosColors.inkForeground,
+    textSecondaryColor: OhosColors.inkForeground,
+    textTertiaryColor: const Color(0xFF767676),
+    textFourthColor: OhosColors.inkInteractive,
+    multiColors: OhosColors.multiInk,
+    // 功能色也压成黑：红色在 16 级灰上变中灰，与正文糊在一起，
+    // 不如「黑字 + 文案说清楚」，需要强调时加粗或加图标。
+    successColor: OhosColors.inkForeground,
+    warningColor: OhosColors.inkForeground,
+    dangerColor: OhosColors.inkForeground,
+    emphasizeSecondaryColor: OhosColors.inkInteractive,
+    emphasizeTertiaryColor: const Color(0x1F000000),
+    // 水波纹 / hover / focus 在墨水屏上是半透明灰块且刷新慢，全部关掉；
+    // 点按反馈只留选中态（实心 20% 黑）。
+    interactiveHoverColor: Colors.transparent,
+    interactivePressedColor: Colors.transparent,
+    interactiveFocusColor: Colors.transparent,
+    interactiveSelectColor: OhosColors.inkInteractive,
+    // 关键：light 预设用 10% 黑做分隔线，墨水屏上等于没有。
+    dividerColor: OhosColors.inkForeground,
+    scrimColor: const Color(0x80000000),
+    // light 的字阶是 90% 黑（0xE6000000），在 16 级灰上会淡成中灰，与「纯黑
+    // + 纯白」的目标不符 —— 凡是没自己 copyWith 颜色的地方（AppBar 标题、
+    // 裸 OhosText）都会露出来，所以这里换纯黑字阶。
+    typography: OhosTypography.monochrome(fontFamily: fontFamily),
+  );
+}
 
   /// Returns a copy with the given fields replaced.
   ///

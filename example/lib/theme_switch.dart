@@ -4,7 +4,7 @@ import 'package:harmony_ui/harmony_ui.dart';
 /// 画廊的皮肤档位，由 `OhosThemeController` 持有。
 ///
 /// 包住 `MaterialApp` 的那层 `OhosTheme` 跟随它重建，所以在任何页面点顶栏
-/// 右上角的按钮，都能立刻看到同一组组件在三种主题下的样子。
+/// 右上角的按钮，都能立刻看到同一组组件在各类主题下的样子。
 ///
 /// 默认停在彩屏：这是组件的常态外观，也是 README 主截图的取景档位。墨屏是
 /// 「同一套组件换一块屏」的对照，**用右上角按钮一键切过去**看，不该让人一
@@ -17,10 +17,31 @@ final OhosThemeController galleryTheme = OhosThemeController(
 /// 全画廊统一的字体族。鸿蒙设备自带，其他平台由 Flutter 回退到系统字体。
 const String galleryFontFamily = 'HarmonyOS Sans';
 
+/// 切到**深色墨水屏**（黑底白字的电子纸），用于演示「令牌明暗」与「表现规则」
+/// 两维正交。
+///
+/// 它不进 [OhosThemeMode] 枚举：深色墨水屏不是「用户会主动选的第 5 档」，而是
+/// 墨水屏这一档的另一种色值。走 `custom()` 让画廊能切过去看，同时保留
+/// [galleryTheme] 原来的彩屏/墨屏来回能力。
+///
+/// 从深色墨屏 toggle 出来会落到 [OhosThemeData.light]（`custom()` 在传入主题
+/// 本身是墨屏时把「普通」侧播种成内置浅色）—— 这是刻意的：切换按钮的职责是
+/// 「在彩屏与墨屏之间翻转」，不该因为当前这份墨屏恰好是深色纸就停在原地。
+void showDarkInk() {
+  galleryTheme.setColorTheme(
+    OhosThemeData.ink(
+      fontFamily: galleryFontFamily,
+      brightness: Brightness.dark,
+    ),
+    mode: OhosThemeMode.ink,
+  );
+}
+
 /// 顶栏右侧的主题切换按钮。
 ///
-/// 点按在「当前彩屏档位 ↔ 墨水屏」之间一键来回；长按弹出三档菜单。档位存在
-/// [galleryTheme] 里，宿主把它塞进任意 `OhosAppBar.actions` 即可。
+/// 点按在「当前彩屏档位 ↔ 墨水屏」之间一键来回；长按弹出四档菜单（跟随系统 /
+/// 浅色 / 深色 / 墨水屏）。档位存在 [galleryTheme] 里，宿主把它塞进任意
+/// `OhosAppBar.actions` 即可。
 class ThemeSwitchButton extends StatelessWidget {
   const ThemeSwitchButton({super.key});
 

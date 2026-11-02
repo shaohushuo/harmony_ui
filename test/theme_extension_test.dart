@@ -264,4 +264,117 @@ void main() {
       expect(theme.id, 'ink_dark');
     });
   });
+
+  // 「自定义主题」与「墨水屏策略」是两个正交维度：前者回答「什么颜色」，
+  // 后者回答「在这块屏上怎么写」。组合起来必须同时成立 —— 品牌色 + 灰阶
+  // 表现规则，是真实存在的需求（企业定制电子纸阅读器）。
+  group('自定义主题 × 墨水屏策略', () {
+    /// 品牌色 + 灰阶：色值自己给，表现规则用 InkVisualPolicy。
+    OhosThemeData brandInk() => OhosThemeData.light().copyWith(
+      id: 'brand_ink',
+      policy: const InkVisualPolicy(),
+      highlightColor: OhosColors.inkForeground,
+      backgroundColor: OhosColors.inkBackground,
+      cardColor: OhosColors.inkBackground,
+      popupColor: OhosColors.inkBackground,
+      textPrimaryColor: OhosColors.inkForeground,
+      textTertiaryColor: const Color(0xFF767676),
+      dividerColor: OhosColors.inkForeground,
+      typography: OhosTypography.monochrome(),
+    );
+
+    test('两维各自成立：不是内置 id，但是灰阶', () {
+      final OhosThemeData theme = brandInk();
+      expect(theme.id, 'brand_ink');
+      expect(theme.monochrome, isTrue);
+      expect(theme.usesOutlines, isTrue);
+      // 自定义主题的亮度由自己声明，不受 policy 影响
+      expect(theme.isDark, isFalse);
+    });
+
+    test('custom() 构造的控制器能识别它是墨水屏', () {
+      final OhosThemeController controller = OhosThemeController.custom(
+        brandInk(),
+      );
+      expect(controller.mode, isNull, reason: '自定义主题没有档位');
+      expect(
+        controller.isInk,
+        isTrue,
+        reason: 'isInk 读的是 policy，不是枚举 —— 自定义灰阶主题同样为 true',
+      );
+    });
+
+    test('从品牌墨水屏 toggle 出来，落到彩屏而不是原地空转', () {
+      final OhosThemeController controller = OhosThemeController.custom(
+        brandInk(),
+      );
+      // 已经在墨屏，toggle 应该切到「普通」侧 —— 也就是彩屏
+      controller.toggle();
+      expect(
+        controller.isInk,
+        isFalse,
+        reason: '若把这份墨屏主题自己当作「普通」侧，toggle 会切到墨屏上，'
+            '按钮看起来完全失灵',
+      );
+      expect(controller.themeData.monochrome, isFalse);
+    });
+
+    test('品牌彩屏 → 墨水屏 → 回来，品牌色没丢', () {
+      final OhosThemeData brandColor = OhosThemeData.light().copyWith(
+        id: 'brand',
+        highlightColor: const Color(0xFF7B3FF2),
+      );
+      final OhosThemeController controller = OhosThemeController.custom(
+        brandColor,
+      );
+
+      controller.toggle();
+      expect(controller.isInk, isTrue);
+      expect(controller.themeData.id, 'ink', reason: 'toggle 进的是内置墨屏');
+
+      controller.toggle();
+      expect(controller.themeData.id, 'brand');
+      expect(controller.themeData.highlightColor, const Color(0xFF7B3FF2));
+    });
+
+    testWidgets('自定义墨屏主题能驱动组件，走的是策略而非枚举',
+        (WidgetTester tester) async {
+      final OhosThemeData theme = brandInk();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: theme,
+          child: MaterialApp(
+            home: OhosScaffold(
+              appBar: OhosAppBar(title: const Text('品牌墨屏')),
+              body: Column(
+                children: <Widget>[
+                  OhosButton(onPressed: () {}, child: const Text('按钮')),
+                  const OhosCard(child: Text('卡片')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final OhosThemeData applied = OhosTheme.of(
+        tester.element(find.text('按钮')),
+      );
+      expect(applied.policy, const InkVisualPolicy());
+      expect(applied.usesOutlines, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    // 高对比主题自己声明了 allowsBlur = false 但没声明 allowsGlow —— 那是个
+    // 有效的自定义策略，不该因为库里多了一个能力声明就编译失败或行为突变。
+    test('老的自定义策略不覆写 allowsGlow 时默认保留光效', () {
+      const OhosVisualPolicy policy = HighContrastPolicy();
+      expect(
+        policy.allowsGlow,
+        isTrue,
+        reason: '基类给默认 true，外部已有策略无需改动',
+      );
+    });
+  });
 }

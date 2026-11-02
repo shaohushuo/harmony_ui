@@ -77,6 +77,9 @@ class OhosThemeToggleButton extends StatelessWidget {
     if (mode == OhosThemeMode.dark) {
       return Icons.dark_mode_outlined;
     }
+    if (mode == OhosThemeMode.system) {
+      return Icons.brightness_auto_outlined;
+    }
     if (mode == OhosThemeMode.ink) {
       return Icons.contrast_rounded;
     }

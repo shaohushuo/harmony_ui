@@ -57,6 +57,22 @@ abstract class OhosVisualPolicy {
   /// 是否允许水波纹。墨水屏每次点按会留一块半透明灰且刷新慢。
   bool get allowsRipple;
 
+  /// 是否允许「光」这类纯装饰性的明度叠加 —— 点光源、按压缩放的高光、
+  /// 沉浸光感的边缘光晕。
+  ///
+  /// 与 [allowsShadow] 分开，因为它们在这块屏上的失败方式不同：阴影不存在
+  /// 只是「少了点立体感」，而白色的光晕叠在纯黑字上会**直接糊掉正文**，
+  /// 黑底场景下又完全看不见。灰阶屏上「光」这个隐喻本身不成立 —— 它没有
+  /// 背光可言，读者看到的只是一块不该出现的浅灰。
+  ///
+  /// 挡住的是 [OhosPointLight]、[OhosPressShadow]、[OhosLightMaterial] 的
+  /// 装饰层；它们真正的信息载体（底色、描边、图标）不受影响。
+  ///
+  /// 默认 `true` 而不是声明成抽象成员：本库承诺「加一块屏 = 写一个子类」，
+  /// 而外部已经存在的自定义策略（高对比主题等）不该因为这里多一个能力声明
+  /// 就编译失败。需要关掉光效的屏自己覆写成 `false`。
+  bool get allowsGlow => true;
+
   /// 过渡时长缩放。墨水屏没有中间帧，长动画只会让人白等一次全屏刷新。
   Duration scaleMotion(Duration base);
 
@@ -127,6 +143,9 @@ class ColorVisualPolicy extends OhosVisualPolicy {
 
   @override
   bool get allowsRipple => true;
+
+  @override
+  bool get allowsGlow => true;
 
   @override
   Duration scaleMotion(Duration base) => base;
@@ -203,16 +222,31 @@ class InkVisualPolicy extends OhosVisualPolicy {
   @override
   bool get allowsRipple => false;
 
+  /// 灰阶屏没有「背光」这回事 —— 白色光晕叠上去只是一块不该出现的浅灰，
+  /// 压在正文上会直接糊掉。点光源 / 按压高光 / 沉浸光感因此整层不画，
+  /// 它们承载信息的底色与描边照旧。
+  @override
+  bool get allowsGlow => false;
+
   @override
   Duration scaleMotion(Duration base) => Duration.zero;
 
-  /// 禁用态填 `#BFBFBF` 那一档实灰。
+  /// 禁用态填一档「比纸面亮、比正文暗」的实灰。
   ///
   /// 不能是纯黑（禁用会比可用还显眼），也不能再靠 [tint] 叠 25% 的底 ——
   /// 那正是灰阶屏上消失的那一类。override 是为了把「哪一档灰」从组件里搬到
   /// 策略里：组件只说「这是个禁用形状」，不关心这块屏的灰有多深。
+  ///
+  /// **跟着 [paper] 走**：白纸上给 `#BFBFBF`，深色纸上必须给 `#4D4D4D`。
+  /// 写死一个值的话，深色墨水屏上禁用态会比可用态更亮 —— 读者会去点它，
+  /// 这是比「看不见」更糟的失败方式。这也是要按纸色分流、而不是让调用方
+  /// 自己 `copyWith` 一个策略的原因。
   @override
-  Color disabledFill(Color base) => quantize(const Color(0xFFBFBFBF));
+  Color disabledFill(Color base) => quantize(
+    paper.computeLuminance() > 0.5
+        ? const Color(0xFFBFBFBF)
+        : const Color(0xFF4D4D4D),
+  );
 
   /// 灰阶屏上「点亮」= 与纸面反差最大那一档实色，而不是量化出来的灰。
   ///

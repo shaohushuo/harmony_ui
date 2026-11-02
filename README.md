@@ -51,7 +51,8 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 ## 特性
 
 - **HarmonyOS 设计令牌**：主题色 `#0A59F7` / `#317AF7`、11 色多彩色板、功能色、四级文字/图标透明度（90%/60%/40%/20%）、组件分层背景（`comp_background_primary/gray`）、20%/10% 品牌高亮背景（`comp_emphasize_secondary/tertiary`）与交互态色（hover/pressed/focus/select），全部对齐官方 Token 表。
-- **多主题**：`OhosThemeData.light()` / `.dark()` / `.ink()`（墨水屏）开箱即用，支持 `copyWith` 定制。
+- **多主题**：`OhosThemeData.light()` / `.dark()` / `.ink()`（墨水屏，可传 `brightness: Brightness.dark` 得到深色纸）开箱即用，支持 `copyWith` 定制。
+- **四档 + 跟随系统**：`OhosThemeMode` 提供 `system` / `light` / `dark` / `ink`，选 `system` 时跟随系统浅色/深色并自动响应切换。`brightness` 只描述令牌明暗，与「表现规则」正交 —— 因此深色墨水屏（黑底白字）可以与白纸墨屏共用同一套组件。
 - **一键切换普通 / 墨水屏**：`OhosThemeController` + `OhosThemeSwitcher` + `OhosThemeToggleButton` 三件套，顶栏放一个按钮即可在运行中来回切换，切换不丢页面栈。墨水屏与普通主题的差异集中在 `OhosVisualPolicy`（彩屏靠分层、墨水屏靠 1px 实线），加新屏只需加一个策略子类，组件层不动。
 - **API 对齐 Flutter**：使用方式与 Material/Cupertino 组件一致，学习成本低。
 - **原生字体**：默认使用 HarmonyOS 系统字体 `HarmonyOS Sans`（非鸿蒙平台自动回退系统字体）。
@@ -156,7 +157,7 @@ OhosThemeSwitcher(
       home: OhosScaffold(
         appBar: OhosAppBar(
           title: const Text('我的应用'),
-          // 3. 顶栏放一个按钮：点按翻转，长按弹出浅色 / 深色 / 墨水屏三选一
+          // 3. 顶栏放一个按钮：点按翻转，长按弹出跟随系统 / 浅色 / 深色 / 墨水屏
           actions: <Widget>[
             OhosThemeToggleButton(controller: themeController),
           ],
@@ -173,6 +174,61 @@ themeController.mode = OhosThemeMode.dark;   // 指定档位
 ```
 
 切换时 `MaterialApp` 原地重建，Navigator 的 State 会被复用，**不会把用户弹回首页**。
+
+### 跟随系统
+
+`OhosThemeMode.system` 把「浅色还是深色」交给系统设置，并**自动响应系统切换**
+（用户改完系统深色模式，界面立刻跟着翻，不用重启）：
+
+```dart
+final theme = OhosThemeController(initialMode: OhosThemeMode.system);
+```
+
+系统亮度**不进 controller 的状态**，而是像 `MediaQuery` 一样由 Widget 树提供，
+`OhosThemeSwitcher` 每次 build 时通过 `controller.resolveTheme(systemBrightness: ...)`
+现算。这样设计是为了避一个坑：如果在 `build()` 里把亮度喂回 controller 再
+`notifyListeners()`，监听者会在当前构建过程中再次触发重建，直接抛
+`setState() or markNeedsBuild() called during build`。
+
+`resolveTheme` / `materialThemeOf` 都是**纯函数** —— 不写状态、不通知，可以安全地在
+`build` 里调用。自己管理 `OhosTheme` 而不走 `OhosThemeSwitcher` 时，用
+`useTheme(controller.resolveTheme(systemBrightness: brightness))` 显式给值即可。
+
+> 选 `system` 之后进入墨水屏再切回来，会落在**离开时那个具体明暗**（深色或浅色），
+> 而不是继续停在 `system` 上 —— 否则切换按钮就成了单向门。
+
+### 深色墨水屏
+
+16 级灰的电子纸不只「白纸黑字」一种。夜间阅读需要黑底白字，这时候**令牌的明暗**
+和**表现规则**必须能各走各的：
+
+```dart
+// 一行拿到完整的深色墨水屏：纸色 #1A1A1A、纯白字阶、禁用灰 #4D4D4D
+final darkInk = OhosThemeData.ink(brightness: Brightness.dark);
+
+darkInk.isDark;      // true  —— 令牌是深底浅字
+darkInk.monochrome;  // true  —— 策略是灰阶屏
+```
+
+这两个维度是正交的，`brightness` **只描述令牌明暗**，不表示系统深色模式、不表示
+档位、不表示是否跟随系统。拆开之前 `ink()` 恒为 `Brightness.light`，`isDark` 恒假，
+深色墨水屏根本做不出来。
+
+为什么不让调用方自己 `copyWith` 一批色值：一份可用的深色墨水屏至少要同时改对 6 个
+色值（纸面 / 卡面 / 弹层 / 正文 / 三级文字 / 分隔线）+ 13 个 `TextStyle` + 策略里的
+`paper`。少改任何一处都会变成「某处黑字压黑纸」，而且窄到跑一遍看不出来 ——
+`typography` 尤其容易漏，它不跟着翻就是整段正文消失。
+
+需要别的纸色时再用 `copyWith`，语义仍然成立：
+
+```dart
+final custom = OhosThemeData.ink().copyWith(
+  brightness: Brightness.dark,
+  policy: const InkVisualPolicy(paper: Color(0xFF202020)),
+  typography: OhosTypography.monochrome(brightness: Brightness.dark),
+  // ...纸色 / 字色 / 分隔线跟着换
+);
+```
 
 ### 换屏之后长什么样
 
@@ -202,10 +258,17 @@ themeController.mode = OhosThemeMode.dark;   // 指定档位
 | `policy.allowsShadow` | `true` | `false` |
 | `policy.allowsBlur` | `true` | `false` |
 | `policy.allowsRipple` | `true` | `false` |
+| `policy.allowsGlow` | `true` | `false` |
 | `policy.scaleMotion(200ms)` | `200ms` | `Duration.zero` |
 
 收到透明的底色就改画线 —— 这条约定替代了原先散在 24 个组件里的
 `theme.monochrome ? A : B`。
+
+`allowsGlow` 与 `allowsShadow` 分开而不是合并，因为两者在这块屏上的**失败方式不同**：
+阴影不存在只是「少了点立体感」，而白色的光晕叠在纯黑字上会**直接糊掉正文**，黑底
+场景下又完全看不见。灰阶屏上「光」这个隐喻本身不成立 —— 它没有背光可言。这条策略
+挡住的是 `OhosPointLight`、`OhosPressShadow`、`OhosLightMaterial` 的装饰层，它们真正
+的信息载体（底色、描边、图标）不受影响。
 
 > 已有代码里的 `theme.monochrome` 仍然可用（是 `policy.isMonochrome` 的别名），
 > 但新代码请读 `policy`。判断「要不要补一条线」用 `theme.usesOutlines`。
@@ -245,6 +308,10 @@ final controller = OhosThemeController.custom(highContrast);
 controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 ```
 
+`allowsGlow` 在基类上有默认值 `true`（而不是声明成抽象成员），所以上面这份
+**已经写好的自定义策略不需要为它补一行** —— 「加一块屏 = 写一个子类」这个承诺不能
+因为库里多一个能力声明就让外部代码编译失败。
+
 `test/theme_extension_test.dart` 里有一份**完整可跑的**自定义主题，用来把这条约束
 固化成回归测试：如果哪天某个 widget 又开始 `switch` 主题枚举、或硬编码某块屏的
 令牌，那个测试就会先红。
@@ -254,10 +321,17 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 - **新增内置档位**（写进 `OhosThemeMode`）仍要改两处：`OhosThemeMode.theme()` 的
   映射，和切换按钮长按菜单的取项（后者是自动遍历 `values`，不用改代码）。除此之外
   没有 widget 需要动 —— 图标对未知档位走兜底推导，不会编译失败。
-- **`InkVisualPolicy.paper` 只改量化底色**，不改色值。做深色墨水屏还要另给一份深色
-  令牌（`OhosThemeData.ink().copyWith(...)` 即可），否则正文仍是白纸上的纯黑。
-- **持久化留给应用层**。核心库只提供 `OhosThemeData.id` 这个稳定字符串，不引入
-  `shared_preferences` 之类的依赖。
+- **`InkVisualPolicy.paper` 只改量化底色**，不改色值。做深色墨水屏请用
+  `OhosThemeData.ink(brightness: Brightness.dark)`（或按上例 `copyWith`），否则正文
+  仍是白纸上的纯黑。
+- **深色墨水屏目前只有两个内置极端**（`#FFFFFF` 纸 / `#1A1A1A` 纸）。中间调纸色
+  （如 `#3A3A3A`）请自行 `copyWith`，并**同时**换 `policy` 的 `paper` 与
+  `typography` —— 三者不一致时量化与字色会各自偏向不同方向。
+- **持久化留给应用层**。核心库只提供 `OhosThemeData.id` 这个稳定字符串
+  （`'light'` / `'dark'` / `'ink'` / `'ink_dark'`），不引入 `shared_preferences`
+  之类的依赖。
+- **`system` 档的持久化要存「这一档」，不要存解析结果**。存成 `dark` 会让应用下次
+  启动后不再跟随系统。
 
 ## 控件覆盖（对应官方「控件概览」42 控件）
 
