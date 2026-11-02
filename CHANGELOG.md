@@ -2,6 +2,10 @@
 
 Release date: 2026-11-01
 
+- 示例：`example` 的主题按钮改为「点按循环 浅色 → 深色 → 墨水屏，长按选全部五档（含深色墨水屏）」。此前直接用库里的 `OhosThemeToggleButton`，它的点按语义是「当前彩屏档位 ↔ 墨水屏」，深色只能进长按菜单 —— 结果是点一下就从浅色跳到黑底白字的电子纸，**深色那一档在画廊里根本走不到**。对一个专门用来看组件外观的应用来说，深色和墨水屏是并列的一等对照项，不该藏在长按里（`example/lib/theme_switch.dart`）
+- 文档：README 头部截图区补上**深色档**五张对照（与墨水屏并列），并新增「深色（dark 主题）」小节 —— 深色只翻令牌明暗、表现规则仍是彩屏（有阴影/模糊/水波纹），与墨水屏正交；另收录一张**深色墨水屏**截图，把「两个维度同时成立」从说明变成可看的图
+- 测试：`example/test/theme_switch_test.dart` 重写（7 例），钉住点按循环、深色档纸色真的换了、`toggle` 从墨屏回来落在深色、菜单能选到深色墨水屏、自定义主题下点按不是空操作。用例在 `runTest` 内部把默认平台临时换成 iOS —— Material 在 Android 平台用水波纹 `InkSparkle`，它首次绘制时加载 `shaders/ink_sparkle.frag`，本仓库的 `flutter_tester` 解析该 asset 会抛 `manifest could not be decoded`（既有环境问题，与主题无关，切墨水屏同样触发）；iOS 的 `InkRipple` 是纯 Dart 实现，不碰 shader
+
 - **破坏性变更**：`OhosThemeData` 构造函数的 `monochrome` 参数（`bool`，默认 `false`）改为 `policy`（`OhosVisualPolicy`，默认 `ColorVisualPolicy()`）。这是本次唯一一处**编译期**不兼容 —— 直接写 `OhosThemeData(monochrome: true, ...)` 手搓主题的调用方会报「没有名为 monochrome 的命名参数」，改为 `policy: const InkVisualPolicy()` 即可（用工厂 `OhosThemeData.ink()` 的调用方不受影响）。改的理由：单色只是「这块屏怎么表现」的一个取值，用 bool 表达等于把 24 个组件的分支逻辑焊死在「彩色 / 单色」这一对上，再加高对比、深色墨水屏就要回头改组件
 - 新增：视觉策略层 `OhosVisualPolicy` —— 把「这块屏上怎么表现才看得见」从色值里拆出来，两个实现 `ColorVisualPolicy`（彩屏：叠色 / 阴影 / 模糊 / 波纹）与 `InkVisualPolicy`（墨水屏：1px 实色线、无动效、灰阶量化）。接口是 `tint` / `line` / `quantize` / `outlineWidth` / `allowsShadow` / `allowsBlur` / `allowsRipple` / `scaleMotion`。**新增一类屏幕 = 新增一个子类 + 一份色值，组件层不动**
 - 调整：`OhosThemeData.monochrome` 由字段改为 getter（`policy.isMonochrome`），读取侧全部兼容，但不能再被赋值；新增语义化 getter `usesOutlines` / `outlineWidth` / `outlineColor`，组件判断「要不要描边」改读这三个，不再摸 `monochrome`。`copyWith` 同时接受 `policy:` 与 `monochrome:`（后者内部换算成策略），旧调用点不用改
