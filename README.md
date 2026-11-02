@@ -10,6 +10,18 @@
   <img src="doc/screenshots/gallery_container.png" alt="容器类" width="230"/>
 </p>
 
+<p align="center">
+  <b>同一套组件，换一块屏。</b>下面五张是墨水屏（16 级灰）档位 —— 顶栏右上角按钮一键切换。
+</p>
+
+<p align="center">
+  <img src="doc/screenshots/ink_01_home.png" alt="墨水屏：主页" width="230"/>
+  <img src="doc/screenshots/ink_02_action.png" alt="墨水屏：操作类" width="230"/>
+  <img src="doc/screenshots/ink_03_selection.png" alt="墨水屏：选择类" width="230"/>
+  <img src="doc/screenshots/ink_07_input.png" alt="墨水屏：输入类" width="230"/>
+  <img src="doc/screenshots/ink_08_container.png" alt="墨水屏：容器类" width="230"/>
+</p>
+
 [![GitHub CI](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -161,6 +173,21 @@ themeController.mode = OhosThemeMode.dark;   // 指定档位
 ```
 
 切换时 `MaterialApp` 原地重建，Navigator 的 State 会被复用，**不会把用户弹回首页**。
+
+### 换屏之后长什么样
+
+同一份代码、同一个页面，只把 `initialMode` 从 `light` 换成 `ink`。对话框与半模态
+面板最能看出差别 —— 墨水屏上它们**完全靠遮罩的明度差**浮起来，没有阴影、没有模糊：
+
+<p align="center">
+  <img src="doc/screenshots/ink_04_dialog.png" alt="墨水屏：对话框靠遮罩浮起" width="230"/>
+  <img src="doc/screenshots/ink_05_popup.png" alt="墨水屏：气泡是白底 + 1px 描边" width="230"/>
+  <img src="doc/screenshots/ink_06_bottom_sheet.png" alt="墨水屏：半模态面板 + 分享宫格" width="230"/>
+</p>
+
+注意半模态面板里的分享图标：彩屏下每个渠道一个品牌色，墨水屏下统一退成
+「灰底 + 黑图标」，靠**形状**而不是颜色区分。更多对照见文末[截图](#截图)里的
+「墨水屏」一节。
 
 ### 两种主题为什么不是「深色模式的变体」
 
@@ -967,6 +994,22 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 | 展示类（交互）：`magnifierBuilder` 自定义泡泡 | `doc/screenshots/mag_02_indexer_custom_bubble.png` |
 | 展示类（交互）：独立放大镜跟随色带报色值 | `doc/screenshots/mag_03_magnifier_strip.png` |
 | 导航类：标题栏状态栏分段着色 / `heightOf` | `doc/screenshots/appbar_01_statusbar_band.png` |
+
+### 墨水屏（ink 主题）
+
+同一份代码切到墨水屏档位后的样子。16 级灰上「浅底 = 不存在」，所以这些图里
+**看不到任何半透明叠色**，凡是彩屏用浅底托住形体的地方，这里都换成了 1px 实线：
+
+| 页面 | 截图 |
+| --- | --- |
+| 主页：卡片全部白底 + 1px 框，图标退成灰底实心 | `doc/screenshots/ink_01_home.png` |
+| 操作类：填充=纯黑 / 次级=中黑 / 描边=1px / 禁用=浅灰，四种强调样式的灰度区分 | `doc/screenshots/ink_02_action.png` |
+| 选择类：勾选、开关、评分靠实心与描边而非色相区分 | `doc/screenshots/ink_03_selection.png` |
+| 输入类：`filled` 变体自动退回透明底 + 1px 线 | `doc/screenshots/ink_07_input.png` |
+| 容器类：列表分隔线与卡片描边同为 1px 实色 | `doc/screenshots/ink_08_container.png` |
+| 弹出框（交互）：无阴影，靠遮罩明度差浮起 | `doc/screenshots/ink_04_dialog.png` |
+| 气泡提示（交互）：白底 + 1px 描边 | `doc/screenshots/ink_05_popup.png` |
+| 半模态面板（交互）：分享图标退成灰底黑图标，靠形状区分 | `doc/screenshots/ink_06_bottom_sheet.png` |
 
 ## 设计来源
 

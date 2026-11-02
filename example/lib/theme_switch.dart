@@ -6,10 +6,11 @@ import 'package:harmony_ui/harmony_ui.dart';
 /// 包住 `MaterialApp` 的那层 `OhosTheme` 跟随它重建，所以在任何页面点顶栏
 /// 右上角的按钮，都能立刻看到同一组组件在三种主题下的样子。
 ///
-/// 默认停在墨主题：这一轮改动（1px 描边、分割线、灰阶对比度）都是为它做的，
-/// 打开演示程序即可对照，不用先点两下。
+/// 默认停在彩屏：这是组件的常态外观，也是 README 主截图的取景档位。墨屏是
+/// 「同一套组件换一块屏」的对照，**用右上角按钮一键切过去**看，不该让人一
+/// 进来就先点一下才见到正常样子。
 final OhosThemeController galleryTheme = OhosThemeController(
-  initialMode: OhosThemeMode.ink,
+  initialMode: OhosThemeMode.light,
   fontFamily: galleryFontFamily,
 );
 
