@@ -333,6 +333,63 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 - **`system` 档的持久化要存「这一档」，不要存解析结果**。存成 `dark` 会让应用下次
   启动后不再跟随系统。
 
+## 应用案例
+
+> 展示基于 harmony_ui 构建的真实应用与开源项目，欢迎[提交你的作品](https://atomgit.com/oh-flutter/harmony_ui/issues)。
+
+<table>
+  <tr>
+    <td width="14%" align="center" valign="middle">
+      <img src="assets/bigeditor/logo.png" width="110" alt="BigEditor Logo"/>
+      <br/>
+      <sub>Powered by</sub>
+      <br/>
+      <strong><font color="#1677FF">harmony_ui</font></strong>
+    </td>
+    <td width="26%" valign="middle">
+      <h3>bige-editor</h3>
+      <p><b>开源项目 · 工具类</b></p>
+      <p>
+        代码阅读器 / 编辑器 + Git 客户端：在手机和平板上读仓库、看代码、
+        改一行、提交上去，不需要电脑。同一份 Dart 代码出鸿蒙 hap 与 Android apk 两种形态。
+      </p>
+      <p>👤 作者：eltoro</p>
+      <p>
+        <a href="https://atomgit.com/eltoro/bige-editor">
+          <img src="https://img.shields.io/badge/项目地址-AtomGit-blue?style=flat-square" alt="项目地址"/>
+        </a>
+      </p>
+    </td>
+    <td width="46%" align="center" valign="middle">
+      <img src="assets/bigeditor/screenshot-1.png" width="32.5%" alt="bige-editor：仓库列表"/>
+      <img src="assets/bigeditor/screenshot-2.png" width="32.5%" alt="bige-editor：变更与提交"/>
+      <img src="assets/bigeditor/screenshot-3.png" width="32.5%" alt="bige-editor：三档主题对照"/>
+    </td>
+    <td width="14%" align="center" valign="middle">
+      <a href="https://appgallery.huawei.com/app/detail?id=ltd.chencan.bige_editor&amp;channelId=SHARE&amp;source=appshare">
+        <img src="assets/bigeditor/qrcode.png" width="120" alt="华为应用市场下载二维码"/>
+      </a>
+      <br/>
+      <sub>扫码下载</sub>
+    </td>
+  </tr>
+</table>
+
+上表三张截图分别取自**仓库列表**、**变更与提交**、**同一份错误态在浅色 / 深色 /
+墨水屏三档下的对照** —— 第三张最能说明这套组件库要解决的问题：同一段业务代码，
+换一块屏不用改一行布局，输入框自动从「灰底无边框」变成「白底 + 1px 黑描边」，按钮
+自动去掉水波纹与阴影。
+
+这个应用也验证了几个关键约束：
+
+- **零组件改动接入** —— bige-editor 只用到 `OhosThemeData.light()` / `.dark()` /
+  `.ink()` 与 `copyWith`（8 个颜色令牌），0.5.0 的策略化重构对它**没有**任何源码
+  影响。
+- **墨水屏可用** —— 索引条受控高亮、无底纹按钮仍可点、输入框描边可读，均在真机
+  与模拟器上验证过。
+- **深色墨水屏不再是理论组合** —— `OhosThemeData.ink(brightness: Brightness.dark)`
+  就是为这类「夜间读代码」场景准备的。
+
 ## 控件覆盖（对应官方「控件概览」42 控件）
 
 ### 导航类

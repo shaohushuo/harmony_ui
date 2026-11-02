@@ -55,6 +55,7 @@ Release date: 2026-11-01
 - 测试：新增「组件层不判断具体主题类型」回归约束 —— 静态扫描 `lib/src/widgets/` 下所有源码（剥掉注释后再扫，否则文档里提到的 `OhosThemeData.monochrome` 会被误判），确保没有 `OhosThemeMode.` / `isMonochrome` / `.monochrome` 分支，只允许主题切换按钮自身例外。这条是「新增一种屏不改组件」从承诺变成可验证事实的关键
 - 测试：`test/theme_extension_test.dart` 增补「自定义主题 × 墨水屏策略」6 例 —— 品牌色 + 灰阶表现规则同时成立、`custom()` 能识别自定义灰阶主题、`toggle` 来回不丢品牌色、老的自定义策略不覆写 `allowsGlow` 时行为不变
 - 修复：`compBackgroundGrayDark` 由官方 token 表的 `#FFE5E5EA` 改为 `#202224`。那个值在 ArkUI 语境里成立（配的是深色**字** `#FFE5E5E5`），本库把它当输入框 / chip 的**填充面**，上面画的是 `textPrimaryColor`（深色档为 `0xE5FFFFFF` 半透明白），白字落在这块浅灰上实测对比度只有 1.23:1。**token 抄对 ≠ 用对**
+- 文档：README 新增「应用案例」章节，收录第一个真实应用 **bige-editor**（代码阅读器 / 编辑器 + Git 客户端，鸿蒙 hap 与 Android apk 双形态）。含 logo、三张实机截图（仓库列表 / 变更与提交 / 同一份错误态在浅色·深色·墨水屏三档下的对照）与华为应用市场下载二维码。这一节同时是「普通深色不回归、墨水屏可用、深色墨屏不再是理论组合」三条验收标准的应用侧佐证
 - 测试：新增 `test/dark_contrast_audit_test.dart`（9 例）用 WCAG 相对亮度公式对深色档做量化审计 —— 文字落页面底、功能色、输入类填充面、弹层、组件实际取色分组断言，半透明前景先 `Color.alphaBlend` 合成再算比值。`_luminance` 用 sRGB 直接加权而非 `computeLuminance()`（后者做线性化会算偏）
 - 调整：分隔线两端不再贯穿 —— 左端对齐文字（有 `leading` 时让到图标之后，16 / 56vp）、右端统一留 16vp（`endIndent: 16`）；列表给非 `OhosListTile` 子节点补的线同样改成两端内缩
 - 修复：`OhosGrid` 的栅格几何 —— ①末行不满时剩下的单元被拉伸铺满整行（12 列的网格里单个 `columnSpan: 3` 占满一整行，与上面满行行的单元边缘全都对不上），现在右侧保留空列，列宽统一为 `span·colWidth + (span−1)·gutter` 且与同行单元个数无关：每格左右各吃 `gutter/2` 内边距、外层 `padding` 让回半格，单元边缘仍精确落在页面边距上；②`maxWidth`（栅格最大使用宽度 2220vp）原来把两侧 margin 也算进上限，改为只限制单元区；③`runSpacing` 连末行也补一段，网格底部凭空多出一条行距；④`_emitRow` 的 `remaining` 参数声明了却没用上。配套 3 条用例（`test/ohos_ui_test.dart` 的 `OhosGrid` 组）
