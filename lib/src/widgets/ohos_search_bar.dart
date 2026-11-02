@@ -201,7 +201,26 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
                     decoration: InputDecoration(
                       hintText: widget.hintText,
                       hintStyle: TextStyle(color: theme.textTertiaryColor),
+                      // 边框的六个状态槽位必须逐个钉成 none，只写 `border` 是不够的：
+                      // `InputDecoration.applyDefaults` 用的是
+                      // `enabledBorder ?? theme.enabledBorder`，装饰器自己的
+                      // `border` 不会回填状态槽位；而 `_getBorder` 先按状态取槽位，
+                      // 取到了就直接用，压根走不到读 `border` 那一步。
+                      //
+                      // 于是宿主只要给 Material 的 `inputDecorationTheme` 配过
+                      // `enabledBorder`（墨水屏上很常见 —— 没有填充色可用，只能靠
+                      // 1px 描边给输入框分层），胶囊里就会再套一圈圆角框。
+                      // 外层胶囊已经在 `foregroundDecoration` 里自己画了 1px 边，
+                      // 内层永远不该再画。
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      // 同一个 `applyDefaults` 还会把宿主的 `filled: true` 带进来，
+                      // 在胶囊里多出一块填充矩形。搜索框没有填充语义，显式关掉。
+                      filled: false,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
                     ),
