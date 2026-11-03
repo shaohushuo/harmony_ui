@@ -112,8 +112,39 @@ abstract class OhosVisualPolicy {
   /// `usesOutlines ? ...` 的原因：描边与否和文字可供性是两件事。
   bool get underlinesTextActions => isMonochrome;
 
+  /// 「我现在在这一项上」该怎么让读者看出来。
+  ///
+  /// 与 [litFill] 的分工：那个管「点亮一个小图标」（开关、星标），答案是一抹
+  /// 颜色；这里管「一组互斥项里当前是哪一项」，答案可能不是颜色 —— 墨水屏上
+  /// `highlightColor` 与 `textPrimaryColor` **都是纯黑**（见 `OhosThemeData.ink`），
+  /// 所以「选中 = 换成品牌色」在灰阶屏上等于什么都没做。工具栏只有图标 + 文字
+  /// 两条信息，没有胶囊底也没有下划线可借，颜色一失效就彻底分不出当前项。
+  ///
+  /// 返回 [OhosSelectionMark] 而不是 bool，是因为「换成什么」与「怎么换」是
+  /// 两件事：高对比主题可能想用粗体 + 加宽描边，墨水屏想用反白（实底 + 纸色
+  /// 文字）。只给一个 bool 的话，组件就得自己猜剩下的部分 —— 猜出来的那套
+  /// 在下一块屏上又不对。
+  ///
+  /// 默认 [OhosSelectionMark.tint]：彩屏上颜色本身就是答案。
+  OhosSelectionMark get selectionMark => OhosSelectionMark.tint;
+
   @override
   String toString() => '$runtimeType';
+}
+
+/// 一组互斥项里「当前项」的表达方式，见 [OhosVisualPolicy.selectionMark]。
+enum OhosSelectionMark {
+  /// 换颜色：用 `highlightColor` 画图标与文字。彩屏默认。
+  tint,
+
+  /// 反白：实底 `highlightColor` + `onHighlightColor` 的文字/图标。
+  ///
+  /// 灰阶屏上这是唯一稳的信号 —— 16 级灰里「第 0 级底 + 第 15 级字」的反差
+  /// 跨温度、跨刷新次数都不漂。
+  inverse,
+
+  /// 加粗 + 描边：形状与线宽变化，不依赖色相。给高对比主题用。
+  emphasis,
 }
 
 /// 彩屏：分层表达，保留阴影 / 模糊 / 水波纹。
@@ -176,6 +207,14 @@ class InkVisualPolicy extends OhosVisualPolicy {
 
   @override
   bool get isMonochrome => true;
+
+  /// 灰阶屏上没有色相可用，`highlightColor` 与 `textPrimaryColor` 都是纯黑，
+  /// 换色等于不换 —— 只能反白（实底 + 纸色字）。
+  ///
+  /// 不给 `emphasis`（加粗 + 描边）：工具栏的字只有 10fp，加粗一档在
+  /// 16 级灰上分辨不出，而每一项都描边会让整条栏变成一排按钮。
+  @override
+  OhosSelectionMark get selectionMark => OhosSelectionMark.inverse;
 
   @override
   Color tint(Color base, double alpha) {
