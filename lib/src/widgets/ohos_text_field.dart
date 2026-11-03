@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_selection_toolbar.dart';
 
 /// Visual variant of [OhosTextField].
 enum OhosTextFieldVariant {
@@ -44,6 +45,8 @@ class OhosTextField extends StatefulWidget {
     this.maxLines = 1,
     this.variant = OhosTextFieldVariant.underline,
     this.style,
+    this.selectionMenuItems = const <OhosSelectionMenuItem>[],
+    this.contextMenuBuilder,
   });
 
   /// Controller for the text; if null an internal one is created from
@@ -104,6 +107,16 @@ class OhosTextField extends StatefulWidget {
 
   /// Overrides the input text style.
   final TextStyle? style;
+
+  /// 扩展动作（翻译 / 分享 / 搜索 / 三方），显示在「更多」二级菜单里。
+  ///
+  /// 内置的剪切 / 复制 / 粘贴 / 全选四项由 [OhosSelectionToolbar] 固定补齐，
+  /// 不需要写在这里 —— 这条分工对应设计规范的「前四项不进更多」。
+  final List<OhosSelectionMenuItem> selectionMenuItems;
+
+  /// 完全接管选择菜单的构建。给了它，[selectionMenuItems] 与内置四项都不再
+  /// 生效，由调用方自己决定菜单长什么样、包含哪些动作。
+  final EditableTextContextMenuBuilder? contextMenuBuilder;
 
   @override
   State<OhosTextField> createState() => _OhosTextFieldState();
@@ -275,6 +288,14 @@ class _OhosTextFieldState extends State<OhosTextField> {
                 color: theme.textPrimaryColor,
               )),
           decoration: decoration,
+          contextMenuBuilder:
+              widget.contextMenuBuilder ??
+              (BuildContext context, EditableTextState state) =>
+                  OhosSelectionToolbar.editable(
+                    context: context,
+                    editableTextState: state,
+                    items: widget.selectionMenuItems,
+                  ),
         ),
       ],
     );

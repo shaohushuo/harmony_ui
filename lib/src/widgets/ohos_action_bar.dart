@@ -95,11 +95,15 @@ class OhosActionBar extends StatelessWidget {
                       ),
                     ),
                   ),
-                  OhosButton(
-                    onPressed: primaryLoading ? null : onPrimaryPressed,
-                    loading: primaryLoading,
-                    child: Text(primaryLabel ?? ''),
-                  ),
+                  // 官方 HdsActionBar 允许「去掉主按钮」，此时只留次要操作。
+                  // 原来无条件渲染 `Text(primaryLabel ?? '')` —— 不传标签就得到
+                  // 一个空白药丸，看着像加载失败，比直接不画更糟。
+                  if (primaryLabel != null || primaryLoading)
+                    OhosButton(
+                      onPressed: primaryLoading ? null : onPrimaryPressed,
+                      loading: primaryLoading,
+                      child: Text(primaryLabel ?? ''),
+                    ),
                 ],
               ),
             ),
