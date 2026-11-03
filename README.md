@@ -63,7 +63,7 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 | `FilterChip` | `OhosChip` |
 | `Divider` / `IconButton` | `OhosDivider` / `OhosIconButton` |
 
-配套图标包：[ohos_icons](https://pub.dev/packages/ohos_icons)（HarmonyOS Symbol 字体图标，已发布）。
+配套图标包：[harmony_icons](https://pub.dev/packages/harmony_icons)（HarmonyOS Symbol 字体图标，已发布）。原 `ohos_icons` 已改名为 `harmony_icons`，旧包在 pub.dev 上标记为 discontinued，类名不变（仍是 `OhosIcons`）。
 
 ## 特性
 
@@ -433,7 +433,7 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 | 文本 / 子标题 | `OhosText`（`OhosTextLevel` 全字阶）/ `OhosSubheader` |
 | 图片 | `OhosImage`（支持选中描边）|
 | 分隔器 | `OhosDivider` |
-| 进度条 | `OhosProgressIndicator`（圆形 / 线性）|
+| 进度条 | `OhosProgressIndicator`（圆环 / 线性 / 胶囊 / 月相 `eclipse` / 刻度环 `scaleRing`）/ `OhosLoadingIndicator`（彗星拖尾）|
 | 新事件标记 | `OhosBadge`（数字 / 红点）|
 | 索引条 | `OhosAlphabetIndexer`（等高槽位 · 拖动放大镜 · `selectedIndex` 受控高亮 · `onSelectEnd`）|
 | 放大镜 | `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`（跟随手指的浮层，也可用于文本选择）|
@@ -482,6 +482,7 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 | 控件 | 实现 |
 | --- | --- |
 | 列表 / 列表项 | `OhosList` / `OhosListTile` |
+| 列表分组 | `OhosListGroup` / `OhosListGroupSliver`（卡片样式 · 组头组尾 · 吸顶组头）|
 | 卡片 | `OhosCard` |
 | 弹出框 | `OhosAlertDialog` / `showOhosDialog` |
 | 气泡提示 | `showOhosPopup` |
@@ -1072,6 +1073,11 @@ showOhosSnackBar(
 
 const OhosProgressIndicator.circular();                     // 无限转圈
 OhosProgressIndicator.linear(value: 0.6);                   // 线性进度
+OhosProgressIndicator.capsule(value: 0.6);                  // 胶囊（量长度）
+OhosProgressIndicator.ring(value: 0.6);                     // 圆环（量角度）
+OhosProgressIndicator.eclipse(value: 0.5);                  // 月相（量面积，0.5 是整左半圆）
+OhosProgressIndicator.scaleRing(value: 0.6);                // 刻度环（靠换色，不是刻度变多）
+const OhosLoadingIndicator();                               // 加载动效（彗星拖尾）
 
 OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'); // 二维码
 ```

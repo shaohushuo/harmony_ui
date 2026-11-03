@@ -40,6 +40,10 @@
   - 沉浸光感：粉紫蓝渐变压成一块没有意义的灰带，墨屏直接给一档实心深灰 `#333333` 当背景，THIN 退化成纯白后仍然立得住；THICK 退化成纯白后与页面同色，按库的约定（边界交给调用方）自己补 1px 线；`+` 图标改读 `theme.highlightColor`（原来硬编码品牌蓝）。
   - 动效曲线：跑道底由 `#F1F3F5` 换成 `#EEEEEE`，圆点改读 `theme.highlightColor`；进度条仍是 55% 品牌蓝 —— 压到灰阶上是中灰，与彩屏版本对照最直观。
 
+### Optimization
+
+- 示例工程与文档的图标包依赖由 `ohos_icons` 迁移到 **`harmony_icons`**。`ohos_icons` 已改名为 `harmony_icons`，旧包在 pub.dev 上标记为 discontinued（`"isDiscontinued": true`），不会再有更新；`harmony_icons` 0.1.0 于 2026-10-13 发布。**类名不变，仍是 `OhosIcons`** —— 两包导出的是同一套 534 个 Symbol 常量，逐个比对只差两处笔误修正（`chevron_down_` → `chevron_down_L`、`chevron_up_` → `chevron_up_L`，旧名末尾多一个下划线），本库用到的 `chevron_right` 不受影响。因此迁移是纯包名替换：`example/pubspec.yaml` 一行 + 8 个示例页的 import 一行，零代码改动。下方 v0.1.0 的条目仍写 `ohos_icons`，那是当时的真实依赖，不改写历史
+
 ## v0.4.0
 
 Release date: 2026-10-30
