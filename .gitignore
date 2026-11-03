@@ -24,3 +24,13 @@ example/ohos/local.properties
 
 # Local agent workspace (not part of the package)
 .workbuddy/
+
+# 上游参考文档快照（用 tool/fetch_reference.sh 重抓，不入库）
+doc/reference/*.md
+!doc/reference/README.md
+
+# 上游组件实现源码快照（用 tool/fetch_source.sh 重抓，不入库）
+doc/source/*.ets
+# 系统资源明文表快照（用 tool/fetch_sys_resources.sh 重抓，不入库）
+doc/source/systemres/
+!doc/source/README.md

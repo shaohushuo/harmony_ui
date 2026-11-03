@@ -1,0 +1,13 @@
+{
+  "overview": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380",
+  "openHarmony": "https://gitee.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts",
+  "hds": "https://developer.huawei.com/consumer/cn/doc/doccenter-references/api",
+  "fetchedAt": "2026-11-03T09:38:20Z",
+  "_traceMethod": "权威清单来自 tool/trace_control_docs.sh：概览页 42 个控件的链接 → 各自设计文档末尾「## 开发文档」→ 组件参考文档。不要靠猜 slug。",
+  "noDevDocLink": {
+    "色彩选择器": "color-picker-0000002574393143.md 只有「如何使用/最佳实践/布局规则」三节，官方未给「开发文档」链接；但 ui-design-hdscolorpicker 参考文档确实存在（本快照已收录）。属于设计文档漏链接，不是文档缺失"
+  },
+  "confirmedAbsent": {
+    "EditableTitleBar": "标题栏可编辑形态。设计文档 titlebar 只链到 ts-basic-components-navigation；ui-design-editable-title-bar / hdseditabletitlebar / hdseditabletitle-bar 均 404"
+  }
+}
