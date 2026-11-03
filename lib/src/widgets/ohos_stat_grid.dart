@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
 
-/// A key-value data statistics panel (数据可视化 in the HarmonyOS guideline)
-/// that renders a series of metrics on cards.
-class OhosDataPanel extends StatelessWidget {
-  const OhosDataPanel({
+/// A grid of key-value metric cards.
+///
+/// This used to be called `OhosDataPanel`, which was a misnomer: ArkUI's
+/// `DataPanel` is a **proportion chart** (`Line` / `Circle`, `values` ≤ 9,
+/// `max` as either an absolute scale or a sum-to-100% mode). A grid of KPI
+/// cards has no official counterpart at all. The name was handed back to the
+/// real thing (see `OhosDataPanel`), and this widget — which several apps
+/// already use — moved here under a name that says what it draws.
+///
+/// Visual output is unchanged from the old `OhosDataPanel`; only the class
+/// name and the file moved.
+class OhosStatGrid extends StatelessWidget {
+  const OhosStatGrid({
     super.key,
     required this.title,
     required this.entries,
@@ -59,7 +68,7 @@ class OhosDataPanel extends StatelessWidget {
           childAspectRatio: 1.6,
           children: <Widget>[
             for (final MapEntry<String, num> entry in items)
-              _OhosDataPanelItem(
+              _OhosStatGridItem(
                 entry: entry,
                 theme: theme,
                 decimals: decimals,
@@ -73,8 +82,8 @@ class OhosDataPanel extends StatelessWidget {
   }
 }
 
-class _OhosDataPanelItem extends StatelessWidget {
-  const _OhosDataPanelItem({
+class _OhosStatGridItem extends StatelessWidget {
+  const _OhosStatGridItem({
     required this.entry,
     required this.theme,
     required this.decimals,
