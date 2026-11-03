@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
@@ -15,6 +15,7 @@ class InputPage extends StatefulWidget {
 class _InputPageState extends State<InputPage> {
   String _query = '';
   int _count = 1;
+  OhosDate _date = const OhosDate(year: 2024, month: 3, day: 7);
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +108,38 @@ class _InputPageState extends State<InputPage> {
           description: '3×3 手势密码，抬手返回点位序列。',
           child: DemoCard(
             child: Center(child: OhosPatternLock(onCompleted: _noopPattern)),
+          ),
+        ),
+        DemoSection(
+          title: '日期加减 OhosDateCounter',
+          description:
+              'CounterType.INLINE_DATE：YYYY / MM / DD 三段可点可输。'
+              '点中哪一段，右侧箭头就加减哪一段 —— 没点过时默认作用于「日」。'
+              '当前: $_date',
+          child: DemoCard(
+            child: Row(
+              children: <Widget>[
+                OhosDateCounter(
+                  value: _date,
+                  upIcon: OhosIcons.arrow_up,
+                  downIcon: OhosIcons.arrow_down,
+                  onChanged: (OhosDate v) => setState(() => _date = v),
+                ),
+                const SizedBox(width: OhosGeometry.spaceMd),
+                Flexible(
+                  child: Text(
+                    // 三段各自的回绕规则不同：年夹取、月回绕不进位、日按当月
+                    // 长度回绕。放一行提示，免得把「12 月加一月还是 12 月」
+                    // 当成 bug。
+                    '月/日回绕：12 月 +1 → 1 月，当月最后一天 +1 → 1 号',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: OhosTheme.of(context).textTertiaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
@@ -70,6 +70,60 @@ class ContainerPage extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+        const DemoSection(
+          title: '分组 OhosListGroup（style: card）',
+          description:
+              '对应 ArkUI 的 ListItemGroupStyle.CARD：左右外边距 12、四周内边距 4、'
+              '圆角 24。组头 / 组尾是普通 Widget，分隔线归组所有 —— 行内 tile 自己那条'
+              '不会重复画。下面的 space 只加在行与行之间，组头到首行、末行到组尾都不受'
+              '影响。',
+          child: OhosListGroup(
+            style: OhosListGroupStyle.card,
+            itemStyle: OhosListGroupItemStyle.card,
+            space: 8,
+            divider: OhosGroupDivider(startMargin: 8, endMargin: 8),
+            header: _GroupHeader('常用'),
+            footer: _GroupFooter('共 3 项系统设置'),
+            children: <Widget>[
+              OhosListTile(
+                leading: Icon(OhosIcons.wifi, color: Color(0xFF0A59F7)),
+                title: Text('无线网络'),
+                trailing: Icon(OhosIcons.chevron_right, size: 20),
+              ),
+              OhosListTile(
+                leading: Icon(OhosIcons.bluetooth, color: Color(0xFF0A59F7)),
+                title: Text('蓝牙'),
+                trailing: Text('已关闭'),
+              ),
+              OhosListTile(
+                leading: Icon(
+                  OhosIcons.battery_75percent,
+                  color: Color(0xFF0A59F7),
+                ),
+                title: Text('电池'),
+                trailing: Icon(OhosIcons.chevron_right, size: 20),
+              ),
+            ],
+          ),
+        ),
+        const DemoSection(
+          title: '分组不铺底板（style: none）',
+          description:
+              '同一套分组只换 style：组头 / 组尾、space、divider 都还在，但不再有'
+              '卡片底板与 12 外边距。itemStyle 也能单独关掉 —— 组样式与行样式是两个'
+              '独立参数，可以自由组合。',
+          child: OhosListGroup(
+            style: OhosListGroupStyle.none,
+            itemStyle: OhosListGroupItemStyle.none,
+            space: 4,
+            divider: OhosGroupDivider(startMargin: 16, endMargin: 16),
+            header: _GroupHeader('未分组'),
+            children: <Widget>[
+              OhosListTile(title: Text('显示与亮度')),
+              OhosListTile(title: Text('声音与振动')),
+            ],
           ),
         ),
         DemoSection(
@@ -234,6 +288,49 @@ class _ShareIcon extends StatelessWidget {
         const SizedBox(height: 6),
         Text(label, style: theme.typography.bodySmall),
       ],
+    );
+  }
+}
+
+/// 分组演示用的组头：官方示例里组头就是一个普通 Widget，不自带任何样式，
+/// 这里只用字阶区分，颜色走主题，墨屏下也能读。
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Text(
+        label,
+        style: theme.typography.titleSmall?.copyWith(
+          color: theme.textSecondaryColor,
+        ),
+      ),
+    );
+  }
+}
+
+/// 分组演示用的组尾。
+class _GroupFooter extends StatelessWidget {
+  const _GroupFooter(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Text(
+        label,
+        style: theme.typography.bodySmall?.copyWith(
+          color: theme.textTertiaryColor,
+        ),
+      ),
     );
   }
 }

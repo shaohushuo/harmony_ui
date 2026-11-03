@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import '../demo_frame.dart';
@@ -543,30 +543,58 @@ class _NavigationBarDemoState extends State<_NavigationBarDemo> {
 class _SwiperDemo extends StatelessWidget {
   const _SwiperDemo();
 
+  static const List<Color> _colors = <Color>[
+    Color(0xFF0A59F7),
+    Color(0xFF64BB5C),
+    Color(0xFFF7CE00),
+    Color(0xFFE55392),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    const List<Color> colors = <Color>[
-      Color(0xFF0A59F7),
-      Color(0xFF64BB5C),
-      Color(0xFFF7CE00),
-      Color(0xFFE55392),
-    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _swiper(
+          type: OhosPageIndicatorType.dot,
+          arrows: false,
+          autoPlay: true,
+        ),
+        const SizedBox(height: 16),
+        _swiper(
+          type: OhosPageIndicatorType.digit,
+          arrows: true,
+          autoPlay: false,
+        ),
+        const SizedBox(height: 8),
+        _hint('上：圆点（选中变宽 12×6）+ 自动播放；下：数字型 + 左右箭头'),
+      ],
+    );
+  }
+
+  Widget _swiper({
+    required OhosPageIndicatorType type,
+    required bool arrows,
+    required bool autoPlay,
+  }) {
     return OhosSwiper(
       height: 120,
-      autoPlay: true,
+      autoPlay: autoPlay,
+      indicatorType: type,
+      showArrows: arrows,
       clipRadius: BorderRadius.circular(16),
       children: <Widget>[
-        for (int i = 0; i < colors.length; i++)
+        for (int i = 0; i < _colors.length; i++)
           Container(
             decoration: BoxDecoration(
-              color: colors[i],
+              color: _colors[i],
               borderRadius: BorderRadius.circular(16),
             ),
             alignment: Alignment.center,
             child: Text(
               '页面 ${i + 1}',
               style: TextStyle(
-                color: colors[i] == const Color(0xFFF7CE00)
+                color: _colors[i] == const Color(0xFFF7CE00)
                     ? Colors.black87
                     : Colors.white,
                 fontSize: 18,
@@ -575,6 +603,20 @@ class _SwiperDemo extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _hint(String text) {
+    return Builder(
+      builder: (BuildContext context) {
+        final OhosThemeData theme = OhosTheme.of(context);
+        return Text(
+          text,
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textSecondaryColor,
+          ),
+        );
+      },
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
@@ -81,8 +81,12 @@ class ActionPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '工具栏 OhosToolbar',
-          description: '横向图标工具栏。',
-          child: DemoCard(child: _ToolbarDemo()),
+          description: '图标 + 文字，整条 57（56 + 1px 分割线）。'
+              '激活态要 activeIndex 与 ACTIVATE 同时满足；超过 5 项自动收进「更多」。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            child: _ToolbarDemo(),
+          ),
         ),
         const DemoSection(
           title: '核心操作栏 OhosActionBar',
@@ -280,23 +284,110 @@ class _ChipsDemoState extends State<_ChipsDemo> {
   }
 }
 
-class _ToolbarDemo extends StatelessWidget {
+class _ToolbarDemo extends StatefulWidget {
   const _ToolbarDemo();
 
   @override
+  State<_ToolbarDemo> createState() => _ToolbarDemoState();
+}
+
+class _ToolbarDemoState extends State<_ToolbarDemo> {
+  /// 4 项的一档：正好演示激活态。
+  int _active = 1;
+
+  /// 7 项的一档：前 4 留在线内，后 3 收进「更多」。
+  int _activeLong = 0;
+
+  @override
   Widget build(BuildContext context) {
-    return OhosToolbar(
-      items: const <OhosToolbarItem>[
-        OhosToolbarItem(icon: OhosIcons.share, label: '分享', onPressed: _noop),
-        OhosToolbarItem(icon: OhosIcons.star, label: '收藏', onPressed: _noop),
-        OhosToolbarItem(
-          icon: OhosIcons.heart,
-          label: '点赞',
-          onPressed: _noop,
-          selected: true,
+    return Column(
+      children: <Widget>[
+        OhosToolbar(
+          activeIndex: _active,
+          items: <OhosToolbarItem>[
+            OhosToolbarItem(
+              icon: OhosIcons.share,
+              label: '分享',
+              onPressed: _noop,
+            ),
+            OhosToolbarItem(
+              icon: OhosIcons.star,
+              label: '收藏',
+              // 只有 ACTIVATE 才允许被 activeIndex 点亮。
+              state: OhosToolbarItemState.activated,
+              onPressed: () => setState(() => _active = 1),
+            ),
+            OhosToolbarItem(
+              icon: OhosIcons.heart,
+              label: '点赞',
+              state: OhosToolbarItemState.activated,
+              onPressed: () => setState(() => _active = 2),
+            ),
+            // 禁用项：不可点、变灰，也永远不会被点亮。
+            const OhosToolbarItem(
+              icon: OhosIcons.message,
+              label: '评论',
+              state: OhosToolbarItemState.disabled,
+            ),
+          ],
         ),
-        OhosToolbarItem(icon: OhosIcons.message, label: '评论', onPressed: _noop),
+        const SizedBox(height: 16),
+        OhosToolbar(
+          activeIndex: _activeLong,
+          moreIcon: OhosIcons.dot_grid_2x2,
+          items: <OhosToolbarItem>[
+            for (int i = 0; i < 7; i++)
+              OhosToolbarItem(
+                icon: _longIcons[i],
+                label: _longLabels[i],
+                state: OhosToolbarItemState.activated,
+                onPressed: () => setState(() => _activeLong = i),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _Hint('上：4 项，正好留出 24 侧边距；下：7 项，前 4 + 「更多」'),
       ],
+    );
+  }
+}
+
+const List<IconData> _longIcons = <IconData>[
+  OhosIcons.share,
+  OhosIcons.star,
+  OhosIcons.heart,
+  OhosIcons.message,
+  OhosIcons.save,
+  OhosIcons.bookmark,
+  OhosIcons.phone,
+];
+
+const List<String> _longLabels = <String>[
+  '分享',
+  '收藏',
+  '点赞',
+  '评论',
+  '保存',
+  '书签',
+  '通话',
+];
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: theme.typography.bodySmall?.copyWith(
+          color: theme.textSecondaryColor,
+        ),
+      ),
     );
   }
 }
