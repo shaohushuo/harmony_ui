@@ -25,6 +25,9 @@ example/ohos/local.properties
 # Local agent workspace (not part of the package)
 .workbuddy/
 
+# 提交 MR 时临时写的描述稿，粘到网页表单即可，不属于仓库内容
+.mr-description.md
+
 # 上游参考文档快照（用 tool/fetch_reference.sh 重抓，不入库）
 doc/reference/*.md
 !doc/reference/README.md
