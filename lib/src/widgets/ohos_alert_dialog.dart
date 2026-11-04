@@ -49,6 +49,20 @@ class OhosDialogMetrics {
     double.infinity,
     double.infinity,
   );
+
+  /// 弹窗与窗口左右边缘的最小间距。
+  ///
+  /// **这个数不在参数表里，只能下到系统资源表取**：`pattern.json` 的
+  /// `ohos_dialog_pattern` 有 `dialog_container_margin_left` /
+  /// `dialog_container_margin_right`，两者都指向 `$float:margin_left` /
+  /// `margin_right`，在 `float_sys.json` 里都是 **16.0vp**。
+  ///
+  /// 为什么必须有它：`maxWidth = 400` 是**上限**，不是「一定 400」。窄屏上
+  /// 可用宽度小于 400 时，直接把 `SizedBox(width: 400)` 塞进 `Center`，
+  /// 弹窗会贴住屏幕左右两侧（360vp 屏上超出 40vp，表现为「宽度占满整屏」），
+  /// 圆角切在屏幕外、看起来不像弹窗。这与 `OhosFloatingTabBar` 的 328 上限
+  /// 是同一类错：**绝对上限 ≠ 必然值，还要再夹一次可用宽度**。
+  static const double sideMargin = 16;
 }
 
 /// 弹窗关闭原因，对应 ArkUI 的 `DismissReason`。
@@ -307,8 +321,15 @@ class _OhosAlertDialogState extends State<OhosAlertDialog> {
     final EdgeInsets safe = MediaQuery.paddingOf(context);
     // 扣掉安全区再乘 0.9 —— 官方明写「0.9 *（窗口高度 - 安全区域）」。
     final double usableHeight = screen.height - safe.top - safe.bottom;
+    // 宽度上限要**两个条件取小**：官方的 400vp 上限，与「窗口宽 − 左右边距」。
+    // 400 是绝对上限而非必然值 —— 360vp 屏上它不可能被满足，只夹 400 会
+    // 让弹窗铺满整屏、圆角切在屏幕外。宽度同样要扣安全区（横屏刘海在左右）。
+    final double usableWidth =
+        screen.width - safe.left - safe.right - OhosDialogMetrics.sideMargin * 2;
     return (
-      maxWidth: OhosDialogMetrics.maxWidth,
+      maxWidth: OhosDialogMetrics.maxWidth < usableWidth
+          ? OhosDialogMetrics.maxWidth
+          : usableWidth,
       maxHeight: usableHeight * OhosDialogMetrics.maxHeightFactor,
     );
   }

@@ -5200,6 +5200,50 @@ void main() {
       );
     });
 
+    testWidgets('窄屏上弹窗不铺满整屏，左右各留 16vp 边距', (WidgetTester tester) async {
+      // `maxWidth = 400` 是**上限**，不是「一定 400」。360vp 的手机屏上可用
+      // 宽度不够 400，只夹 400 会让弹窗顶满整个屏幕宽度（`SizedBox(width:400)`
+      // 在 360 的松约束下被压成 360），圆角切在屏幕外、看起来不像弹窗。
+      //
+      // 这条用例能变红是因为它断言**具体宽度**而不是「≤ 400」：修之前量到
+      // 360（= 屏宽），修之后是 328。
+      // `setSurfaceSize` **不改 `MediaQuery`** —— 组件读的是
+      // `MediaQuery.sizeOf`，只设前者的话 `_bounds` 算出来仍是默认 800×600，
+      // 量到的弹窗宽度不受影响。两个都要设，否则这条用例会因为
+      // 「屏幕从来没变成 360」而假通过。
+      const Size phone = Size(360, 800);
+      tester.view.physicalSize = phone;
+      tester.view.devicePixelRatio = 1.0;
+      await tester.binding.setSurfaceSize(phone);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        return tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        wrap(
+          OhosAlertDialog(
+            title: '删除文件',
+            content: '删除后无法恢复，确定要继续吗？',
+            actions: const <OhosDialogAction>[
+              OhosDialogAction(label: '取消', onPressed: _noop),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Rect surface = tester.getRect(dialogSurface());
+      expect(
+        surface.width,
+        360 - OhosDialogMetrics.sideMargin * 2,
+        reason: '窄屏上宽度应是「屏宽 − 左右边距」，不是屏宽本身',
+      );
+      expect(surface.left, OhosDialogMetrics.sideMargin);
+      expect(surface.right, 360 - OhosDialogMetrics.sideMargin);
+    });
+
     testWidgets('显式 width 超过 400 会被夹回，而不是突破上限', (WidgetTester tester) async {
       // 官方 width 的语义是「设置后不超过默认最大宽度」—— 是**夹取**不是
       // **放开**，这点与 gridCount 的「异常值按默认值处理」不同。
