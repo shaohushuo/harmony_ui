@@ -93,7 +93,17 @@ void main() {
 
       final TextStyle style = styleOfLabel(tester, '了解更多');
       expect(hasUnderline(style), isFalse, reason: '彩屏不该被祖先的下划线传染');
-      expect(style.decorationColor, isNot(const Color(0xFFFF0000)));
+      // **不能只断言 `isNot(红)`**：`null` 也能通过那一条，而 `null` 恰恰就是
+      // 缺陷形态（`merge` 不回填 null → 祖先的 decorationColor 被放行）。
+      // 这里曾经就是 `isNot(const Color(0xFFFF0000))`，于是
+      // `decorationColor: underline ? foreground : null` 这个写法全绿 ——
+      // 而 flutter_test 的默认 `DefaultTextStyle` 带的是**纯黄** `#FFFF00`，
+      // 墨屏对话框的标题与正文因此各带一条黄线（实测通道差 86）。
+      expect(
+        style.decorationColor,
+        Colors.transparent,
+        reason: '不画线时必须显式给中性值，否则祖先的颜色会漏下来',
+      );
     });
 
     testWidgets('其他样式不受影响：filled / outlined 不加下划线',
