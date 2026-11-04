@@ -21,7 +21,7 @@
 set -e
 cd "$(dirname "$0")/.."
 
-BASE="https://gitee.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts"
+BASE="https://raw.gitcode.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts"
 HDS_BASE="https://developer.huawei.com/consumer/cn/doc/doccenter-references/api"
 OUT=doc/reference
 mkdir -p "$OUT"
@@ -50,6 +50,10 @@ COMPONENTS=(
   # 输入
   ts-basic-components-textinput ts-basic-components-search ohos-arkui-advanced-Counter
   ts-container-counter ts-basic-components-patternlock
+  # 通用属性：TextInput 的 showCounter 配置项 InputCounterOptions 定义在这里，
+  # 正文文档只写了「见 ts-universal-attributes-text-style.md#inputcounteroptions11」。
+  # 少了它就查不到 thresholdPercentage 的有效区间 [1,100] 与 highlightBorder 默认值。
+  ts-universal-attributes-text-style
   # 选择
   ts-basic-components-checkbox ts-basic-components-checkboxgroup ts-basic-components-radio
   ts-basic-components-rating ts-basic-components-slider ts-basic-components-calendarpicker

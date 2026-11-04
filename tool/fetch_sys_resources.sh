@@ -26,10 +26,16 @@
 #   tool/fetch_sys_resources.sh              # 抓取 + 打印 search / chip / subheader 摘要
 #   tool/fetch_sys_resources.sh search_      # 只看指定前缀
 #
+# 仓库地址（2026-11 迁到 GitCode）：https://gitcode.com/openharmony/global_system_resources
+#   raw 直链必须走 **raw.gitcode.com/<仓>/raw/master/...**。
+#   `gitcode.com/<仓>/raw/...` 与 `/-/raw/...` 都只返回 HTML（状态码仍是 200），
+#   下面那句「首字符必须是 `{`」的校验就是为这类「200 但内容不是 JSON」准备的。
+#   旧 gitee 的 API 已全线 403（Rate Limit Exceeded），raw 也建议一起迁。
+#
 # 输出落到 doc/source/systemres/（已被 .gitignore 挡住，见 README）。
 set -u
 
-RAW="https://gitee.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element"
+RAW="https://raw.gitcode.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element"
 OUT="$(cd "$(dirname "$0")/.." && pwd)/doc/source/systemres"
 mkdir -p "$OUT"
 
@@ -114,6 +120,15 @@ queries = [
         'subheader_titles_space', 'subheader_left_icon_size',
         'subheader_left_icon_end_margin', 'subheader_content_margin_start',
         'subheader_content_margin_end', 'subheader_content_padding',
+        # 2026-11 新增：subheader.ets 把原来的一批**硬编码常量**改成了
+        # `lazyInit(() => getResourceValue('sys.float.subheader_right_*'))`。
+        # 这直接推翻了「源码答硬编码」这条判据在该组件上的适用性 ——
+        # 现在源码只说令牌名，真值必须回到这两张 float 表来查。
+        'subheader_right_arrow_height', 'subheader_right_arrow_width',
+        'subheader_right_icon_zone_size', 'subheader_right_icon_size',
+        'subheader_right_button_default_focus_style', 'subheader_right_font_arrow_space',
+        'subheader_right_button_radius', 'subheader_right_button_margin_start',
+        'subheader_right_button_margin_bottom',
     ]),
 ]
 

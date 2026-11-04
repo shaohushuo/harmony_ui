@@ -24,11 +24,20 @@
 # 抓下来能提供的硬编码信息极少（已实测 search_layout_algorithm.cpp 仅一条
 # DEFAULT_DIVIDER_HEIGHT）。ArkTS 侧的 defaultTheme 常量块是可直接抄的。
 #
+# 仓库地址（2026-11 迁到 GitCode）：
+#   https://gitcode.com/openharmony/arkui_ace_engine
+#   raw 走 raw.gitcode.com，API 走 api.gitcode.com —— **两者是不同的 host**。
+#   `gitcode.com/<仓>/raw/...` 与 `/-/raw/...` 都只返回 HTML，别用。
+#   为什么必须迁：旧 gitee 的 raw 还能下（会被 302 到 raw.giteeusercontent），
+#   但**目录 API 已被限流**（`403 Forbidden (Rate Limit Exceeded)`），而下面
+#   「列目录取真实文件名」正是靠它 —— 拿不到就退化成猜名字，那是最容易错的环节。
+#
 # 用法：./tool/fetch_source.sh
 set -e
 cd "$(dirname "$0")/.."
 
-RAW="https://gitee.com/openharmony/arkui_ace_engine/raw/master/advanced_ui_component"
+RAW="https://raw.gitcode.com/openharmony/arkui_ace_engine/raw/master/advanced_ui_component"
+API="https://api.gitcode.com/api/v5/repos/openharmony/arkui_ace_engine/contents"
 OUT=doc/source
 mkdir -p "$OUT"
 
@@ -72,16 +81,32 @@ for n in $COMPONENTS; do
   # 不猜文件名。目录名与文件名并不一致，且不一致的方式还不统一：
   #   chip/source/chip.ets                          目录名 = 文件名
   #   gridobjectsortcomponent/source/GridObjectSortComponent.ets   驼峰
-  # 本轮先试「首字母大写」猜法，对 gridobjectsortcomponent 仍然 404 ——
+  # 早期试过「首字母大写」猜法，对 gridobjectsortcomponent 仍然 404 ——
   # 因为它是驼峰，不是简单首字母大写。于是改成**列目录取 .ets**：
   # 用 API 拿到真实文件名，这就不存在「猜」这个动作了。
-  # 上一轮「猜 slug」的教训在这里再验证了一遍。
-  list=$(curl -sL --max-time 60 "https://gitee.com/api/v5/repos/openharmony/arkui_ace_engine/contents/advanced_ui_component/$n/source?ref=master")
-  fn=$(echo "$list" | sed -n 's/.*"name":"\([^"]*\.ets\)".*/\1/p' | head -1)
-  # sed 在单行 JSON 上只能取到最后一个，改用 grep -o 逐个抓再取首个
-  if [[ -z "$fn" ]]; then
-    fn=$(echo "$list" | tr '{' '\n' | grep -o '"name":"[^"]*\.ets"' | head -1 | sed 's/"name":"//;s/"$//')
-  fi
+  #
+  # 解析用 python3 而不是 `sed`：目录里**可能不止一个 .ets**（`chip` 目录就有
+  # `chip.ets` 与 `chip_v16.ets`），旧写法在单行 JSON 上用贪婪匹配只会取到
+  # 最后一个，再 `head -1` 反而挑中了不确定的那个。这里按规则显式选：
+  # 优先与目录同名的 `$n.ets`，否则取第一个非 `*_v<N>.ets` 的。
+  list=$(curl -sL --max-time 60 "$API/advanced_ui_component/$n/source?ref=master")
+  fn=$(printf '%s' "$list" | python3 -c '
+import json, re, sys
+try:
+    items = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+names = [x["name"] for x in items
+         if isinstance(x, dict) and x.get("name", "").endswith(".ets")]
+dir_name = sys.argv[1]
+# 与目录同名的优先
+if dir_name + ".ets" in names:
+    print(dir_name + ".ets")
+    sys.exit(0)
+# 其次排除带版本后缀的 _v16 / _v20，拿第一个
+plain = [x for x in names if not re.search(r"_v\d+\.ets$", x)]
+print((plain or names or [""])[0])
+' "$n" 2>/dev/null || true)
   ok=0
   if [[ -n "$fn" ]]; then
     code=$(curl -sL --max-time 60 -o "$out" -w "%{http_code}" "$RAW/$n/source/$fn")
@@ -90,7 +115,7 @@ for n in $COMPONENTS; do
     fi
   fi
   if [[ "$ok" != "1" ]]; then
-    echo "FAIL $code $n (fn=${fn:-未取到文件名})"
+    echo "FAIL ${code:-?} $n (fn=${fn:-未取到文件名})"
     rm -f "$out"
     fail=1
   fi
