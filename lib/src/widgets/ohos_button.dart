@@ -190,8 +190,22 @@ class OhosButton extends StatelessWidget {
                       decoration: underline
                           ? TextDecoration.underline
                           : TextDecoration.none,
-                      // 实色下划线：墨水屏上半透明的线会化进白底。
-                      decorationColor: underline ? foreground : null,
+                      // `decorationColor` 同理，**也必须两个分支都给值**。
+                      //
+                      // 这里曾经写成 `decorationColor: underline ? foreground : null`，
+                      // 于是三个字段只有这一个漏了：`decoration` 已经是 none，
+                      // 祖先把我们的橙黄 `decorationColor` 递了下来。flutter_test
+                      // 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`
+                      // （纯黄）—— 那是测试框架给「不该有下划线却有了」留的视觉
+                      // 警报色。结果：墨屏对话框的标题与正文各带一条**黄线**，
+                      // 而所有断言（都只查 `decoration`）全绿。
+                      //
+                      // 真机不显形，是因为 Material 3 的 `decorationColor` 是正文色，
+                      // 即使下划线被关掉也看不出来。**「彩屏看着没问题」在这里第二次
+                      // 掩盖了同一个缺陷**：前一次是 `decoration`（注释已记录），
+                      // 这一次是它的兄弟字段。所以不再走「靠祖先恰好对我有利」这条
+                      // 路，直接给中性值。
+                      decorationColor: underline ? foreground : Colors.transparent,
                       decorationStyle: underline
                           ? TextDecorationStyle.solid
                           : null,
