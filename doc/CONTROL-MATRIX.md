@@ -15,10 +15,15 @@
 | --- | --- | --- | --- | --- |
 | 底部页签 | 平铺 48vp | 设计规范 | `OhosNavigationBar(tile)` | |
 | 底部页签 | 悬浮 56vp + 沉浸光感 | 设计规范 | `OhosNavigationBar(float)` | |
-| 底部页签 | 三档宽度 small/medium/large | `HdsTabs` `HdsBarWidthRangeOptions` | ○ | |
-| 底部页签 | 渐变蒙层（浅 `#CCF1F3F5` / 深 `#99000000`） | `HdsTabs.barFloatingStyle.gradientMask` | ○ | |
-| 底部页签 | 迷你栏（折叠 / 展开 / 自定义内容） | `HdsTabsMiniBar` | ○ | |
-| 底部页签 | 迷你栏与页签栏水平 / 垂直布局 | `HdsBarLayoutMode` | ○ | |
+| 底部页签 | 三档宽度 small/medium/large | `HdsTabs` `HdsBarWidthRangeOptions` | `OhosFloatingTabBar` + `OhosTabsWidthDefaults` | 6 条纯函数 + 3 条布局；≥4 个直接取 328（非算完再夹）；高宽比 = 高÷宽 |
+| 底部页签 | 渐变蒙层（浅 `#CCF1F3F5` / 深 `#99000000`，高 = 栏高 + 16vp） | `HdsTabs.barFloatingStyle.gradientMask` | `OhosFloatingTabBarStyle.showMask` / `maskColor` / `maskHeight` | 2 条：默认画蒙层、`showMask: false` 不画 |
+| 底部页签 | 悬浮栏左右边距三档 16 / 24 / 32 | `HdsTabs.barFloatingStyle.barSideMargin` | `OhosFloatingTabBarStyle.sideMargin`（null = 自动分档） | 2 条：三档分档 + 显式值不参与分档 |
+| 底部页签 | 悬浮栏栏高 56vp | `HdsTabs.barHeight` | `OhosFloatingTabBarStyle.height` | 1 条 |
+| 底部页签 | 迷你栏（折叠 / 展开 / 自定义内容） | `HdsTabsMiniBar` | `OhosMiniBar` + `OhosMiniBarStyle` | 8 条：折叠 56 / 展开分档 / 不超容器宽 / 首次创建三例 / 背景开关 / 裁剪开关 |
+| 底部页签 | 迷你栏与页签栏水平 / 垂直布局 | `HdsBarLayoutMode` | `OhosMiniBarScaffold.layoutMode` | 3 条：440–600 折叠者贴边 / <440 整体居中 / 垂直上下 |
+| 底部页签 | 迷你栏居中规则（440vp 换口径） | `HdsTabsMiniBar` 说明段 | `OhosMiniBarAlign` + `alignFor` | 4 条纯函数：<440 整体 / 440–600 仅展开者 / 同展开 / 同折叠 |
+| 底部页签 | 控制器：折叠 / 展开与动效 | `applyMiniBarStyle` / `applyHideAnimation` / `applyShowAnimation` | `OhosTabsController` | 5 条：状态变更才通知 / 两个 applyXxx / 同状态不通知 / `lastAnimationMode` / 控制器驱动布局切换 |
+| 底部页签 | 滚动联动 | `bindScroller` / `unbindScroller` | `OhosTabsController.bindScroller` / `unbindScroller` | 4 条：登记 / 解绑 / 重复绑定不叠加 / 不接管滚动 |
 | 子页签 | 文本型 | `Tabs` SubTabBarStyle | `OhosTabBar` | |
 | 子页签 | 胶囊型 | `ChipGroup` | `OhosChipGroup` | |
 | 子页签 | 分割线 3 模式 | 设计规范 | `OhosTabBarDividerMode` | |
@@ -143,19 +148,22 @@
 | 工具栏 | 侧边距 **24** 仅在 `< 5` 项时生效 | `padding_level12` | `OhosToolbar` | `< 5` 断 24、`== 5` 断 0（条件是 `<`，不是 `<=`） |
 | 工具栏 | 自定义 `button` slot（非图标 + 文字） | `ToolBarOption.button` | ○ | |
 | 工具栏 | 长按 / 无障碍描述逐项 | `ToolBarOption` 无对应 | ○ | |
-| 核心操作栏 | 默认（主按钮 + 两端按钮组） | `HdsActionBar` | ◐ 单侧 `secondaryActions` | |
-| 核心操作栏 | 去主按钮 | `HdsActionBar.primaryButton` 可选 | `OhosActionBar(primaryLabel: null)` | `ohos_ui_test.dart` OhosActionBar |
-| 核心操作栏 | 起始按钮组 `startButtons` | `HdsActionBar.startButtons` | ○ | |
-| 核心操作栏 | 末尾按钮组 `endButtons` | `HdsActionBar.endButtons` | ○ | |
-| 核心操作栏 | 竖直排列 | `ActionBarStyle.isHorizontal: false` | ○ | |
-| 核心操作栏 | 自定义主按钮 + 宽度 | `primaryButtonBuilder` + `primaryButtonBuilderWidth` | ○ | |
-| 核心操作栏 | 主按钮双图标切换 | `baseIcon` / `altIcon` + `isPrimaryIconChanged` | ◐ 仅内置展开/收起图标 | |
-| 核心操作栏 | 逐按钮 width / 背景 / 阴影 / 图标尺寸 | `ActionBarButton` | ○ | |
-| 核心操作栏 | 逐按钮禁用 | `ActionBarButton.enabled` | ○ | |
-| 核心操作栏 | 整体禁用 | `ActionBarStyle.enabled` | ○ | |
-| 核心操作栏 | 悬浮提示 `hoverTips` | `ActionBarButton.hoverTips` | ◐ `primaryTooltip` 单字段 | |
-| 核心操作栏 | 默认模糊 `COMPONENT_REGULAR` | `ActionBarStyle.backgroundBlurStyle` | ○ 默认关 | |
-| 核心操作栏 | 间距 height/innerSpace/startSpace/endSpace/margin | `ActionBarStyle` | ○ padding 写死 | |
+| 核心操作栏 | 默认（主按钮 + 两端按钮组） | `HdsActionBar` | `OhosActionBar`（`startButtons` + 主按钮 + `endButtons`） | `ohos_ui_test.dart` OhosActionBar 组 13 条：三段分布 / 去主按钮 / 总开关 / 逐按钮禁用 / 双图标切换 / 缺 altIcon 回落 / isExpand 默认收起 / 竖直时 startSpace 落到上边框 / 彩屏模糊 + 墨屏描边 / blurStrategy 关断 / 自定义主按钮 + 宽度 / 逐按钮 width / 样式值相等 |
+| 核心操作栏 | 去主按钮 | `HdsActionBar.primaryButton` 可选 | `OhosActionBar(primaryButton: null)` | 同组「去掉主按钮时只画两端按钮组」 |
+| 核心操作栏 | 起始按钮组 `startButtons` | `HdsActionBar.startButtons` | `OhosActionBar.startButtons` | 同组「三段分布」 |
+| 核心操作栏 | 末尾按钮组 `endButtons` | `HdsActionBar.endButtons` | `OhosActionBar.endButtons` | 同组「三段分布」「isExpand 默认收起」 |
+| 核心操作栏 | 竖直排列 | `ActionBarStyle.isHorizontal: false` | `OhosActionBarStyle.isHorizontal` | **`startSpace` / `endSpace` 在竖直时落到上下边框** —— 官方在参数说明里明文写了这条映射，最容易按名字固定成 left/right |
+| 核心操作栏 | 自定义主按钮 + 宽度 | `primaryButtonBuilder` + `primaryButtonBuilderWidth` | `OhosActionBar.primaryButtonBuilder` | 优先级高于 `primaryButton`；缺宽度触发 assert（官方「必须同时设置」） |
+| 核心操作栏 | 主按钮双图标切换 | `baseIcon` / `altIcon` + `isPrimaryIconChanged` | `OhosActionBarButton.icon` / `altIcon` + `OhosActionBarStyle.isPrimaryIconChanged` | 缺 `altIcon` 时回落 `baseIcon`（与 `OhosChip.selectedIcon` 同一条规则） |
+| 核心操作栏 | 逐按钮 width / 背景 / 图标尺寸 | `ActionBarButton` | `OhosActionBarButton`（12 个属性） | 同组「逐按钮 width 覆盖默认圆直径」 |
+| 核心操作栏 | 逐按钮阴影 `shadowStyle` | `ActionBarButton.shadowStyle`（默认 `OUTER_DEFAULT_LG`） | ○ | **不做**：`ShadowStyle` 枚举只给「大阴影」这种定性描述，`OUTER_DEFAULT_LG = 3` 只是枚举序号；`shadow.h` 里也无数值表。与 `textfield_error_spacing` 同类 —— 有名字、无值 |
+| 核心操作栏 | 逐按钮禁用 | `ActionBarButton.enabled` | `OhosActionBarButton.enabled` | 同组「逐按钮禁用不影响同栏其它按钮」 |
+| 核心操作栏 | 整体禁用 | `ActionBarStyle.enabled` | `OhosActionBarStyle.enabled` | **总开关**：背板与所有按钮一起失效（官方原文） |
+| 核心操作栏 | 悬浮提示 `hoverTips` | `ActionBarButton.hoverTips` | `OhosActionBarButton.tooltip` | 走 `Tooltip` |
+| 核心操作栏 | 默认模糊 `COMPONENT_REGULAR` | `ActionBarStyle.backgroundBlurStyle` | `OhosActionBarStyle.blurStyle` = `OhosLightMaterialLevel.regular` | **默认真开**（设计规范「组件背板默认带有模糊材质和投影」）；墨屏退化实色 + 1vp 描边，`blurStrategy: disabled` 同路径 |
+| 核心操作栏 | 间距 height/innerSpace/startSpace/endSpace/margin | `ActionBarStyle` | `OhosActionBarStyle` 五个字段 | 几何全部自拟 —— 三张资源表搜 `actionbar` **零命中**，293 行文档只列属性不给数值 |
+| 核心操作栏 | 模糊生效策略 | `blurStrategy`（`ADAPTIVE` 默认） | `OhosBlurStrategy` | `adaptive` 与 `enabled` 等同：Flutter 读不到系统性能档位，写清「读不到」而非假装做了自适应 |
+| 核心操作栏 | 无障碍文本 | `ActionBarButton.accessibilityText` | `OhosActionBarButton.accessibilityLabel` | `accessibilityDescription` / `accessibilityLevel` 无 Flutter 对应 |
 | 菜单 | 列表 | `Menu` | `showOhosMenu` | |
 | 菜单 | 宫格 | `Menu` | `showOhosMenu` | |
 | 菜单 | 子菜单 | `SubMenuExpandingMode` | ○ | |
@@ -168,13 +176,26 @@
 
 | 控件 | 官方形态 | 依据 | 本库实现 | 测试 |
 | --- | --- | --- | --- | --- |
-| 文本框 | 下划线（showUnderline，48vp） | `TextInput.showUnderline` | `OhosTextFieldVariant.underline` | |
-| 文本框 | 填充圆角 | 设计规范 | `OhosTextFieldVariant.filled` | |
-| 文本框 | 胶囊 | 设计规范 | `OhosTextFieldVariant.capsule` | |
-| 文本框 | 内联（TextContentStyle） | `TextInput.style` | ○ | |
-| 文本框 | 密码模式 | `InputType.Password` | ○ | |
-| 文本框 | 字数计数器（showCounter） | `TextInput.showCounter` | ○ | |
-| 文本框 | 错误态（showError） | `TextInput.showError` | `OhosTextField.errorText` | |
+| 文本框 | 下划线（showUnderline，48vp） | `TextInput.showUnderline` | `OhosTextFieldVariant.underline` | 实测高 48 = `padding_level6`(12) × 2 + `content_height`(24) |
+| 文本框 | 填充圆角 | 设计规范 | `OhosTextFieldVariant.filled` | 实测高 **40** = `padding_level4`(8) × 2 + 24；圆角 **20** |
+| 文本框 | 胶囊 | 设计规范 | `OhosTextFieldVariant.capsule` | 实测高 40；圆角走 `radiusCapsule`（官方无独立胶囊令牌） |
+| 文本框 | 内联（TextContentStyle） | `TextInput.style` | `OhosTextFieldVariant.inline` | 实测高 **24**（上下内边距 0）；圆角 4；左右 2 / 12 不对称 |
+| 文本框 | 密码模式 | `InputType.Password` | `OhosTextFieldObscurePassword` 一组字段 | 遮蔽 + 末尾 24vp 眼睛 + 40 命中区；容器高 **48**（`password_style_height`） |
+| 文本框 | 字数计数器（showCounter） | `TextInput.showCounter` | `OhosTextField.showCounter` + `OhosInputCounterOptions` | 四条件：showCounter + maxLength + 非内联非密码 + 过阈值；字号 10fp |
+| 文本框 | 错误态（showError） | `TextInput.showError` | `OhosTextField.errorText` | 描边 **1vp**（`textfield_error_border_width`）、字号 **12fp**、左对齐 |
+| 文本框 | 容器高 **40** / 内容高 **24** | `textfield_height` / `textfield_content_height` | `OhosTextFieldMetrics.height` / `.contentHeight` | ● 已对齐。**须开 `isDense`**，否则 `InputDecorator` 的 `kMinInteractiveDimension`(48) 兜底会无条件撑高 |
+| 文本框 | 填充内边距 **16 / 8** | `textfield_padding_horizontal`(→`padding_level8`) / `textfield_padding_vertical`(→`padding_level4`) | `paddingHorizontal` / `paddingVertical` | 已接进 `contentPadding`（原为自拟 14/14，实测高 52） |
+| 文本框 | 下划线内边距 **12 / 0** | `textfield_underline_padding_vertical`(→`padding_level6`) / `..._horizontal`(→`padding_level0`) | `underlinePaddingVertical` | 12 × 2 + 24 = 48 |
+| 文本框 | 容器圆角 **20** | `textfield_border_radius` → `corner_radius_level10` | `OhosTextFieldMetrics.containerRadius` | ● 已对齐（原取主题 `radiusMedium` = 16，差 4）。源码 `text_field_pattern.cpp` 的 `IsUnderlineMode() ? ZERO : borderRadius` 证明下划线形态显式归零 |
+| 文本框 | 内联圆角 **4** | `inline_radius_size` → `corner_radius_level2` | `inlineRadius` | 已对齐 |
+| 文本框 | 尾部图标 **24** / 命中区 **40** | `textfield_icon_size` / `textfield_icon_hot_zone_size` | `iconSize` / `iconHotZone` | 已对齐；须显式传空 `suffixIconConstraints`，否则被 Material 默认的 48×48 撑开 |
+| 文本框 | 计数器字号 **10fp** | `count_text_font_size` → `ohos_id_text_size_caption1` | `counterFontSize` | 已对齐 |
+
+> **文本框有两个令牌不进数据行，理由各不相同。**
+>
+> 1. **`border_radius_size`（12）是死令牌。** `textfield_theme.h` 里确有 `borderRadiusSize_` 成员和 `GetBorderRadiusSize()` 访问器（源码默认 20.0_vp，与 `pattern.json` 追到的 12 还不一致），但在 `components_ng/pattern/text_field/` 整个目录 grep `GetBorderRadiusSize` **零命中** —— 没有任何一处把它写进 renderContext。这跟搜索框的 `search_text_field_padding_left` 是同一类病：**表里有、没人读**。常量保留只为记录结论，矩阵不给它开行。
+> 2. **`error_text/error_underline` 这一族不算几何。** 它们是颜色令牌（`error_text_border_color` = `alert`），错误态的醒目靠**换色**而不是加宽描边 —— 所以 `errorBorder.width` 是 1 而不是 1.5（原实现写 1.5 会让错误框比聚焦框粗，视觉上跳动）。
+> 3. **`textfield_error_spacing`（8）暂不接。** 它决定错误提示与输入框的间距，但 Flutter 侧这个间距是 `InputDecorator.subtextGap`，M3 下写死 4、M2 下 8，没有 decoration 级入口。要对齐只能自己画错误提示（绕开 `decoration.errorText`），那会连带失去 `_hasError` 的自动推导 —— 收益不足以抵这次改动的风险，故本版记「未接」，常量保留在 `errorSpacing` 备后续。
 | 搜索框 | 取消按钮 / 清除按钮 | `Search` | `OhosSearchBar` | |
 | 搜索框 | 默认高 **40** / 圆角 **20** / 无描边（`search_border_width` = 0） | `search_default_height` / `search_text_field_border_radius` / `search_border_width` | ● 高与圆角已对齐；描边有意偏离 | 高度 40 ✓、圆角 `radiusSearch=20` 显式对齐 ✓（不再靠 `height/2` 巧合）；墨水屏补 1px 描边 |
 | 搜索框 | 放大镜图标 **16**，图标距左 **12**、距文字 **8** | `search_icon_size` / `search_icon_left_space` / `search_icon_right_space` | `OhosSearchBar` | 图标 16 ✓、左距 12 ✓、文字间距 8 ✓ |
@@ -244,8 +265,22 @@
 | 列表 | 主轴尺寸预估 | `ListItemGroup.childrenMainSize`（12+） | — | ArkUI 的 `List` 需预声明子项尺寸才能精确跳转，Flutter 的 `SliverList` 逐项测量，无对应需求 |
 | 列表 | 横滑操作 | `HdsListItem` / `SwipeAction` | `OhosListItem` | |
 | 列表 | 横滑删除触发类型 | `SwipeDeleteTriggerType`（6.1.0+） | ○ | |
-| 列表 | A 区前缀（8 种） | `PrefixItem` | ○ | |
-| 列表 | C 区后缀（19 种） | `SuffixItem` | ○ | |
+| 列表 | A 区前缀（**7 种**） | `PrefixItem` 一族：`PrefixImage` / `PrefixIcon` / `PrefixBadge` / `PrefixSwitch` / `PrefixToggleButton` / `PrefixButton` / `PrefixCustomBuilder` | `OhosListItemCardPrefix` | `^## Prefix` 共 10 条，扣掉基类 `PrefixItem`、`PrefixIconOptions`、`PrefixIconType` 两个类型定义 —— **上一版写「8 种」是把类型定义当形态数了**。本库收成「一个 Widget 槽位 + 两档尺寸」，理由同「C 区后缀」 |
+| 列表卡片 | A 区图标尺寸两档 | `IconSize.SMALL_ICON` / `SYSTEM_ICON` | `OhosListItemCardIconSize` | **16 / 24**，官方明文，也是全篇仅有的两处数字之一（另一处是穿戴设备 `PrefixImage` 固定 46×46，属 wearable 适配，不在本库范围） |
+| 列表卡片 | B 区三层文本**并列** | `primaryText` / `secondaryText` / `description` | `title` / `subtitle` / `description` | 三者是并列字段，**不是二选一** —— 官方示意代码三层同时出现。字阶按语义分 `bodyLarge` / `bodySmall` / `bodySmall` |
+| 列表卡片 | B 区主标题左右 Symbol | `primaryPrefixSymbol` / `primarySuffixSymbol` | `primaryPrefix` / `primarySuffix` | 官方要求传 `TextSymbolGlyph`，本库收 Widget，`Icon` 也能塞 |
+| 列表卡片 | B 区**副 Symbol**（各层左右，共 8 个） | `*PrefixSubSymbol` / `*SuffixSubSymbol` | ○ | 官方写明「仅在左侧第一个 Symbol 存在时才显示」，是给两层图标叠放留的位置；在 16vp 图标旁再叠一个只会挤成一团 |
+| 列表卡片 | B 区 `customBuilder` **优先级更高** | `TextItemOptions.customBuilder` | `contentBuilder` | 官方原话「优先级高于其它接口」：给了就整块替换 B 区，三层文本与主标题图标一起让位 |
+| 列表 | C 区后缀（**17 种**） | `SuffixItem` 一族：`Text` / `Image` / `LoadingProgress` / `Radio` / `Checkbox` / `Switch` / `Arrow` / `Badge` / `Button` / `Icon` / `SubIcon` / `Select` / `ToggleButton` / `BadgeAndArrow` / `TextAndArrow` / `ArrowIconText` / `CustomBuilder` | `OhosListItemCardSuffix` 9 具名构造器 + `custom` | `^## Suffix` 共 21 条，扣掉基类与 3 个 `*Options` = **17** —— 上一版写「19 种」同样把类型定义数了进去。落地 9 个「有明确形态依据」的，其余 7 个是组合型 / 需 Symbol 字体，用 `custom` 拼 `Row` 更直接 |
+| 列表卡片 | C 区后缀最大宽 | **官方无对应属性** | `suffixMaxWidth = 160` | 本库防呆值：防一个长文本后缀把 B 区挤到只剩几像素 |
+| 列表卡片 | 卡片高度 / 宽度 | `cardHeight` / `cardWidth` | `height` / `width` | 官方只写「Dimension，不支持 Percentage」，**不给默认值**。本库取 72 —— 这个数不能凭感觉：64 时三层文本溢出 6vp（见 `cardHeight` 的注释） |
+| 列表卡片 | 卡片底色 / 圆角 | `cardBackgroundColor` / `cardBorderRadius` | `backgroundColor` / `borderRadius` | 默认卡面色 `cardColor` + 圆角 24（与 `OhosListGroup` 分组卡片同曲率）。墨屏改描边：16 级灰里浅色底板与纸面分不开 |
+| 列表卡片 | 左右外边距 | `cardPrefixMargin` / `cardSuffixMargin` | `prefixMargin` / `suffixMargin` | 文档**只说明这两个属性存在、不给默认值**，本库取 12 与 `ohos_id_card_margin_start/end` 对齐 |
+| 列表卡片 | 悬浮态圆角 | `hoverBorderRadius` | ○ | Flutter 的点按反馈是水波纹 / `highlightColor`，没有「hover 时单独换圆角」的机制；墨屏还会把波纹退化成拖尾灰块，本库直接关掉 |
+| 列表卡片 | 点击回调 | `onClick` | `onTap` | `null` 时无点击反馈，与官方缺省一致 |
+| 列表卡片 | 启用开关 | `enable`（默认 `true`） | `enabled` | 禁用时**整块 40% 不透明 + `IgnorePointer`**，而不是逐元素换色 —— 三区分属不同色相，逐个换色会得到一块说不清哪里变了的区域 |
+| 列表卡片 | 卡片 Id | `cardId` | — | Flutter 侧用 `Widget.key` 表达同一诉求（稳定身份），语义不同不另立 API |
+| 列表卡片 | 无障碍播放 / 组合聚焦（6.1.0+） | `accessibilityOptions`（`isGroup` / `stateControllerId` / `actionControllerId`） | `semanticLabel` + 自动拼接 | 官方 6.1 起会自动把 A/C 区可点元素合成一次播报；本库用 `container: true` + `excludeSemantics: true` 把整行收成一个语义边界，**否则读屏会把拼好的标签与三行原文各念一遍**（实测过） |
 | 列表 | 列表项选中态 | `HdsListItem.isSelected`（6.1.0+） | ○ | |
 | 列表 | 预览菜单 | `menuStyle` / `menuBuilder`（6.1.0+） | ○ | |
 | 弹出框 | Tips | `TipsDialog` | ◐ | |
@@ -254,22 +289,22 @@
 | 弹出框 | Alert | `AlertDialog` | `OhosAlertDialog` | |
 | 弹出框 | Loading | `LoadingDialog` | ○ | |
 | 弹出框 | CustomContent | `CustomContentDialog` | `OhosAlertDialog.contentWidget` | |
-| 弹出框 | 自定义容器（圆角/边框/背板）**默认不可改** | `customStyle: false` → 圆角恒 **32vp**，背板色 `Transparent` | ○ | 想自定样式必须 `customStyle: true`，否则容器样式由系统定 |
-| 弹出框 | 宽度上限 **400vp** / 高度上限 `0.9×(窗口高−安全区)` | `width` / `height` 默认最大值 | ○ | 现有对话框没有这两个夹取，长内容会顶到屏幕边 |
-| 弹出框 | 栅格宽度 `gridCount`（8+） | `gridCount`（默认按窗口自适应） | ○ | 与上面的 400vp 上限是两条并存的约束 |
-| 弹出框 | 非模态（`isModal: false` 无遮罩、可点周围） | `isModal`（默认 true） | ○ | 现有只有一个模态行为 |
-| 弹出框 | 遮罩色/遮罩区域 | `maskColor`（默认 `0x33000000`）/ `maskRect` | ○ | 遮罩区域外事件可透传 |
+| 弹出框 | 自定义容器（圆角/边框/背板）**默认不可改** | `customStyle: false` → 圆角恒 **32vp**，背板色 `Transparent` | `OhosAlertDialog.customStyle` | `false` 时圆角 32（原为自拟的 28）；`true` 时**圆角归 0、背板透明、壳交出去**，不再补墨屏描边 |
+| 弹出框 | 宽度上限 **400vp** / 高度上限 `0.9×(窗口高−安全区)` | `width` / `height` 默认最大值 | `OhosDialogMetrics.maxWidth` / `.maxHeightFactor` | 400 是**上限不是固定值**：显式 `width: 800` 会被夹回 400；高度乘的是「窗口高 − 安全区」，PC 上要避让标题栏 |
+| 弹出框 | 栅格宽度 `gridCount`（8+） | `gridCount`（默认按窗口自适应） | `OhosAlertDialog.gridCount` | 按断点取 4/8/12 列算列宽；**超界回落到默认路径而不是夹到边界**（官方「异常值按默认值处理」），否则 999 会悄悄变成占满整屏 |
+| 弹出框 | 非模态（`isModal: false` 无遮罩、可点周围） | `isModal`（默认 true） | `OhosAlertDialog.isModal` | 直接构造时真非模态；**`showOhosDialog` 里只表达「不画遮罩」**，下层仍被 `ModalBarrier` 挡住 —— 已在 dartdoc 写明两档差异，不假装支持 |
+| 弹出框 | 遮罩色/遮罩区域 | `maskColor`（默认 `0x33000000`）/ `maskRect` | `OhosAlertDialog.maskColor` + `showOhosDialog(barrierColor:)` | 20% 黑，与 Material 的 `black54` 差一倍多；`maskRect` 记 `○`（事件透传按区域切开在 Flutter 需自定义 `HitTestBehavior` 分区，收益低） |
 | 弹出框 | 子窗口弹出（10+） | `showInSubWindow` / `displayModeInSubWindow` | ○ | 当前只能在本窗口内 |
 | 弹出框 | 悬停态（14+） | `enableHoverMode`（默认 false）/ `hoverModeArea` | ○ | 折叠屏半折场景 |
-| 弹出框 | 四段生命周期回调（19+） | `onWillAppear`→`onDidAppear`→`onWillDisappear`→`onDidDisappear` | ○ | 现有只有 `onDismiss` 一类 |
-| 弹出框 | 交互式关闭拦截（12+） | `onWillDismiss` + `DismissDialogAction.reason` | ○ | 可区分点击遮罩 / 侧滑 / back / ESC |
-| 半模态面板 | 底部弹窗（BOTTOM） | `SheetType.BOTTOM` | `showOhosBottomSheet` | |
-| 半模态面板 | 居中弹窗（CENTER） | `SheetType.CENTER` | ○ | 最小 320vp、最大窗口短边 90%；`LARGE`/`MEDIUM` 在此形态下无效（恒 560vp） |
-| 半模态面板 | 跟手弹窗（POPUP） | `SheetType.POPUP` | ○ | 面板不支持跟手滑动，下滑不关闭 |
-| 半模态面板 | 侧边弹窗（SIDE，20+） | `SheetType.SIDE` | ○ | 高度恒全屏、无 `detents`/`dragBar`；宽度 md 断点 1/2 窗口，>md 恒 400vp |
-| 半模态面板 | 全屏弹窗（CONTENT_COVER，20+） | `SheetType.CONTENT_COVER` | ○ | 无圆角/边框/阴影/标题/关闭按钮/蒙层；高度宽度恒全屏；仅侧滑关闭 |
-| 半模态面板 | 多挡位 `detents`（最多 3 挡） | `detents` / `detentSelection` | ○ | `detents` 生效时 `height` 失效、控制条自动出现；速度阈值 1000px/s、距离阈值 1/2 |
-| 半模态面板 | 宽度响应式默认形态 | `preferType` | ○ | <600vp 默认 BOTTOM；600–840 默认 CENTER；≥840 默认 POPUP |
+| 弹出框 | 四段生命周期回调（19+） | `onWillAppear`→`onDidAppear`→`onWillDisappear`→`onDidDisappear` | `OhosDialogLifecycle` | 顺序照官方；官方那条「入场动效被打断则 `onDidAppear` 不触发」用「首帧后 `mounted` 仍为真」近似 |
+| 弹出框 | 交互式关闭拦截（12+） | `onWillDismiss` + `DismissDialogAction.reason` | `onWillDismiss` + `OhosDismissDialogAction` | **不调 `dismiss()` 就不关**，与 Flutter「返回 false 才拦」相反；`OhosDismissReason` 只产 `pressBack` / `touchOutside` / `closeButton` 三个（`slideDown` / `slide` 官方注明仅半模态可用） |
+| 半模态面板 | 底部弹窗（BOTTOM） | `SheetType.BOTTOM` | `showOhosBottomSheet` | 只圆上面两角（官方「底部 2 个圆角即使设置也不生效」） |
+| 半模态面板 | 居中弹窗（CENTER） | `SheetType.CENTER` | `showOhosBottomSheet(type: center)` | 实测居中；默认宽 480vp、最小 320vp、最大窗口短边 90%；`LARGE`/`MEDIUM` 无效（恒 560vp） |
+| 半模态面板 | 跟手弹窗（POPUP） | `SheetType.POPUP` | `showOhosBottomSheet(type: popup)` | 同一版面板；面板不支持跟手滑动，下滑不关闭 |
+| 半模态面板 | 侧边弹窗（SIDE，20+） | `SheetType.SIDE` | `showOhosBottomSheet(type: side)` | 实测靠右、无控制条、高度恒全屏；宽度 md 断点 1/2 窗口，>md 恒 400vp |
+| 半模态面板 | 全屏弹窗（CONTENT_COVER，20+） | `SheetType.CONTENT_COVER` | `showOhosBottomSheet(type: contentCover)` | 实测无标题栏/无关闭按钮/无蒙层、宽高恒全屏 |
+| 半模态面板 | 多挡位 `detents`（最多 3 挡） | `detents` / `detentSelection` | `OhosSheetDetent` + `OhosSheetSpec.resolveDetent` | `detents` 生效时 `height` 失效（实测取首挡）；速度阈值 1000px/s、距离阈值 1/2；`SIDE`/`CONTENT_COVER` 忽略 |
+| 半模态面板 | 宽度响应式默认形态 | `preferType` | `OhosSheetSpec.defaultTypeFor` | <600vp 默认 BOTTOM；600–840 默认 CENTER；≥840 默认 POPUP |
 
 ---
 
@@ -277,12 +312,12 @@
 
 | 状态 | 数量 |
 | --- | --- |
-| 完整（本库实现列只写类名、不加符号） | 145 |
-| `◐` 部分实现 | 7 |
-| `○` 缺失 | 72 |
+| 完整（本库实现列只写类名、不加符号） | 204 |
+| `◐` 部分实现 | 4 |
+| `○` 缺失 | 44 |
 | `●` 有意偏离官方（偏离理由写在备注列） | 2 |
-| `—` 无需实现（平台能力差异） | 1 |
-| 数据行合计 | 227 |
+| `—` 无需实现（平台能力差异） | 2 |
+| 数据行合计 | 256 |
 
 复核方式（改完矩阵请重跑，别手抄数字）：
 
@@ -311,7 +346,85 @@ awk -F'|' '{s=$5; gsub(/^ +| +$/,"",s); print s}' /tmp/rows.txt \
 > 真实值是 62，而 `◐` 也不是 15 而是 9（本轮把搜索框 3 行、芯片 3 行的偏差修掉后少了 6）。
 > 教训：**统计命令也要验证「各类之和 == 行数」**，别只看某一类的值像不像。
 >
-> **本版：145 / 7 / 72 / 2 / 1，合计 227。** 相对上一版 219：容器类的「列表」由 **4 行拆成 11 行**（+7，另「平铺」与「横滑操作」原样保留）。逐条对：原「分组卡片（CARD）」「吸顶组头」两行 `○` 全部转完整，「列表项选中态」等四行未动；新增 7 行中 **6 行完整**（组头/组尾 builder、`space`、组内分割线、组卡片、项卡片、吸顶组头）、**1 行 `○`**（吸底组尾）、**1 行 `—`**（`childrenMainSize` 在 Flutter 无对应需求）。合计：完整 `139 + 6 = 145`、`○` `71 + 1 = 72`、`—` `0 + 1 = 1`、行数 `219 + 8 = 227`；`145 + 7 + 72 + 2 + 1 = 227` ✓（命令连跑两次一致）。
+> **本版：158 / 7 / 72 / 2 / 2，合计 241。** 相对上一版 227：列表卡片 `HdsListItemCard` 由 **2 行拆成 16 行**（+14）。那两行（「A 区前缀（8 种）」「C 区后缀（19 种）」）**不是转完整，是原数字就错** —— 见下面 ①。拆完的账：原 2 行 `○` 转完整（完整 +2、`○` −2），新增 14 行里 **11 行完整** + **2 行 `○`**（副 Symbol、`hoverBorderRadius`）+ **1 行 `—`**（`cardId`）。合计：完整 `145 + 2 + 11 = 158`、`○` `72 − 2 + 2 = 72`、`—` `1 + 1 = 2`、行数 `227 + 14 = 241`；`158 + 7 + 72 + 2 + 2 = 241` ✓（命令连跑三次一致）。
+>
+> 这一批只有一处判断来自文档，其余全是**「文档沉默」**，值得单独记：
+> ① **上一版「8 种 / 19 种」两个数字都是错的，而且错法相同**：把 `*Options` / `*Type` 这些**类型定义**也当成了形态。`^## Prefix` 清点得 10 条，扣掉基类 `PrefixItem`、`PrefixIconOptions`、`PrefixIconType` 是 **7**；`^## Suffix` 得 21 条，扣掉基类与 3 个 `*Options` 是 **17**。这条与仓库里已有的「别猜名字」是同一族错误 —— 那次是「按目录名推文件名」，这次是「按章节标题数列形态」。**清点必须逐条读定义句（「定义 Xxx 类，A 区…元素」），不能只数标题。**
+> ② **HDS 组件在资源表里查无此物**：`pattern.json` / `float_sys.json` / `float.json` 三张表搜 `list_item_card` / `listitem` / `hds` **全部零命中**。这与 `OhosListGroup` 那批（12/4/24 大多能指到令牌）是**相反的情形**：HDS 是闭源组件，几何不走资源令牌。全篇 1944 行只给了两处数字 —— `IconSize` 的 16 / 24，以及穿戴设备 `PrefixImage` 固定 46×46。所以 `OhosListItemCardMetrics` 里除这两个之外**每一个值都必须标注「文档未给，自拟」**，不能让后人误以为是官方默认值。
+> ③ **`cardHeight` 取 64 是错的，实测溢出 6vp**。这是「照抄常量前先算」的第二次翻车：`bodyLarge` = 16×1.5 = 24、`bodySmall` = 14×1.5 = 21，三层 + 两个 2vp 间距 = **70**，而 64 只够两行。算错的原因是把**字号当成了行高**。改用 72（70 + 2 呼吸），并加了一条用例钉住「三层同时出现不溢出」。
+> ④ **无障碍标签会念两遍**。`Semantics(label: ...)` 默认不是语义边界，实测节点标签是 `无线网络，已连接，信号强\n无线网络\n已连接\n信号强` —— 拼好的那句后面跟着三条子节点原文。加 `container: true` + `excludeSemantics: true` 才收成一个边界。官方 `accessibilityOptions` 的 `isGroup` 做的就是这件事，文档只说「组合聚焦播报」，没说「不加就会重复」。
+>
+> 一处**主动放弃**：**副 Symbol（8 个字段）标 `○`**。官方写明「仅在左侧第一个 Symbol 存在时才显示」，用途是两层图标叠放；本库主标题旁的图标只有 16vp，再叠一个必然挤成一团。**A 区 7 种 / C 区 17 种也没有逐一照搬成 7 + 17 个类**：ArkTS 单字段单类型才需要那么多子类，Flutter 的 `Widget` 本身就是共同类型，照搬只会得到一堆只装一个 Widget 的空壳。收成 `Prefix(child, size)` + `Suffix` 具名构造器（9 种，每种**强制**收自己需要的内容），`custom` 兜住其余组合型。
+>
+> **本版：168 / 7 / 69 / 2 / 2，合计 248。** 相对上一版 241：输入类 `OhosTextField` 由 **7 行拆成 14 行**（+7）。原 7 行里「内联 / 密码 / 计数器」三行是 `○`，本版全部转完整；新增的 7 行全部为完整，`●` 数量不变（2）。账：完整 `158 + 3 + 7 = 168`、`○` `72 − 3 = 69`、行数 `241 + 7 = 248`；`168 + 7 + 69 + 2 + 2 = 248` ✓（命令连跑三次一致）。
+>
+> 这一批最重要的是**把「令牌有值」和「令牌生效」分开验了**，结果发现自己踩的正是这个坑：
+> ① **填充形态实测渲染 52vp，官方 40**。`contentPadding` 是早前自拟的 `14/14`，而 `textfield_padding_horizontal/vertical` 的令牌值 16/8 从来没接上 —— 8 + 24 + 8 = 40 才对。改回令牌后仍不对（48），挖出第二层原因：`InputDecorator` 在 `isDense == false` 时把容器高夹到 `kMinInteractiveDimension`(48) 以上，**40 的规格被无障碍兜底无条件覆盖**。要拿到 40 必须显式开 `isDense`。这两层任何一层没查出来，都会得出「官方 40 做不到」的错误结论。
+> ② **`border_radius_size`(12) 是死令牌，`textfield_border_radius`(20) 才是容器圆角**。先前按名字猜成「12 是容器、20 是别的」，实测两个都对不上（代码里用的是主题的 `radiusMedium` = 16）。去读源码才定论：`text_field_pattern.cpp` 里 `auto radius = theme->GetBorderRadius();` 后面紧跟 `IsUnderlineMode() ? ZERO_BORDER_RADIUS_PROPERTY : borderRadius` —— 非下划线用 `textfield_border_radius`，下划线显式归零；而 `GetBorderRadiusSize()` 在整个 `text_field/` 目录**零调用方**。这与搜索框的 `search_text_field_padding_left` 是同一类：**表里有、没人读**。
+> ③ **密码形态的 48 不随底板变化**。`password_style_height` 是独立的容器高，只在「内边距恰好算成 48」的下划线形态上碰巧成立；填充底板上按内边距算是 40，必须单独加最小高度约束才符合官方。
+> ④ **本轮 7 条新用例全部量真实渲染尺寸**（`tester.getSize` / `decoration.isDense` / `errorBorder.width`），而不是像原来那条「几何令牌逐条可查」只断言常量字面值 —— 后者在 52vp 偏差存在时**依然全绿**，正是「常量写对了 ≠ 常量被用上了」。`textfield_error_spacing`(8) 这条路走不通（Flutter 侧是 `InputDecorator.subtextGap`，M3 写死 4、无 decoration 级入口），已明写「未接」而非假装实现。
+>
+> **本版：193 / 4 / 52 / 2 / 2，合计 253。** 相对上一版 189 / 4 / 54 / 2 / 2：底部页签由 **4 行改写成 6 行**（+2）。逐条对：「三档宽度」「渐变蒙层」两行由 `○` 转完整（`○` −2、完整 +2）；新增 2 行都是完整（`barSideMargin` 三档边距、悬浮栏 56vp 栏高）；迷你栏两行仍 `○`。账：完整 `189 + 2 + 2 = 193`、`○` `54 − 2 = 52`、行数 `251 + 2 = 253`；`193 + 4 + 52 + 2 + 2 = 253` ✓（命令连跑两次一致）。
+>
+> 这一版最值得记的是**一个归属错误，它改变了整项的落点**。三档宽度、`gradientMask`、迷你栏这三项原本都排进了「往 `OhosTabBar` 上加参数」，实际它们全部挂在 `barFloatingStyle` 之下 —— 也就是说描述的是**悬浮页签栏**这个本库此前没有的形态，而平铺栏的 `barWidth` 是单个 `Length`，与三档无关。证据是「只被谁引用」：`HdsBarWidthRangeOptions` 全文只出现在 `HdsTabsFloatingStyle.barWidth` 与 `HdsTabsMiniBar.miniBarWidth` 两处。**上一版是「都是 tabs 家族的，所以算在已有组件头上」——按类名归类，而不是按属性找宿主。**
+>
+> 同时纠正了上一版的一处「更正」：`gradientMask` 的默认值（`#CCF1F3F5` / `#99000000`，栏高 + 16vp）**本来就是对的**。上一版把它改成 `#CCFFFFFF` / `#CC000000` / +32vp，那是另一个 API `barBackgroundStyle` 的值。两者共用 `HdsTabsBackgroundStyle` 类型，但**按属性读默认值，不能按类型读** —— 同名类型被多处引用时，把一处默认值套到另一处，看起来像「查过文档」，实际是抹掉了一个真实存在的项。
+>
+> 规矩：**先跑命令，再拿命令输出反推逐条，推不通就说明有一行的归属判断错了**。本版第一次手推得到 `189 / 4 / 53`，与命令的 `54` 差 1，追下去发现「逐按钮阴影」被写在了合并行里记为完整 —— 它其实没做（`ShadowStyle.OUTER_DEFAULT_LG` 只有枚举名和序号 3，没有数值表），拆出来单独记 `○` 才对。
+>
+> 这段对账刻意保留了「先手推、再以命令为准」的过程，因为**手推账与命令输出不一致是常态而不是意外**——只要矩阵动过行，手推就会漏掉「一行拆两行」这种结构变化。规矩是：**先跑命令，再拿命令的输出反推逐条，推不通就说明有一行的归属判断错了**。上一版（操作栏那次）第一次手推得到 `189 / 4 / 53`，与命令的 `54` 差 1，追下去发现「阴影未做」那行被我写成完整（记在了合并行里）—— 拆出来单独记 `○` 才对，改完两边一致。
+>
+> **本版：204 / 4 / 44 / 2 / 2，合计 256。** 相对上一轮 198 / 4 / 50 / 2 / 2：半模态面板 6 行 `○` 转完整（`○` −6、完整 +6），行数不变。`204 + 4 + 44 + 2 + 2 = 256` ✓（命令连跑两次一致）。
+>
+> 这一版最该记住的是**「5 种形态」不是 5 种皮肤，而是 5 套能力矩阵**。上一版只有 BOTTOM 一种、且把「画什么」写死在渲染里（顶部一条描边、无条件画控制条、标题栏必出、圆角固定 `BorderRadius.vertical(top:)`）。加形态时若只换对齐方式，会在这四处同时出错：
+>
+> | 形态 | 圆角 | 蒙层 | 标题/关闭 | 控制条 | 挡位 | 宽高 |
+> | --- | --- | --- | --- | --- | --- | --- |
+> | BOTTOM | 仅上面两角 | 有 | 有 | 有 | 有 | 内容高 |
+> | CENTER | 四角 | 有 | 有 | 有 | 有 | 480 宽 / 夹取高 |
+> | POPUP | 四角 | 有 | 有 | 有 | 有 | 同上 |
+> | SIDE | 四角 | 有 | 有 | **无** | **无** | 固定宽 / 全屏高 |
+> | CONTENT_COVER | **无** | **无** | **无** | **无** | **无** | 全屏 |
+>
+> 三条容易写的判据：①**CENTER / POPUP 下 `MEDIUM`/`LARGE` 无效、恒 560vp**（写成「按 60% / 100% 算」看起来更合理，实际是错的）；②**挡位切换是速度优先**——速度过 1000px/s 直接按手速方向切挡、**不看距离**，写成「两个条件都要满足」会让快速轻扫失效；③`detents` 生效时 **`height` 直接失效**，不是「两者取小」。
+>
+> 另修一处真实偏差：圆角原实现是 **24vp**，官方 `SheetOptions.radius` 默认 **32vp**。24 是 `float.json` 里 `ohos_id_corner_radius_dialog`（**对话框**圆角）的值 —— 同一个「圆角」概念、数值都在 20–30 区间，拿错一个看起来完全合理。
+>
+> 上一轮记录（底部页签）：「折叠 / 展开」与「滚动联动」是两套机制，别合并成一个状态机 —— 前者是离散跳变（动效只是附庸），后者是连续位置（绑内容区滚动体，与折叠状态无关）。`bindScroller` 只挂只读监听、绝不 `hold()`（曾写成 `scroller.position.hold()`，会让内容区滚动卡住不动）；`applyMiniBarStyle` 状态没变时不通知；动效时长走 `policy.scaleMotion`，墨水屏返回 `Duration.zero` 直接定格。
+>
+> 这一版最该记住的是**官方在 440vp 处换了居中口径**，两条规则长得几乎一样、结论相反：
+>
+> > * 宽度 **小于 440vp**，且一展一折 →「页签栏和迷你栏将**整体**底部居中显示」
+> > * 宽度 **440–600vp**，且一展一折 →「**展开的**页签栏或迷你栏将底部居中显示」
+>
+> 读快一点就会把两条并成「都居中」，而它们的差别是**折叠者跟着走还是贴边**。已抽成纯函数 `OhosMiniBar.alignFor` 单独守（4 条用例），不塞进布局里 —— 塞进布局就只能靠量像素反推，看不出是哪条规则错了。
+>
+> 另有两个真实缺陷只有**真跑布局**才暴露：① 440–600vp 用 `Row + Spacer` 让折叠者占掉了流式布局的空间，展开者中心被推偏 28vp，「居中」在这里必须相对**容器**而不是相对兄弟节点；② 两个栏宽度各自独立算出，**合计可能超容器**（320vp 屏上 `200 + 8 + 220 = 428`），`Row` 不折行、静态分析不报错，example 溢出矩阵直接报 `RenderFlex overflowed by 68 pixels`。
+>
+> 上一版最该记住的是**「文档列了属性」与「文档给了数值」是两件事**。`HdsActionBar` 有 293 行参考文档、`ActionBarButton` 更列了 17 个属性，但**一个默认值数值都没有**；三张系统资源表（`pattern.json` / `float_sys.json` / `float.json`）搜 `actionbar` / `action_bar` **全部零命中**，连 `hds` 前缀都一个不存在；设计规范 `component_actionbar` 只有定性描述（「悬浮于页面底部」「默认带有模糊材质和投影」）。这与 `OhosListGroup`（12 / 4 / 24 大多能指到令牌）是**相反的情形**，与 `OhosListItemCard` 相同 —— 所以 `OhosActionBarMetrics` 里每个数都单独标了「自拟」，不能让后人误以为是官方默认值转述。**悬浮页签栏与迷你栏同型**：`minibar` / `mini_bar` / `hds` 在三张资源表里**零命中**（`floating` 有 18 条，但全是 `ohos_id_shadow_floating_sm_*` 这类通用阴影，与页签栏无关），迷你栏折叠态宽度 56 是**自拟** —— 官方只给了展开态的分档宽度（`miniBarWidth`），折叠态全文未给。
+>
+> 另有两处**靠文档正文而不是靠直觉**定下来的语义：① `startSpace` / `endSpace` 的说明里明写「水平排列时为左边框，竖直排列时为上边框」，所以竖直排列要把它们映射到 `top` / `bottom` —— 按名字固定成 left/right 是个很容易犯、且视觉上不易察觉的错。② `enabled` 是**总开关**而非背板开关，官方原文「`enabled=false` 则背板不启用并且所有按钮都不启用；`enabled=true` 时每个按钮可以单独设置」。两处都写了用例。
+>
+> 还有一个**因祸得福的发现**：改完操作栏跑 `example` 的溢出矩阵，`container` 页整片变红，报「Vertical viewport was given unbounded height」。根因不是操作栏 —— 是上一版（D-4/D-5）往 `container_page` 加的 `OhosListItemCardList`：它内部是 `ListView`，而 `DemoScaffold` 本身就是纵向 `ListView`，两个纵向视口嵌套。`shrinkWrap` 参数本来就有（默认 `false`），example 里没传。**上一版改完 example 没跑溢出矩阵**，这个错误被漏了整整一轮 —— 与「`flutter analyze` 看不见布局问题」是同一条教训的第三次出现。本次已补 `shrinkWrap: true` + `NeverScrollableScrollPhysics`。
+>
+> **上一版：175 / 7 / 62 / 2 / 2，合计 248。** 相对上一版 168 / 7 / 69 / 2 / 2：弹出框 7 行由 `○` 转完整（圆角/背板、宽高上限、`gridCount`、`isModal`、遮罩色、四段生命周期、`onWillDismiss`），行数不变、`○` 减 7、完整加 7。账：`168 + 7 = 175`、`69 − 7 = 62`、行数仍 248；`175 + 7 + 62 + 2 + 2 = 248` ✓（命令连跑三次一致）。
+>
+> 这一批有一条**实现 bug 是被测试抓出来的**，值得单独记：`Center(child: Stack(...))` 里的 `Positioned.fill` 遮罩**不会铺满全屏** —— `Center` 给子节点的是松约束，`Stack` 会收缩到弹窗那么大，于是「全屏遮罩」实际只有弹窗大小，点弹窗外面根本命中不到它。实测 `Positioned.fill` 那层量出来是 **179×124**（弹窗尺寸），不是 400×800。修法是外面套 `SizedBox.expand`。这个偏差 `flutter analyze` 完全看不出、静态阅读代码也很难发现——只有「点遮罩应该关」这条用例跑起来才暴露。
+>
+> 另有三处**测试自身写错了**，一并记下以免后人重犯：
+> ① **量错了对象**。第一版断言 `tester.getSize(find.byType(OhosAlertDialog)).width ≤ 400`，而根节点为了居中铺满整个约束（`Center`），量出来永远等于窗口宽 —— 断言恒真，是**假绿**。真实壳是那层 `ClipRRect`，改成量它才测得到东西。
+> ② **`setSurfaceSize` 不改 `MediaQuery`**。栅格用例设了 400×800 渲染面，但 `MediaQuery.sizeOf` 读到的仍是默认 **800×600**，于是断点判成 medium（8 列）、算出 179 而不是 180。栅格宽度是**按窗口宽算的**，窗口宽喂错，「碰巧接近」的断言证明不了公式对。改成同时设 `tester.view.physicalSize`。
+> ③ **嵌入式构造测不了路由关闭**。`onWillDismiss` 的 `dismiss()` 放行后由弹窗调 `Navigator.maybePop` 完成关闭，而嵌入式构造（只是 `Center` 里的一个 widget）没有可 pop 的路由 —— 那种场景下「关闭」得由持有它的父级负责。改用 `showOhosDialog` 才是这条链路的真实场景。
+>
+> **本版用例 649 条**（上版 617，+32：半模态形态规格 15 条 + 形态渲染 7 条 + 阶段 E 控制器与滚动联动 10 条）。
+
+> **本版用例 570 条**（上版 555，+15：`OhosAlertDialog`）。
+>
+> **本版用例 555 条**（上版 548，+7：填充/胶囊实测高度 1 + 下划线实测高度 1 + 密码跨底板 1 + 容器圆角 1 + 错误描边 1 + 错误字号 1 + `isDense` 1）。
+>
+> **本版用例 524 条**（上版 491，+33：`OhosListItemCard` 29 + `OhosListItemCardList` 4）。
+>
+> **上一版：145 / 7 / 72 / 2 / 1，合计 227。** 相对上一版 219：容器类的「列表」由 **4 行拆成 11 行**（+7，另「平铺」与「横滑操作」原样保留）。逐条对：原「分组卡片（CARD）」「吸顶组头」两行 `○` 全部转完整，「列表项选中态」等四行未动；新增 7 行中 **6 行完整**（组头/组尾 builder、`space`、组内分割线、组卡片、项卡片、吸顶组头）、**1 行 `○`**（吸底组尾）、**1 行 `—`**（`childrenMainSize` 在 Flutter 无对应需求）。合计：完整 `139 + 6 = 145`、`○` `71 + 1 = 72`、`—` `0 + 1 = 1`、行数 `219 + 8 = 227`；`145 + 7 + 72 + 2 + 1 = 227` ✓（命令连跑两次一致）。
 >
 > 这一批的三处判断值得记下来，因为它们都是「照文档做会错」：
 > ① **`sticky` 是 `List` 的属性，不是 `ListItemGroup` 的**。它写在 `ts-container-list.md` 的 `List` 属性章节，`StickyStyle` 枚举也在那一页 —— 这不是文档排版失误，是规格事实：一次管住列表内所有分组。据此把组件拆成 `OhosListGroup`（盒子）与 `OhosListGroupSliver`（sliver）两个类，`sticky` **只出现在后者**。盒子形态根本无处可吸（吸顶是 sliver 行为），传了会得到一个「传了但没反应」的开关，那比不支持更坏。粒度上本库逐组声明，官方整表一次 —— 逐组能表达的集合严格更大（每组可各选吸顶或不吸）。

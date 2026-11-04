@@ -13,8 +13,12 @@
 ### 1. 开源 ArkUI 组件 → OpenHarmony 文档仓库
 
 ```
-https://gitee.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts/<组件名>.md
+https://raw.gitcode.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts/<组件名>.md
 ```
+
+> 2026-11 起 OpenHarmony 各仓在 GitCode（`https://gitcode.com/openharmony/<仓>`）。raw 直链**必须**用 `raw.gitcode.com`：`gitcode.com/openharmony/docs/raw/...` 与 `.../-/raw/...` 都只返回一张 HTML 页面，**状态码仍是 200**，校验内容才知道拿错了。
+>
+> 旧 gitee 地址已于同批迁移：`docs` 仓的 raw 尚可访问（302 到 `raw.giteeusercontent`），但目录 API `api/v5/repos/.../contents` 已全线 `403 Rate Limit Exceeded`。本目录的抓取只依赖 raw，所以迁与不迁都能跑；但 `fetch_source.sh` 依赖目录 API 列真实文件名，那边是非迁不可。
 
 中文站参考页（`developer.huawei.com/consumer/cn/doc/harmonyos-references/*`）是 SPA，静态抓取只会拿到 404 页；页面里 `<link rel="alternate" type="text/markdown">` 指向的 `.md` 地址同样返回 404。所以改抓 OpenHarmony 仓库 —— 内容与官网同源，且自带完整的 ArkTS 示例代码（官网 SPA 渲染出来的就是这些）。
 

@@ -56,6 +56,7 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 | `Switch` / `Checkbox` / `Radio` | `OhosSwitch` / `OhosCheckbox` / `OhosRadio` |
 | `TextField` / `SearchBar` | `OhosTextField` / `OhosSearchBar` |
 | `NavigationBar` / `TabBar` | `OhosNavigationBar` / `OhosTabBar` |
+| 悬浮页签栏 / 迷你栏（`HdsTabs` 的 `barFloatingStyle`） | `OhosFloatingTabBar` / `OhosMiniBar` / `OhosMiniBarScaffold` |
 | `Slider` / `RatingBar` | `OhosSlider` / `OhosRatingBar` |
 | `AlertDialog` / `showDialog` | `OhosAlertDialog` / `showOhosDialog` |
 | `SnackBar` / `showMenu` | `OhosSnackBar` / `showOhosMenu` |
@@ -416,77 +417,84 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 
 ## 控件覆盖（对应官方「控件概览」42 控件）
 
+> **这张表按「官方形态」逐项勾选，不是只写类名。** 只写类名会掩盖一个事实：一个组件类对应官方几个形态、做了几个，从类名上完全看不出来 —— 例如 `showOhosBottomSheet` 一个函数覆盖官方 `bindSheet` 的 5 种 `SheetType`，而 `OhosGauge` 一个类覆盖数据可视化的 17 个形态项。完整形态清单与逐项状态见 [`doc/CONTROL-MATRIX.md`](doc/CONTROL-MATRIX.md)（当前 **256 行 / 完整 204**）。
+>
+> 标记：`✓` 已实现且有用例；`◐` 部分实现（备注写缺口）；`—` 平台差异无需实现。
+
 ### 导航类
 
-| 控件 | 实现 |
-| --- | --- |
-| 标题栏 | `OhosAppBar` |
-| 子页签 | `OhosTabBar` |
-| 底部页签 | `OhosNavigationBar` |
-| 导航点 | `OhosPageIndicator`（见 `ohos_swiper.dart`）|
-| 轮播 | `OhosSwiper` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 标题栏 | 普通 `✓` / MINI 小标题 56vp `✓` / FREE 滚动缩小 `○` / FULL 大标题 112·138vp `○` / MODAL 半模态 `○` / 底部自定义区 `○` / 可编辑 `○` / 动态模糊 `◐` | `OhosAppBar`（逐项缺口见矩阵）|
+| 子页签 | 文本 `✓` / 胶囊 `✓` / 分割线 3 模式 `✓` / 胶囊三段间距 `✓` / 默认选中首个 `✓` | `OhosTabBar` + `OhosChipGroup` |
+| 底部页签 | 平铺 `✓` / 悬浮 `✓` / 迷你栏 `✓` / 三档宽度 `✓` / 渐变蒙层 `✓` / 折叠动效与滚动联动 `✓` | `OhosNavigationBar`（平铺）/ `OhosFloatingTabBar`（悬浮）/ `OhosMiniBar` + `OhosTabsController`（迷你栏） |
+| 导航点 | 圆点 `✓` / 数字 `✓` / 箭头 `✓` / 超长显示 `○` / 蒙版 `○` / 按压放大 `○` / 任意位置 `○` / 逐项自定义 `○` | `OhosPageIndicator`（见 `ohos_swiper.dart`）|
+| 轮播 | 自动播放 `✓` / 指示器联动 `✓` | `OhosSwiper` |
 
 ### 展示类
 
-| 控件 | 实现 |
-| --- | --- |
-| 文本 / 子标题 | `OhosText`（`OhosTextLevel` 全字阶）/ `OhosSubheader` |
-| 图片 | `OhosImage`（支持选中描边）|
-| 分隔器 | `OhosDivider` |
-| 进度条 | `OhosProgressIndicator`（圆环 / 线性 / 胶囊 / 月相 `eclipse` / 刻度环 `scaleRing`）/ `OhosLoadingIndicator`（彗星拖尾）|
-| 新事件标记 | `OhosBadge`（数字 / 红点）|
-| 索引条 | `OhosAlphabetIndexer`（等高槽位 · 拖动放大镜 · `selectedIndex` 受控高亮 · `onSelectEnd`）|
-| 放大镜 | `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`（跟随手指的浮层，也可用于文本选择）|
-| 滚动条 | `OhosScrollbar` |
-| 即时反馈 / 即时操作 | `showOhosToast` / `showOhosSnackBar` |
-| 气泡提示 | `showOhosPopup` |
-| 数据可视化 | `OhosDataPanel` |
-| 二维码 | `OhosQrCode` |
-| 空白 | `OhosBlank` |
-| 文本时钟 | `OhosTextClock` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 文本 / 子标题 | 单行 / 多行 / 省略 `✓` / 跑马灯 `○` / 子标题 7 项 `✓` | `OhosText`（`OhosTextLevel`）/ `OhosSubheader` |
+| 图片 | 基础 `✓` | `OhosImage` |
+| 分隔器 | 横向 `✓` / 纵向 `✓` / `lineCap` `○` | `OhosDivider` |
+| 进度条 | 圆环 `✓` / 线性 `✓` / 胶囊 `✓` / 月相 `✓` / 刻度环 `✓` / 加载动效 `✓` | `OhosProgressIndicator` / `OhosLoadingIndicator`（彗星拖尾）|
+| 新事件标记 | 数字 `✓` / 红点 `✓` | `OhosBadge` |
+| 索引条 | 弹出气泡 `✓` | `OhosAlphabetIndexer` |
+| 放大镜 | 跟随手指浮层 `✓` / 文本选择复用 `✓` | `OhosMagnifier` / `OhosMagnifierController` |
+| 滚动条 | 有子节点 `✓` / 无子节点 `○` | `OhosScrollbar` |
+| 即时反馈 / 即时操作 | Toast `✓` / SnackBar `✓` | `showOhosToast` / `showOhosSnackBar` |
+| 气泡提示 | 气泡 `✓` / 自定义内容 `○` | `showOhosPopup` |
+| 数据可视化 | 17 个形态项全 `✓` | `OhosDataPanel` + `OhosGauge`（逐项见矩阵）|
+| 二维码 | 基础 `✓` | `OhosQrCode` |
+| 空白 | 基础 `✓` | `OhosBlank` |
+| 文本时钟 | 基础 `✓` | `OhosTextClock` |
 
 ### 操作类
 
-| 控件 | 实现 |
-| --- | --- |
-| 按钮 | `OhosButton`（filled / tonal / outlined / text / plain × 胶囊 / 圆角 / 圆形）|
-| 下拉按钮 | `OhosSelect` |
-| 状态按钮 | `OhosToggleButton` |
-| 操作块 | `OhosChip` |
-| 工具栏 | `OhosToolbar` |
-| 核心操作栏 | `OhosActionBar` |
-| 菜单 | `showOhosMenu`（列表 / 宫格）|
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 按钮 | 5 样式 × 3 形状 `✓` / 3 尺寸 `○` | `OhosButton`（filled / tonal / outlined / text / plain × 胶囊 / 圆角 / 圆形）|
+| 下拉按钮 | 基础 `✓` | `OhosSelect` |
+| 状态按钮 | 开关 `✓` / 勾选 `○` / 按钮 `✓` | `OhosToggleButton` |
+| 操作块 | 基础 NORMAL/SMALL `✓` / 逐项几何 `✓` / 可关闭 `✓` / 后缀图标 `✓` / 前图标 `✓` / 筛选型 `○` | `OhosChip`（默认无描边是 `●` 有意偏离，见矩阵）|
+| 工具栏 | 图标+文本 `✓` / ItemState `✓` / 激活项 `✓` / 几何 `✓` / 收纳更多 `✓` / 侧边距 `✓` / 自定义 slot `○` / 长按与无障碍 `○` | `OhosToolbar` |
+| 核心操作栏 | 起始组+主按钮+末尾组 `✓` / 15 项完整 / 逐按钮阴影 `○` | `OhosActionBar` |
+| 菜单 | 列表 `✓` / 宫格 `✓` / 子菜单 `○` | `showOhosMenu` |
 
 ### 输入类
 
-| 控件 | 实现 |
-| --- | --- |
-| 文本输入 | `OhosTextField`（正常 / 聚焦 / 错误态）|
-| 搜索框 | `OhosSearchBar` |
-| 数字加减 | `OhosCounter` |
-| 图案锁 | `OhosPatternLock` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 文本输入 | 下划线 `✓` / 填充 `✓` / 胶囊 `✓` / **内联** `✓` / 密码 `✓` / 计数器 `✓` / 错误态 `✓` / 逐项几何 7 条 `✓` | `OhosTextField` |
+| 密码输入 | 遮蔽 + 眼睛切换 `✓` / 尾部图标 24vp、命中区 40 `✓` / 容器高 48 `✓` | `OhosTextField(obscurePassword:)` |
+| 字数计数器 | 阈值 `✓` / 溢出高亮 `✓` / 字号 10fp `✓` | `OhosTextField(showCounter:)` + `OhosInputCounterOptions` |
+| 搜索框 | 6 项几何与按钮形态 `✓` / `autoDisable` `✓` | `OhosSearchBar`（默认高 40 / 圆角 20 是 `●` 有意偏离，见矩阵）|
+| 数字加减 | 数字 `✓` / 日期 `✓` / 日期几何 4 条 `✓` / 聚焦段反白 `✓` / 长按连续 `○` / 列表·紧凑·内联型 `○` | `OhosCounter` / `OhosDateCounter` |
+| 图案锁 | 基础 `✓` | `OhosPatternLock` |
 
 ### 选择类
 
-| 控件 | 实现 |
-| --- | --- |
-| 勾选框 / 单选按钮 / 开关 | `OhosCheckbox` / `OhosRadio` / `OhosSwitch` |
-| 评分条 | `OhosRatingBar`（支持半星）|
-| 滑动条 | `OhosSlider`（刻度 / 气泡数值）|
-| 选择器 | `showOhosPicker` |
-| 颜色选择器 | `OhosColorPicker` |
-| 分段按钮 | `OhosSegmentedButton` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 勾选框 / 单选按钮 / 开关 | 单个 `✓` / 全选组 `✓`（全选与半选）/ 圆形 `✓` / 自定义 indicator `✓` / 开关 `✓` | `OhosCheckbox` / `OhosRadio` / `OhosSwitch` |
+| 评分条 | 整星 / 半星 `✓` | `OhosRatingBar` |
+| 滑动条 | OutSet `✓` / InSet `✓` / NONE 无滑块 `✓` / 步点 `✓` / 前后缀 `✓` / 有效区间 `○` | `OhosSlider` |
+| 选择器 | 滚轮 `✓` / 时间日期 `✓` / 月历 `○` | `showOhosPicker`（月历见阶段 C 遗留）|
+| 颜色选择器 | 网格/光谱/滑块 `✓` / 收藏 `✓` / 不透明度 `○` / 屏幕取色 `○` / 色值输入 `○` | `OhosColorPicker` |
+| 分段按钮 | 4 项全 `✓` | `OhosSegmentedButton` |
 
 ### 容器类
 
-| 控件 | 实现 |
-| --- | --- |
-| 列表 / 列表项 | `OhosList` / `OhosListTile` |
-| 列表分组 | `OhosListGroup` / `OhosListGroupSliver`（卡片样式 · 组头组尾 · 吸顶组头）|
-| 卡片 | `OhosCard` |
-| 弹出框 | `OhosAlertDialog` / `showOhosDialog` |
-| 气泡提示 | `showOhosPopup` |
-| 半模态面板 | `showOhosBottomSheet` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 列表 / 列表项 | 平铺 `✓` / 分组+组头组尾 `✓` / 组内分割线 `✓` / 卡片样式 `✓` / 吸顶 `✓` / 横滑操作 `✓` / 吸底 `○` / 组头悬浮 `○` / 多列 `○` / 横滑删除类型 `○` / 选中态 `○` / 预览菜单 `○` | `OhosList` / `OhosListTile` |
+| 列表分组 | 卡片样式 `✓` / 组头组尾 `✓` / 吸顶组头 `✓` / 吸底组尾 `○` / 悬浮 `○` / 多列 `○` | `OhosListGroup` / `OhosListGroupSliver` |
+| 列表卡片 | A 区前缀 7 种 `✓` / B 区三层文本 `✓` / C 区后缀 17 种 `✓` / 几何与交互 `✓` / 副 Symbol `○` / 悬浮态圆角 `○` | `OhosListItemCard` / `OhosListItemCardList` |
+| 卡片 | 基础 `✓` / 可点击 `✓` | `OhosCard` |
+| 弹出框 | Confirm `✓` / Alert `✓` / CustomContent `✓` / 几何 6 条 `✓` / `onWillDismiss` `✓` / Tips `◐` / Select·Loading·子窗口·悬停 `○` | `OhosAlertDialog` / `showOhosDialog` |
+| 气泡提示 | 见「展示类」 | `showOhosPopup` |
+| 半模态面板 | BOTTOM `✓` / CENTER `✓` / POPUP `✓` / SIDE `✓` / CONTENT_COVER `✓` / `detents` 多挡位 `✓` / 响应式 `preferType` `✓` | `showOhosBottomSheet` |
 
 ## 设计语言实现（对齐官方设计规范）
 
@@ -1135,9 +1143,11 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 | 页面 | 截图 |
 | --- | --- |
 | 主页（7 大分类）| `doc/screenshots/gallery_home.png` |
-| 导航类：沉浸光感标题栏 / 下划线+胶囊子页签 / ChipGroup 多选 / 平铺+悬浮底部页签 | `doc/screenshots/gallery_navigation.png` |
-| 导航类（滚动）：胶囊子页签 / ChipGroup / 底部页签 | `doc/screenshots/gallery_navigation_capsule.png` |
-| 导航类（滚动）：平铺式 + 悬浮式底部页签 | `doc/screenshots/gallery_navigation_bottom.png` |
+| 导航类：沉浸光感标题栏 / 状态栏内边距 / 标题栏对齐 | `doc/screenshots/gallery_navigation.png` |
+| 导航类（滚动）：下划线子页签 | `doc/screenshots/gallery_navigation_capsule.png` |
+| 导航类（滚动）：胶囊子页签 / ChipGroup 多选 | `doc/screenshots/gallery_navigation_bottom.png` |
+| 导航类（滚动）：悬浮页签栏 `OhosFloatingTabBar` 与其内容区 | `doc/screenshots/gallery_navigation_floating.png` |
+| 导航类（滚动）：迷你栏 `OhosMiniBar` 折叠/展开与布局切换 | `doc/screenshots/gallery_navigation_minibar.png` |
 | 布局与动效：栅格系统 / 响应式断点 / 沉浸光感 / 转场动效 | `doc/screenshots/gallery_layout_grid.png` |
 | 布局与动效（滚动）：沉浸光感 THIN/THICK 材质 | `doc/screenshots/gallery_layout_light.png` |
 | 布局与动效（滚动）：一镜到底共享元素 / 动效曲线对比 | `doc/screenshots/gallery_layout_motion.png` |

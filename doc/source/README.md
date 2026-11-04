@@ -12,18 +12,44 @@
 
 | 快照 | 回答 | 来源 |
 | --- | --- | --- |
-| `*.ets` | 源码里**硬编码**的部分 | `arkui_ace_engine/.../advanced_ui_component/<组件>/source/*.ets` |
-| `systemres/*.json` | **令牌**的真实值 | `global_system_resources/systemres/main/resources/base/element/` |
+| `*.ets` | 源码里**硬编码**的部分 | `raw.gitcode.com/openharmony/arkui_ace_engine/raw/master/advanced_ui_component/<组件>/source/*.ets` |
+| `systemres/*.json` | **令牌**的真实值 | `raw.gitcode.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element/` |
 
-硬编码的典型例子：
+> **仓址（2026-11 迁到 GitCode）。** 旧地址 `gitee.com/openharmony/arkui_ace_engine` 已作废，新仓 <https://gitcode.com/openharmony/arkui_ace_engine>。raw 直链必须走 `raw.gitcode.com`（`gitcode.com/<仓>/raw/...` 与 `/-/raw/...` 只返回 HTML，状态码仍 200）；目录列表 API 走 `api.gitcode.com/api/v5/repos/.../contents/<路径>?ref=master`，与 raw 是**不同 host**。迁移的动因是旧 gitee 的目录 API 已全线 403 —— 而那正是本层「不猜文件名」的依据。
 
-- `chipgroup.ets` 第 46 行：`chipGroupSpace: { itemSpace: 8, startSpace: 16, endSpace: 16 }`
-- `chipgroup.ets` 第 63 行：`enum ChipGroupHeight { NORMAL = 36, SMALL = 28 }`
-- `chip.ets` 第 371 行：`minLabelWidth: 12`、`borderWidth: 2`、`normalMargin 6/6`、`breakPoint MinWidth 128 / Sm 156 / Md 280 / Lg 400`
-- `editabletitlebar.ets` 第 68 行：`DEFAULT_TITLE_BAR_HEIGHT = 56`、`TITLE 20vp`、`SUBTITLE 14vp`、主副标题 0.65/0.35
+> **这张表的分工是按「上游当时怎么写的」分的，不是按「来源」分的。** 原来的说法是「源码答硬编码、资源表答令牌」，但 2026-11 上游连续把常量从字面值改成了令牌引用——
+>
+> - `subheader.ets`：`const OPERATE_ITEM_LENGTH = lazyInit<number>(() => getResourceValue('sys.float.subheader_right_arrow_height'));`
+> - `chip.ets`：高度从 `enum ChipGroupHeight { NORMAL = 36, SMALL = 28 }` 改成 `size: ChipSize.NORMAL` + `normalHeight: $r('sys.float.chip_normal_height')`
+>
+> —— 源码现在**只说令牌名**，真值要回到 `float.json` / `float_sys.json` 查。所以判据应当是：**同一个字段，哪个来源给得出具体数值就用哪个**，给不出就换另一边。本轮已核对这两批令牌的真值与原来的硬编码**完全一致**（subheader 24 / 12 / 28 / 24vp，chip 36vp / 28lpx），故既有实现无需改动。
+
+硬编码的典型例子（**只给查找键，不给行号** —— 见下方说明）：
+
+- `chipgroup.ets`：`chipGroupSpace: { itemSpace: 8, startSpace: 16, endSpace: 16 }`
+- `chip.ets`：`minLabelWidth: 12`、`borderWidth: 2`、`normalMargin 6/6`、`breakPoint MinWidth 128 / Sm 156 / Md 280 / Lg 400`
+- `editabletitlebar.ets`：`DEFAULT_TITLE_BAR_HEIGHT = 56`、`TITLE 20vp`、`SUBTITLE 14vp`、主副标题 0.65/0.35
 - `counter.ets`：`COUNTER_LIST_HEIGHT = '48vp'`、`COUNTER_LIST_PADDING = 12`、`INLINE_BUTTON_ICON 24vp × 12vp`
 
-`subheader.ets` 还额外带一张 `RESOURCE_CACHE_MAP`，把「令牌 → 真实值」直接列出来（28 条），见下节。
+> **别再往这里抄行号。** 上一版写的是「`chipgroup.ets` 第 46 行」「第 63 行」「`chip.ets` 第 371 行」——2026-11 一次同步之后三个全部失效：`chipGroupSpace` 往后漂了几行，`chip.ets` 那批常量则落在文件三分之一处而非三百七十行。这批 `.ets` 本就**随上游漂移、不入库**，行号是最脆弱的定位方式。要定位就直接搜键名：
+>
+> ```zsh
+> python3 -c "import io,sys;t=io.open('doc/source/chip.ets',encoding='utf-8').read().split(chr(10));[print(i+1,l.strip()) for i,l in enumerate(t) if 'minLabelWidth' in l]"
+> ```
+
+> **`chipgroup.ets` 的 `enum ChipGroupHeight { NORMAL = 36, SMALL = 28 }` 已不存在（2026-11）。** 上游把尺寸枚举并进了 `chip.ets` 的 `ChipSize`，而且它的成员是**字符串**：
+>
+> ```
+> export enum ChipSize { NORMAL = "NORMAL", SMALL = "SMALL" }
+> ```
+>
+> 真值不再由枚举给出，而是 `chip.ets` 通过 `normalHeight: $r('sys.float.chip_normal_height')` / `smallHeight: $r('sys.float.chip_small_height')` 引用令牌。**注意这与 `subheader.ets` 是同一类变化**：源码从「写字面值」退化为「只写令牌名」，所以源码层现在对 chip 高度**不再答得出具体数值**，必须回 `float_sys.json` 查（36vp / 28lpx），本库实现的 36/28 经核对**未变**。
+
+`subheader.ets` 还额外带一张 `RESOURCE_CACHE_MAP`，把「令牌 → 真实值」直接列出来。**旧版记的是「28 条」，2026-11 已增至 59 个不同的 `sys.float.*` 键**（其中 47 个是 `subheader_*`，其余是 `padding_levelN` / `margin_*` / `corner_radius_level4` 这类基础令牌）。数字会随上游漂移，用到时现数：
+
+```zsh
+python3 -c "import io,re;t=io.open('doc/source/subheader.ets',encoding='utf-8').read();print(len(set(re.findall(r'sys\.float\.([a-z0-9_]+)',t))))"
+```
 
 ## 令牌的真值：`resources.index` 不是黑盒
 
@@ -32,10 +58,21 @@
 `resources.index` 确实是二进制（RestoolV2），`strings` 只读得到令牌名。但它就是 `global_system_resources` 仓库里三份 JSON 的编译产物，**直接读源文件即可**：
 
 ```
-systemres/main/resources/base/element/pattern.json    9701 行  组件主题模式（ohos_search_pattern 等）
-systemres/main/resources/base/element/float.json      4112 行  基础设计令牌：ohos_id_* / padding_levelN / 字阶
-systemres/main/resources/base/element/float_sys.json  1816 行  组件级令牌：chip_* / search_* / subheader_*
+systemres/main/resources/base/element/pattern.json    67 条   组件主题模式（ohos_search_pattern 等）
+systemres/main/resources/base/element/float.json    1080 条  基础设计令牌：ohos_id_* / padding_levelN / 字阶
+systemres/main/resources/base/element/float_sys.json  507 条  组件级令牌：chip_* / search_* / subheader_*
 ```
+
+> **数条目，别数行。** 上一版这里记的是行数（9701 / 4112 / 1816），2026-11 一次同步后变成 10208 / 4324 / 2032 —— 行数取决于上游的格式化，`float_sys.json` 甚至因为多了空行和缩进写法就涨了 12%，条目数却只增不减、更适合作为基准。现数：
+>
+> ```zsh
+> python3 -c "
+> import json, glob
+> for p in sorted(glob.glob('doc/source/systemres/*.json')):
+>     d = json.load(open(p, encoding='utf-8'))
+>     print(p, len(d[list(d)[0]]), '条')
+> "
+> ```
 
 **两张 float 表合起来才构成 `sys.float` 命名空间，键不重复，别以为一张是另一张的索引**（我第一版就这么以为，写错了）：
 
