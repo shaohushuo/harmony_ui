@@ -80,6 +80,25 @@ class NavigationPage extends StatelessWidget {
           child: _NavigationBarDemo(type: OhosNavigationBarType.float),
         ),
         const DemoSection(
+          title: '悬浮页签栏 OhosFloatingTabBar（HdsTabs barFloatingStyle）',
+          description:
+              '与上面两个不是一回事：官方把「三档宽度 smallWidth/mediumWidth/largeWidth」、'
+              '蒙层 gradientMask、迷你栏 miniBar 全部挂在 barFloatingStyle 之下，而它有三个'
+              '前置条件（栏叠在内容之上、非纵向、位于底部）。所以这是另一个组件，不是'
+              'OhosNavigationBar 加参数。下面切换 2 / 4 个页签对照宽度规则：≤3 个按 76vp×n+8vp，'
+              '≥4 个直接取上限 328vp（不是「算完再夹」，4 个按 76×4+8=312 还没到上限）。',
+          child: _FloatingTabBarDemo(),
+        ),
+        const DemoSection(
+          title: '迷你栏 OhosMiniBar（HdsTabs miniBar）',
+          description:
+              '迷你栏与页签栏是两个独立的栏：官方给了它自己的宽度分档、自己的折叠展开状态'
+              '（HdsBarStyle）和自己的动效回调。居中规则在 440vp 处换口径 —— 小于 440vp 时'
+              '「两个栏整体居中」，440–600vp 时「只有展开的那个居中」，折叠者贴边。'
+              '下面点迷你栏可折叠/展开，并实时显示当前生效的是哪一条。',
+          child: _MiniBarDemo(),
+        ),
+        const DemoSection(
           title: '导航点 OhosPageIndicator',
           description: '配合轮播 OhosSwiper 使用，支持自动播放。',
           child: _SwiperDemo(),
@@ -273,23 +292,35 @@ class _LightAppBarDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    // 这层彩色渐变是**示例自绘的「壁纸」**，用来让上方的毛玻璃有东西可模糊。
+    //
+    // 墨水屏上必须跟着退化：灰阶屏画蓝色渐变等于把一块纯色块塞进白纸里，
+    // 且文字是白色 → 白字压深底、对比关系整块反过来。这里改成
+    // 「浅灰底 + 深色文字」，与真实壁纸在墨屏上的表现一致。
+    final bool colorful = theme.policy.allowsGlow;
     return Stack(
       children: <Widget>[
         Container(
           height: 160,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[Color(0xFF0A59F7), Color(0xFF61CFBE)],
-            ),
+          decoration: BoxDecoration(
+            gradient: colorful
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: <Color>[Color(0xFF0A59F7), Color(0xFF61CFBE)],
+                  )
+                : null,
+            color: colorful ? null : theme.policy.quantize(theme.cardColor),
           ),
           child: Center(
             child: Text(
               '沉浸光感\nULTRA_THIN + 渐变模糊',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.85),
+                color: colorful
+                    ? Colors.white.withValues(alpha: 0.85)
+                    : theme.textPrimaryColor,
                 fontWeight: FontWeight.w600,
                 height: 1.5,
               ),
@@ -390,6 +421,256 @@ class _AppBarSlotsDemoState extends State<_AppBarSlotsDemo>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FloatingTabBarDemo extends StatefulWidget {
+  const _FloatingTabBarDemo();
+
+  @override
+  State<_FloatingTabBarDemo> createState() => _FloatingTabBarDemoState();
+}
+
+class _FloatingTabBarDemoState extends State<_FloatingTabBarDemo> {
+  static const List<OhosFloatingTabItem> _pool = <OhosFloatingTabItem>[
+    OhosFloatingTabItem(
+      icon: Icon(Icons.home_outlined),
+      label: '首页',
+      badge: '2',
+    ),
+    OhosFloatingTabItem(icon: Icon(Icons.search), label: '搜索'),
+    OhosFloatingTabItem(icon: Icon(Icons.star_border), label: '收藏'),
+    OhosFloatingTabItem(icon: Icon(Icons.person_outline), label: '我的'),
+  ];
+
+  int _count = 3;
+  int _selected = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // 高度必须给死：栏用 `Positioned` 贴在底部，父级若纵向无界，
+        // 栏就没有「底」可贴（报 unbounded height）。
+        SizedBox(
+          height: 180,
+          child: OhosFloatingTabScaffold(
+            bar: OhosFloatingTabBar(
+              items: _pool.take(_count).toList(),
+              selectedIndex: _selected.clamp(0, _count - 1),
+              onSelected: (int i) => setState(() => _selected = i),
+            ),
+            child: ColoredBox(
+              // 内容区故意用一块深色，好让蒙层与模糊背板读得出来。
+              color: theme.policy.quantize(theme.cardColor),
+              child: Center(
+                child: Text(
+                  '内容区（栏叠在它上面，不占布局高度）',
+                  style: TextStyle(color: theme.textSecondaryColor),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            const Text('页签个数：'),
+            for (final int n in <int>[2, 3, 4])
+              OhosChip(
+                label: Text('$n'),
+                selected: _count == n,
+                onPressed: () => setState(() {
+                  _count = n;
+                  _selected = _selected.clamp(0, n - 1);
+                }),
+              ),
+            const SizedBox(width: 12),
+            // 把期望宽度写出来，省得读者自己按 76n+8 算。
+            Text(
+              _count >= 4
+                  ? '4 个以上取上限 328vp'
+                  : '${76 * _count + 8}vp（76×$_count+8）',
+              style: TextStyle(color: theme.textTertiaryColor, fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniBarDemo extends StatefulWidget {
+  const _MiniBarDemo();
+
+  @override
+  State<_MiniBarDemo> createState() => _MiniBarDemoState();
+}
+
+class _MiniBarDemoState extends State<_MiniBarDemo> {
+  // 状态全部由控制器持有 —— 折叠/展开是一次离散跳变，动画只是它的附庸。
+  final OhosTabsController _controller = OhosTabsController();
+  OhosBarLayoutMode _mode = OhosBarLayoutMode.horizontal;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    // 演示容器的实际宽度决定居中规则：<440vp 整体居中，440–600vp 只有
+    // 展开者居中。把当前生效的规则直接写出来，读者不用自己推。
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final OhosMiniBarAlign align = OhosMiniBar.alignFor(
+          containerWidth: width,
+          miniStyle: _controller.miniBarStyle,
+          tabStyle: _controller.tabBarStyle,
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SizedBox(
+              height: 150,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: OhosMiniBarScaffold(
+                  controller: _controller,
+                  layoutMode: _mode,
+                  miniBar: OhosMiniBar(
+                    controller: _controller,
+                    widthRange: const OhosTabsBarWidthRange(
+                      smallWidth: 200,
+                      mediumWidth: 260,
+                      largeWidth: 320,
+                    ),
+                    builder: (BuildContext context) => GestureDetector(
+                      // 点迷你栏 → 走控制器的折叠/展开，动画由 `applyXxx` 带出。
+                      onTap: () => _controller.applyMiniBarStyle(
+                        _controller.miniBarStyle == OhosBarStyle.expand
+                            ? OhosBarStyle.collapse
+                            : OhosBarStyle.expand,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          const Icon(Icons.alarm, size: 24),
+                          if (_controller.miniBarStyle == OhosBarStyle.expand)
+                            ...<Widget>[
+                              const SizedBox(width: 12),
+                              const Text('点击折叠'),
+                              const SizedBox(width: 12),
+                              const Icon(Icons.pause_circle_outline, size: 24),
+                            ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  tabBar: OhosFloatingTabBar(
+                    items: const <OhosFloatingTabItem>[
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.home_outlined),
+                        label: '首页',
+                      ),
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.search),
+                        label: '搜索',
+                      ),
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.person_outline),
+                        label: '我的',
+                      ),
+                    ],
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                    widthRange: const OhosTabsBarWidthRange(
+                      smallWidth: 220,
+                      mediumWidth: 260,
+                      largeWidth: 300,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                const Text('迷你栏：'),
+                for (final OhosBarStyle s in OhosBarStyle.values)
+                  OhosChip(
+                    label: Text(s == OhosBarStyle.expand ? '展开' : '折叠'),
+                    selected: _controller.miniBarStyle == s,
+                    onPressed: () => _controller.applyMiniBarStyle(s),
+                  ),
+                const SizedBox(width: 12),
+                const Text('页签栏：'),
+                for (final OhosBarStyle s in OhosBarStyle.values)
+                  OhosChip(
+                    label: Text(s == OhosBarStyle.expand ? '展开' : '折叠'),
+                    selected: _controller.tabBarStyle == s,
+                    onPressed: () => _controller.applyTabBarStyle(s),
+                  ),
+                const SizedBox(width: 12),
+                // 这三个是演示自己的切换控件，用库里的 [OhosChip] 而不是 Material
+                // 的 `ChoiceChip` —— 与 `kit_page.dart` 里同类按钮保持同一理由：
+                // `ChoiceChip` 的选中态是 M3 的 `secondaryContainer`（默认淡紫
+                // `#E8DEF8`），这个颜色**不跟 OhosThemeData 走**，于是在墨水屏下
+                // 整块仍是淡紫（实测通道差 29），彩色就这么漏进了灰阶截图。
+                // `OhosChip` 在墨屏走「留白 + 1px 实线 + 对勾」，灰阶下分得清。
+                OhosChip(
+                  label: Text(
+                    _mode == OhosBarLayoutMode.horizontal ? '左右布局' : '上下布局',
+                  ),
+                  selected: _mode == OhosBarLayoutMode.vertical,
+                  onPressed: () => setState(
+                    () => _mode = _mode == OhosBarLayoutMode.vertical
+                        ? OhosBarLayoutMode.horizontal
+                        : OhosBarLayoutMode.vertical,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 官方两个方法各收一个「动效模式」参数：滚动触发 vs 点击触发。
+                // 这里并排放出来，顺带演示两者都会改风格状态。
+                OhosChip(
+                  label: const Text('applyHide'),
+                  onPressed: () =>
+                      _controller.applyHideAnimation(OhosAnimationMode.click),
+                ),
+                OhosChip(
+                  label: const Text('applyShow'),
+                  onPressed: () =>
+                      _controller.applyShowAnimation(OhosAnimationMode.scroll),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '容器 ${width.toStringAsFixed(0)}vp → '
+              '${align == OhosMiniBarAlign.group ? '整体底部居中' : '只有展开者居中'}',
+              style: TextStyle(color: theme.textTertiaryColor, fontSize: 12),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -552,16 +833,19 @@ class _SwiperDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _swiper(
+          theme: theme,
           type: OhosPageIndicatorType.dot,
           arrows: false,
           autoPlay: true,
         ),
         const SizedBox(height: 16),
         _swiper(
+          theme: theme,
           type: OhosPageIndicatorType.digit,
           arrows: true,
           autoPlay: false,
@@ -573,6 +857,7 @@ class _SwiperDemo extends StatelessWidget {
   }
 
   Widget _swiper({
+    required OhosThemeData theme,
     required OhosPageIndicatorType type,
     required bool arrows,
     required bool autoPlay,
@@ -585,22 +870,33 @@ class _SwiperDemo extends StatelessWidget {
       clipRadius: BorderRadius.circular(16),
       children: <Widget>[
         for (int i = 0; i < _colors.length; i++)
-          Container(
-            decoration: BoxDecoration(
-              color: _colors[i],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '页面 ${i + 1}',
-              style: TextStyle(
-                color: _colors[i] == const Color(0xFFF7CE00)
-                    ? Colors.black87
-                    : Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          Builder(
+            builder: (BuildContext context) {
+              // 这四块纯色只是**给轮播占位用的自绘内容**，不是组件在表达状态。
+              // 墨屏上留着蓝/绿/黄/粉 = 一页里出现四条彩色带，「墨水屏」图集
+              // 自证不了主题生效；走 policy.quantize 后彩屏原样返回、墨屏取灰。
+              //
+              // 字色不能跟着写死的表判断（黄 → 黑字那条规则在量化后不成立）：
+              // 量化结果是哪一档灰由纸面决定，只能对着**结果**算亮度。
+              final Color pageColor = theme.policy.quantize(_colors[i]);
+              return Container(
+                decoration: BoxDecoration(
+                  color: pageColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '页面 ${i + 1}',
+                  style: TextStyle(
+                    color: pageColor.computeLuminance() > 0.5
+                        ? Colors.black87
+                        : Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            },
           ),
       ],
     );

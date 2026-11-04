@@ -90,24 +90,75 @@ class ActionPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '核心操作栏 OhosActionBar',
-          description: '左侧次级操作 + 右侧主操作。',
+          description: '两端按钮组 + 居中主按钮，背板默认带模糊材质。',
           child: DemoCard(
             padding: EdgeInsets.zero,
             child: OhosActionBar(
-              primaryLabel: '确认支付',
-              onPrimaryPressed: _noop,
-              secondaryActions: <Widget>[
-                OhosButton(
+              startButtons: <OhosActionBarButton>[
+                OhosActionBarButton(
+                  icon: Icon(Icons.schedule_rounded),
+                  tooltip: '稍后',
                   onPressed: _noop,
-                  style: OhosButtonStyle.text,
-                  child: Text('稍后'),
                 ),
-                OhosButton(
+                OhosActionBarButton(
+                  icon: Icon(Icons.confirmation_number_outlined),
+                  tooltip: '优惠券',
                   onPressed: _noop,
-                  style: OhosButtonStyle.text,
-                  child: Text('优惠券'),
                 ),
               ],
+              endButtons: <OhosActionBarButton>[
+                OhosActionBarButton(
+                  icon: Icon(Icons.mic_none_rounded),
+                  tooltip: '语音',
+                  onPressed: _noop,
+                ),
+              ],
+              primaryButton: OhosActionBarButton(
+                icon: Icon(Icons.check_rounded),
+                tooltip: '确认支付',
+                onPressed: _noop,
+              ),
+            ),
+          ),
+        ),
+        const DemoSection(
+          title: '操作栏：竖直排列 + 整体禁用',
+          description:
+              'isHorizontal: false 时 startSpace / endSpace 落到上下边框；'
+              'style.enabled 是总开关，背板与所有按钮一起失效。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            // 竖直排列的操作栏高度由按钮数量决定（无界），必须给一个明确的
+            // 高度容器包住 —— 直接塞进纵向 ListView 会得到
+            // 「Vertical viewport was given unbounded height」。
+            child: SizedBox(
+              height: 240,
+              child: Center(
+                child: OhosActionBar(
+                  isExpand: true,
+                  startButtons: <OhosActionBarButton>[
+                    OhosActionBarButton(
+                      icon: Icon(Icons.share_rounded),
+                      tooltip: '分享（禁用）',
+                      enabled: false,
+                      onPressed: _noop,
+                    ),
+                  ],
+                  endButtons: <OhosActionBarButton>[
+                    OhosActionBarButton(
+                      icon: Icon(Icons.bookmark_border_rounded),
+                      tooltip: '收藏',
+                      onPressed: _noop,
+                    ),
+                  ],
+                  primaryButton: OhosActionBarButton(
+                    icon: Icon(Icons.send_rounded),
+                    tooltip: '发送',
+                    onPressed: _noop,
+                  ),
+                  style: OhosActionBarStyle(enabled: false, isHorizontal: false),
+                ),
+              ),
             ),
           ),
         ),

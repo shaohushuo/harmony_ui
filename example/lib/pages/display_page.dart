@@ -6,6 +6,7 @@ import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import '../demo_frame.dart';
+import '../ink_color_data.dart';
 import 'demo_scaffold.dart';
 
 /// 展示类：文本 / 子标题 / 分隔器 / 进度条 / 索引条 / 滚动条 / 徽标 /
@@ -732,7 +733,10 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
           ),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
+        // 这条色带是**取色器的数据源**：观感上它就该是十二个真彩块，
+        // 量化成灰之后「拖到紫色报 #8B7FE8」这件事就演示不了了。
+        InkColorData(
+          child: GestureDetector(
           key: _stripKey,
           onHorizontalDragStart: _onDragStart,
           onHorizontalDragUpdate: _onDragUpdate,
@@ -763,6 +767,7 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
               ),
             ),
           ),
+          ),
         ),
       ],
     );
@@ -792,13 +797,17 @@ class _HexBubble extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              color: swatch.color,
-              shape: BoxShape.circle,
-              border: Border.all(color: demoFrameColor(theme)),
+          // 泡泡里的色点是**被报出的那个色值本身**，和旁边那行 `#0A59F7`
+          // 同属数据：量化成灰之后，泡泡会显示「灰圆点 + #0A59F7」，自相矛盾。
+          InkColorData(
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: swatch.color,
+                shape: BoxShape.circle,
+                border: Border.all(color: demoFrameColor(theme)),
+              ),
             ),
           ),
           const SizedBox(width: 8),
