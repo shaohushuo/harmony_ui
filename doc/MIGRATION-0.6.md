@@ -12,7 +12,7 @@
 | 2 | `OhosDataPanel` | 语义调换，旧用法改名 `OhosStatGrid` | ✅ | — |
 | 3 | `OhosToolbarItem` | `selected: bool` → `state: 枚举` | ✅ | ✅ |
 | 4 | `OhosAlertDialog` | `borderRadius` 参数移除（28 → 固定 32） | ✅ | ✅ |
-| 5 | `OhosSubheader` | `padding` 移除、`title` 不再必填 | ✅ | ✅ |
+| 5 | `OhosSubheader` | `padding` 移除（报错）、`title` 改为可选（不报错） | ✅（仅 `padding`） | ✅ |
 | 6 | `OhosProgressIndicatorVariant` | 枚举成员 `circular` → `ring` | ✅ | — |
 | 7 | `OhosChipGroup` | 不传选中项时默认选中第 0 颗 | — | ✅ |
 

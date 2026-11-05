@@ -104,6 +104,20 @@ fvm flutter pub add harmony_ui \
 #       ref: main
 ```
 
+## 升级
+
+从 0.5.x 升到 0.6.0 有 **7 处破坏性变更**（`OhosActionBar` / `OhosDataPanel` /
+`OhosToolbarItem` / `OhosAlertDialog` / `OhosSubheader` /
+`OhosProgressIndicatorVariant` / `OhosChipGroup`），逐条迁移写法见
+[`doc/MIGRATION-0.6.md`](doc/MIGRATION-0.6.md)，完整变更史见 [`CHANGELOG.md`](CHANGELOG.md)。
+
+大部分破坏会在 `flutter analyze` 阶段直接报错，照着改即可。**三处不报错**，
+升级后要自己确认：
+
+- `OhosAlertDialog` 的圆角从 28 变成固定 32（删掉 `borderRadius` 实参不报错，但视觉上大 4vp）
+- `OhosChipGroup` 不传选中项时，现在默认选中第 0 颗（旧版一个都不选）
+- `OhosSubheader` 的 `title` 不再是必填 —— 这只是放宽，旧代码不会因此报错，但三者全空时会命中 `assert`
+
 ## 快速开始
 
 > **沉浸式布局**：`OhosAppBar` 默认 `primary: true`，会自己吃掉
