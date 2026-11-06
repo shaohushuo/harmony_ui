@@ -13,7 +13,17 @@ Widget naming and APIs are aligned with Flutter's built-in `Material*` / `Cupert
 
 ## Installation
 
-Add the git dependency in `pubspec.yaml`:
+Pick either of the two ways below.
+
+**Option 1: Add the published pub package**
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
+  harmony_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
+```
+
+**Option 2: Add the git dependency of this repository**
 
 ```yaml
 dependencies:

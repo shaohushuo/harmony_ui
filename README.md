@@ -84,23 +84,30 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 
 ## 安装
 
-### 通过 pub.dev（发布后）
+两种方式任选其一。
 
-```bash
-fvm flutter pub add harmony_ui
+### 方式一：添加 pub 上的包
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
 ```
 
-### 通过 Git（当前推荐）
+```bash
+fvm flutter pub get
+```
+
+### 方式二：通过 Git 引用本仓库
 
 ```bash
 fvm flutter pub add harmony_ui \
-  --git-url git@github.com:shaohushuo/harmony_ui.git
+  --git-url https://atomgit.com/oh-flutter/harmony_ui.git
 
 # 或直接在 pubspec.yaml 中声明
 # dependencies:
 #   harmony_ui:
 #     git:
-#       url: https://github.com/shaohushuo/harmony_ui.git
+#       url: https://atomgit.com/oh-flutter/harmony_ui.git
 #       ref: main
 ```
 

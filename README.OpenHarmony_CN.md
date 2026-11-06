@@ -13,7 +13,17 @@
 
 ## 下载安装
 
-`pubspec.yaml` 中添加 git 依赖：
+两种方式任选其一。
+
+**方式一：添加 pub 上的包**
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
+  harmony_icons: ^0.1.0   # 可选，配套 HarmonyOS Symbol 字体图标
+```
+
+**方式二：通过 Git 引用本仓库**
 
 ```yaml
 dependencies:
