@@ -374,11 +374,7 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
                   // 挪进去会让分隔线也跟着抖。
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: _controller,
-                    builder: (
-                      BuildContext context,
-                      TextEditingValue value,
-                      _,
-                    ) {
+                    builder: (BuildContext context, TextEditingValue value, _) {
                       // 只有开了 autoDisable 且确实为空才置灰；`enabled: false`
                       // （整栏禁用）优先，两者对按钮的效果都是不可点 + 灰字。
                       final bool empty =
@@ -400,7 +396,7 @@ class _OhosSearchBarState extends State<OhosSearchBar> {
                           // 的文档兜底值；真正生效的是 `search_font_size_API16`
                           // → `Body_M` = 14fp（theme 里 API18 起覆盖）。
                           textStyle: const TextStyle(fontSize: 14),
-                      // `search_button_text_padding` = 14 —— 文字的左右内边距。
+                          // `search_button_text_padding` = 14 —— 文字的左右内边距。
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           // 按钮高 = 栏高 - 2*searchButtonSpace，即 40 - 4 = 36。
                           // 用 fixedSize 而不是 minimumSize，是因为官方连字号放大

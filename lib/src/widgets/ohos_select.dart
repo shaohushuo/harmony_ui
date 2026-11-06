@@ -129,15 +129,16 @@ class OhosSelect<T> extends StatelessWidget {
   /// overlay's origin, so the menu appears at the button's position.
   RelativeRect _menuPosition(BuildContext context) {
     final RenderBox? box = context.findRenderObject() as RenderBox?;
-    final RenderBox? overlay = Overlay.maybeOf(
-      context,
-      rootOverlay: true,
-    )?.context.findRenderObject() as RenderBox?;
+    final RenderBox? overlay =
+        Overlay.maybeOf(context, rootOverlay: true)?.context.findRenderObject()
+            as RenderBox?;
     if (box == null || overlay == null || !box.hasSize) {
       return RelativeRect.fromLTRB(0, 0, 0, 0);
     }
     final Offset topLeft = box.localToGlobal(Offset.zero);
-    final Offset bottomRight = box.localToGlobal(box.size.bottomRight(Offset.zero));
+    final Offset bottomRight = box.localToGlobal(
+      box.size.bottomRight(Offset.zero),
+    );
     final double gap = 4;
     return RelativeRect.fromLTRB(
       topLeft.dx,

@@ -104,11 +104,7 @@ void main() {
         final OhosThemeData resolved = controller.resolveTheme(
           systemBrightness: Brightness.dark,
         );
-        expect(
-          resolved,
-          controller.themeData,
-          reason: '$mode 不该被系统亮度改写',
-        );
+        expect(resolved, controller.themeData, reason: '$mode 不该被系统亮度改写');
       }
     });
 
@@ -185,9 +181,7 @@ void main() {
       final OhosThemeController controller = OhosThemeController(
         initialMode: OhosThemeMode.system,
       );
-      await tester.pumpWidget(
-        hostBrightness(Brightness.dark, app(controller)),
-      );
+      await tester.pumpWidget(hostBrightness(Brightness.dark, app(controller)));
       await tester.pumpAndSettle();
 
       expect(find.text('dark'), findsOneWidget);
@@ -206,8 +200,7 @@ void main() {
     });
 
     // 这是「跟随系统」的核心验收：系统切深色，界面自动翻，用户什么都没点。
-    testWidgets('系统亮度变化后主题自动跟着翻，且不抛 build 期异常',
-        (WidgetTester tester) async {
+    testWidgets('系统亮度变化后主题自动跟着翻，且不抛 build 期异常', (WidgetTester tester) async {
       final OhosThemeController controller = OhosThemeController(
         initialMode: OhosThemeMode.system,
       );
@@ -226,7 +219,8 @@ void main() {
       expect(
         tester.takeException(),
         isNull,
-        reason: '在 build 里 notifyListeners 会抛 '
+        reason:
+            '在 build 里 notifyListeners 会抛 '
             'setState() or markNeedsBuild() called during build',
       );
 
@@ -237,8 +231,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Material 主题同步跟随，Scaffold 不会闪错色',
-        (WidgetTester tester) async {
+    testWidgets('Material 主题同步跟随，Scaffold 不会闪错色', (WidgetTester tester) async {
       final OhosThemeController controller = OhosThemeController(
         initialMode: OhosThemeMode.system,
       );
@@ -279,8 +272,7 @@ void main() {
       expect(find.text('dark'), findsOneWidget);
     });
 
-    testWidgets('切到墨水屏后，系统亮度变化不会把墨屏改掉',
-        (WidgetTester tester) async {
+    testWidgets('切到墨水屏后，系统亮度变化不会把墨屏改掉', (WidgetTester tester) async {
       final OhosThemeController controller = OhosThemeController(
         initialMode: OhosThemeMode.system,
       );
@@ -366,7 +358,8 @@ void main() {
       expect(
         offenders,
         isEmpty,
-        reason: '组件按主题类型分支会让「新增一种屏」变成改 52 个文件：\n'
+        reason:
+            '组件按主题类型分支会让「新增一种屏」变成改 52 个文件：\n'
             '${offenders.join('\n')}',
       );
     });

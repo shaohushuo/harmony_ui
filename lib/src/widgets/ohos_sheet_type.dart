@@ -191,7 +191,12 @@ abstract final class OhosSheetSpec {
     if (raw == null) {
       return null;
     }
-    return clampHeight(height: raw, type: type, viewportHeight: viewportHeight, shortSide: shortSide);
+    return clampHeight(
+      height: raw,
+      type: type,
+      viewportHeight: viewportHeight,
+      shortSide: shortSide,
+    );
   }
 
   /// CENTER / POPUP 的高度夹取：最小 320vp、最大窗口短边 90%。

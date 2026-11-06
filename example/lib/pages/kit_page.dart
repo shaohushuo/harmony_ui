@@ -16,7 +16,8 @@ class KitPage extends StatelessWidget {
       children: const <Widget>[
         DemoSection(
           title: '点光源效果 OhosLightSource / OhosIlluminated',
-          description: '点击中心按钮，切换受光类型：NONE / BORDER / CONTENT / BORDER_CONTENT / 羽化描边。',
+          description:
+              '点击中心按钮，切换受光类型：NONE / BORDER / CONTENT / BORDER_CONTENT / 羽化描边。',
           child: _PointLightDemo(),
         ),
         DemoSection(
@@ -224,7 +225,8 @@ class _PointLightDemoState extends State<_PointLightDemo> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: theme.emphasizeSecondaryColor ??
+          color:
+              theme.emphasizeSecondaryColor ??
               theme.highlightColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
         ),
@@ -267,7 +269,10 @@ class _PressShadowDemo extends StatelessWidget {
             ),
             child: const Text(
               'BLEND_WHITE',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -286,7 +291,10 @@ class _PressShadowDemo extends StatelessWidget {
             ),
             child: const Text(
               'BLEND_GRADIENT',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -352,7 +360,8 @@ class _SideBarDemoState extends State<_SideBarDemo> {
           height: 300,
           child: OhosSideBar(
             isShowSideBar: _showSideBar,
-            onIsShowSideBarChanged: (bool v) => setState(() => _showSideBar = v),
+            onIsShowSideBarChanged: (bool v) =>
+                setState(() => _showSideBar = v),
             overlay: true,
             contentAreaMask: false,
             width: 230,
@@ -389,7 +398,11 @@ class _SwipeListDemo extends StatefulWidget {
 }
 
 class _SwipeListDemoState extends State<_SwipeListDemo> {
-  final List<String> _rows = <String>['Primary Text 1', 'Primary Text 2', 'Primary Text 3'];
+  final List<String> _rows = <String>[
+    'Primary Text 1',
+    'Primary Text 2',
+    'Primary Text 3',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -437,7 +450,10 @@ class _SwipeListDemoState extends State<_SwipeListDemo> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.drive_file_move_rounded, color: theme.textSecondaryColor),
+                    Icon(
+                      Icons.drive_file_move_rounded,
+                      color: theme.textSecondaryColor,
+                    ),
                     const SizedBox(width: 12),
                     // 窄屏下长条目名要省略，不能撑破整行
                     Expanded(
@@ -448,7 +464,10 @@ class _SwipeListDemoState extends State<_SwipeListDemo> {
                         style: theme.typography.bodyMedium,
                       ),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: theme.textTertiaryColor),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.textTertiaryColor,
+                    ),
                   ],
                 ),
               ),
@@ -457,7 +476,9 @@ class _SwipeListDemoState extends State<_SwipeListDemo> {
         if (_rows.isEmpty)
           Text(
             '列表已清空（第 3 行整划删除）',
-            style: theme.typography.bodySmall?.copyWith(color: theme.textSecondaryColor),
+            style: theme.typography.bodySmall?.copyWith(
+              color: theme.textSecondaryColor,
+            ),
           ),
       ],
     );
@@ -559,17 +580,18 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
               spacing: 8,
               runSpacing: 8,
               children: <Widget>[
-                for (final OhosTabBarDividerMode mode in OhosTabBarDividerMode.values)
+                for (final OhosTabBarDividerMode mode
+                    in OhosTabBarDividerMode.values)
                   OhosChip(
-                    label: Text(
-                      switch (mode) {
-                        OhosTabBarDividerMode.visible => '常显',
-                        OhosTabBarDividerMode.none => '常隐',
-                        OhosTabBarDividerMode.followScroll => '跟手',
-                      },
-                    ),
+                    label: Text(switch (mode) {
+                      OhosTabBarDividerMode.visible => '常显',
+                      OhosTabBarDividerMode.none => '常隐',
+                      OhosTabBarDividerMode.followScroll => '跟手',
+                    }),
                     selected: _mode == mode,
-                    icon: _mode == mode ? const Icon(Icons.check_rounded) : null,
+                    icon: _mode == mode
+                        ? const Icon(Icons.check_rounded)
+                        : null,
                     onPressed: () => setState(() => _mode = mode),
                   ),
               ],
@@ -584,28 +606,31 @@ class _TabDividerDemoState extends State<_TabDividerDemo> {
               // 跟手分割线要盯「当前页」的滚动位置：切页后换成那一页的 controller。
               Builder(
                 builder: (BuildContext tabContext) {
-                  final TabController controller =
-                      DefaultTabController.of(tabContext);
+                  final TabController controller = DefaultTabController.of(
+                    tabContext,
+                  );
                   return AnimatedBuilder(
                     animation: controller,
-                    builder: (BuildContext context, Widget? child) => OhosTabBar(
-                      tabs: const <Widget>[
-                        Tab(text: '推荐'),
-                        Tab(text: '关注'),
-                        Tab(text: '热榜'),
-                      ],
-                      divider: OhosTabBarDividerOptions(mode: _mode),
-                      scrollController:
-                          _mode == OhosTabBarDividerMode.followScroll
-                          ? _scrollers[controller.index]
-                          : null,
-                    ),
+                    builder: (BuildContext context, Widget? child) =>
+                        OhosTabBar(
+                          tabs: const <Widget>[
+                            Tab(text: '推荐'),
+                            Tab(text: '关注'),
+                            Tab(text: '热榜'),
+                          ],
+                          divider: OhosTabBarDividerOptions(mode: _mode),
+                          scrollController:
+                              _mode == OhosTabBarDividerMode.followScroll
+                              ? _scrollers[controller.index]
+                              : null,
+                        ),
                   );
                 },
               ),
               Container(
                 height: 180,
-                color: theme.compBackgroundGrayColor ??
+                color:
+                    theme.compBackgroundGrayColor ??
                     theme.textPrimaryColor.withValues(alpha: 0.06),
                 child: TabBarView(
                   children: <Widget>[
@@ -711,10 +736,11 @@ class _ColorPickerKitDemoState extends State<_ColorPickerKitDemo> {
               OhosColorPickerTab.sliders,
             ],
             favoriteColors: _favorites,
-            onFavoritesChanged: (List<Color> c) =>
-                setState(() => _favorites
-                  ..clear()
-                  ..addAll(c)),
+            onFavoritesChanged: (List<Color> c) => setState(
+              () => _favorites
+                ..clear()
+                ..addAll(c),
+            ),
           ),
         ],
       ),
@@ -764,8 +790,9 @@ class _BlurAppBarDemoState extends State<_BlurAppBarDemo> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0A59F7)
-                            .withValues(alpha: 0.10 + (i % 3) * 0.06),
+                        color: const Color(
+                          0xFF0A59F7,
+                        ).withValues(alpha: 0.10 + (i % 3) * 0.06),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       alignment: Alignment.centerLeft,
@@ -812,7 +839,8 @@ class _ExpandableActionBarDemo extends StatefulWidget {
   const _ExpandableActionBarDemo();
 
   @override
-  State<_ExpandableActionBarDemo> createState() => _ExpandableActionBarDemoState();
+  State<_ExpandableActionBarDemo> createState() =>
+      _ExpandableActionBarDemoState();
 }
 
 class _ExpandableActionBarDemoState extends State<_ExpandableActionBarDemo> {
@@ -877,17 +905,26 @@ class _LayeredIconDemo extends StatelessWidget {
         OhosLayeredIcon(
           size: 56,
           background: theme.highlightColor.withValues(alpha: 0.12),
-          foreground: Icon(Icons.photo_camera_outlined, color: theme.highlightColor),
+          foreground: Icon(
+            Icons.photo_camera_outlined,
+            color: theme.highlightColor,
+          ),
         ),
         OhosLayeredIcon(
           size: 56,
           background: const Color(0xFF27B440).withValues(alpha: 0.12),
-          foreground: const Icon(Icons.videocam_outlined, color: Color(0xFF27B440)),
+          foreground: const Icon(
+            Icons.videocam_outlined,
+            color: Color(0xFF27B440),
+          ),
         ),
         OhosLayeredIcon(
           size: 56,
           background: const Color(0xFFED6F21).withValues(alpha: 0.12),
-          foreground: const Icon(Icons.music_note_rounded, color: Color(0xFFED6F21)),
+          foreground: const Icon(
+            Icons.music_note_rounded,
+            color: Color(0xFFED6F21),
+          ),
           borderColor: theme.dividerColor,
         ),
         OhosLayeredIcon(

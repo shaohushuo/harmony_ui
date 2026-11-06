@@ -228,10 +228,7 @@ class OhosListGroup extends StatelessWidget {
         horizontal: OhosListGroupMetrics.cardMargin,
       ),
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: radius,
-        ),
+        decoration: BoxDecoration(color: theme.cardColor, borderRadius: radius),
         child: Padding(
           padding: const EdgeInsets.all(OhosListGroupMetrics.cardPadding),
           child: body,
@@ -292,10 +289,20 @@ class OhosListGroup extends StatelessWidget {
 /// 官方没给组头内边距的令牌 —— 示例里组头自己 `padding(10)` 全包。这里给一组
 /// 通栏用的 16/8：左右与列表内容边距对齐，上下留出与行之间的呼吸。调用方要
 /// 官方示例那种「整块色带」的效果，传 `EdgeInsets.zero` 并在组头内部自己上色。
-const EdgeInsets kOhosListGroupHeaderPadding = EdgeInsets.fromLTRB(16, 12, 16, 8);
+const EdgeInsets kOhosListGroupHeaderPadding = EdgeInsets.fromLTRB(
+  16,
+  12,
+  16,
+  8,
+);
 
 /// 组尾的默认内边距。
-const EdgeInsets kOhosListGroupFooterPadding = EdgeInsets.fromLTRB(16, 8, 16, 12);
+const EdgeInsets kOhosListGroupFooterPadding = EdgeInsets.fromLTRB(
+  16,
+  8,
+  16,
+  12,
+);
 
 /// 列表分组的 sliver 形态，用在 [CustomScrollView] 里。
 ///
@@ -327,7 +334,8 @@ class OhosListGroupSliver extends StatelessWidget {
   final OhosListStickyStyle sticky;
 
   bool get _stickyHeader =>
-      sticky == OhosListStickyStyle.header || sticky == OhosListStickyStyle.both;
+      sticky == OhosListStickyStyle.header ||
+      sticky == OhosListStickyStyle.both;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +364,10 @@ class OhosListGroupSliver extends StatelessWidget {
           horizontal: OhosListGroupMetrics.cardMargin,
         ),
         sliver: DecoratedSliver(
-          decoration: BoxDecoration(color: theme.cardColor, borderRadius: radius),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: radius,
+          ),
           sliver: SliverPadding(
             padding: const EdgeInsets.all(OhosListGroupMetrics.cardPadding),
             sliver: sliver,

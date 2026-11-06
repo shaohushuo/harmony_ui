@@ -150,9 +150,7 @@ class OhosRadio extends StatelessWidget {
               width: ohosStrokeWidth(context, 1),
             ),
           ),
-          child: value
-              ? Center(child: _indicatorContent(theme, plate))
-              : null,
+          child: value ? Center(child: _indicatorContent(theme, plate)) : null,
         ),
       ),
     );

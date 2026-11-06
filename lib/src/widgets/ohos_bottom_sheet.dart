@@ -54,10 +54,13 @@ Future<void> showOhosBottomSheet({
   // 调用点拿不到面板自己的约束 —— 与组件内部 `LayoutBuilder` 的判据不同，
   // 那处必须用约束宽度。两者各自正确，别互相套用。
   final double windowWidth = MediaQuery.sizeOf(context).width;
-  final OhosSheetType resolved = type ?? OhosSheetSpec.defaultTypeFor(windowWidth);
+  final OhosSheetType resolved =
+      type ?? OhosSheetSpec.defaultTypeFor(windowWidth);
 
   final double windowHeight = MediaQuery.sizeOf(context).height;
-  final double shortSide = windowWidth < windowHeight ? windowWidth : windowHeight;
+  final double shortSide = windowWidth < windowHeight
+      ? windowWidth
+      : windowHeight;
 
   switch (resolved) {
     case OhosSheetType.bottom:
@@ -145,7 +148,8 @@ Future<void> _showPanel({
       );
 
       // 三型的共同点：宽度与高度都不一样，所以外面套一层定位。
-      final double panelWidth = requestedWidth ??
+      final double panelWidth =
+          requestedWidth ??
           (type == OhosSheetType.center || type == OhosSheetType.popup
               ? OhosSheetSpec.centerDefaultWidth
               : windowWidth);
@@ -177,10 +181,7 @@ Future<void> _showPanel({
 
       if (type == OhosSheetType.bottom) {
         // BOTTOM 贴底、宽度占满。
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: sized,
-        );
+        return Align(alignment: Alignment.bottomCenter, child: sized);
       }
       // CENTER / POPUP 居中悬浮。
       return Center(child: sized);
@@ -239,14 +240,15 @@ Future<void> _showSide({
         ),
       );
     },
-    transitionBuilder: (BuildContext context, Animation<double> a, _, Widget child) {
-      // 官方：侧边「从右向左进入，原地向右退出」，不支持自定义转场。
-      final Animation<Offset> slide = Tween<Offset>(
-        begin: const Offset(1, 0),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic));
-      return SlideTransition(position: slide, child: child);
-    },
+    transitionBuilder:
+        (BuildContext context, Animation<double> a, _, Widget child) {
+          // 官方：侧边「从右向左进入，原地向右退出」，不支持自定义转场。
+          final Animation<Offset> slide = Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic));
+          return SlideTransition(position: slide, child: child);
+        },
   );
 }
 
@@ -275,13 +277,17 @@ Future<void> _showContentCover({
         ),
       );
     },
-    transitionBuilder: (BuildContext context, Animation<double> a, _, Widget child) {
-      final Animation<Offset> slide = Tween<Offset>(
-        begin: const Offset(0, 0.02),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic));
-      return SlideTransition(position: slide, child: FadeTransition(opacity: a, child: child));
-    },
+    transitionBuilder:
+        (BuildContext context, Animation<double> a, _, Widget child) {
+          final Animation<Offset> slide = Tween<Offset>(
+            begin: const Offset(0, 0.02),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic));
+          return SlideTransition(
+            position: slide,
+            child: FadeTransition(opacity: a, child: child),
+          );
+        },
   );
 }
 
@@ -397,11 +403,7 @@ Widget _shell({
       child: child,
     );
   }
-  return OhosLightMaterial(
-    level: level,
-    borderRadius: shape,
-    child: child,
-  );
+  return OhosLightMaterial(level: level, borderRadius: shape, child: child);
 }
 
 /// 按形态给圆角。

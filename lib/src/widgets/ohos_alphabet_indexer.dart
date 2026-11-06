@@ -354,7 +354,7 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
               _selectAt(d.localPosition.dy, slot);
               _updateMagnifier(d.globalPosition);
             },
-              onVerticalDragStart: (DragStartDetails d) => _startDrag(d, slot),
+            onVerticalDragStart: (DragStartDetails d) => _startDrag(d, slot),
             onVerticalDragEnd: (DragEndDetails _) => _finishDrag(),
             onVerticalDragCancel: _finishDrag,
             child: Column(

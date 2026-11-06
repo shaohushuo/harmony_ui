@@ -196,9 +196,8 @@ class OhosSubheader extends StatelessWidget {
   /// Derived from the fields, not a switch you set — ArkUI has no `type`
   /// parameter, and inventing one here would let callers claim a shape the
   /// renderer cannot honour.
-  OhosSubheaderType get type => _isDoubleLine
-      ? OhosSubheaderType.content
-      : OhosSubheaderType.list;
+  OhosSubheaderType get type =>
+      _isDoubleLine ? OhosSubheaderType.content : OhosSubheaderType.list;
 
   /// Two-line shape: both texts present and no icon taking over the leading
   /// slot (`getMinHeight()` checks `secondaryTitle && icon` **before**
@@ -380,7 +379,10 @@ class OhosSubheader extends StatelessWidget {
         : theme.highlightColor;
     return Padding(
       // 右侧总下边距也是 8：Row 本身 4 + 外面 4。两块都算在「右侧」头上。
-      padding: EdgeInsets.only(top: _contentPadding, bottom: _trailingExtraBottom),
+      padding: EdgeInsets.only(
+        top: _contentPadding,
+        bottom: _trailingExtraBottom,
+      ),
       child: InkWell(
         onTap: onTrailingTap,
         borderRadius: BorderRadius.circular(4),
@@ -404,9 +406,7 @@ class OhosSubheader extends StatelessWidget {
               const SizedBox(width: 2),
               IconTheme.merge(
                 data: IconThemeData(size: 16, color: color),
-                child:
-                    trailingIcon ??
-                    const Icon(Icons.chevron_right_rounded),
+                child: trailingIcon ?? const Icon(Icons.chevron_right_rounded),
               ),
             ],
           ],

@@ -270,10 +270,7 @@ class OhosThemeController extends ChangeNotifier {
   /// `useTheme(controller.resolveTheme(systemBrightness: ...))` 显式给值。
   set mode(OhosThemeMode value) {
     useTheme(
-      value.theme(
-        fontFamily: fontFamily,
-        systemBrightness: Brightness.light,
-      ),
+      value.theme(fontFamily: fontFamily, systemBrightness: Brightness.light),
       mode: value,
     );
   }
@@ -328,9 +325,7 @@ class OhosThemeController extends ChangeNotifier {
       // 这里读 [_lastColorTheme] 的亮度把 system 落成具体档位：那份数据就是
       // 进墨水屏那一刻实际显示的东西，也正是用户期望回来时看到的。
       _lastColorMode = _mode == OhosThemeMode.system
-          ? (_lastColorTheme.isDark
-                ? OhosThemeMode.dark
-                : OhosThemeMode.light)
+          ? (_lastColorTheme.isDark ? OhosThemeMode.dark : OhosThemeMode.light)
           : _mode;
       useTheme(
         OhosThemeData.ink(fontFamily: fontFamily),
@@ -345,10 +340,7 @@ class OhosThemeController extends ChangeNotifier {
       !value.isMonochrome,
       'setColorMode 只接受彩屏档位；切墨水屏请用 mode = ... 或 toggle()',
     );
-    setColorTheme(
-      value.theme(fontFamily: fontFamily),
-      mode: value,
-    );
+    setColorTheme(value.theme(fontFamily: fontFamily), mode: value);
   }
 
   /// 切到某个内置档位，自动判断它该记住还是不记住。

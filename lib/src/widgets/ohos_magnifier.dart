@@ -76,12 +76,7 @@ class OhosMagnifier extends StatelessWidget {
         );
     final Widget content =
         child ??
-        Text(
-          text!,
-          style: style,
-          maxLines: 1,
-          textAlign: TextAlign.center,
-        );
+        Text(text!, style: style, maxLines: 1, textAlign: TextAlign.center);
     // 气泡挂在根 `Overlay` 上，祖先链里没有 `Material`：`MaterialApp` 在这种
     // 位置把 `_errorTextStyle`（红字 mono + **黄色双下划线**）当
     // `DefaultTextStyle`。只覆盖字号/字重/颜色，`decoration` 和 `fontFamily`
@@ -106,11 +101,7 @@ class OhosMagnifier extends StatelessWidget {
         borderRadius: radius,
         // 用描边的主题靠实线划边界（墨水屏没有阴影可用），彩色主题用一条很
         // 淡的 hairline，避免与卡片面糊在一起。
-        border: Border.all(
-          color:
-              borderColor ??
-              theme.outlineColor,
-        ),
+        border: Border.all(color: borderColor ?? theme.outlineColor),
       ),
       // 大字号（textScale 1.3）时内容会比泡泡高，缩下来而不是溢出。
       child: FittedBox(
@@ -119,7 +110,9 @@ class OhosMagnifier extends StatelessWidget {
       ),
     );
     // 动画在灰阶屏上会留拖影，策略说不能动就一次到位
-    final Widget body = animate && policy.scaleMotion(OhosGeometry.durationShort) != Duration.zero
+    final Widget body =
+        animate &&
+            policy.scaleMotion(OhosGeometry.durationShort) != Duration.zero
         ? TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: 1),
             duration: OhosGeometry.durationShort,
@@ -175,7 +168,10 @@ class OhosMagnifierController {
     EdgeInsets safeInset = EdgeInsets.zero,
     double gap = 12,
   }) {
-    assert(text != null || child != null, 'OhosMagnifierController 需要 text 或 child');
+    assert(
+      text != null || child != null,
+      'OhosMagnifierController 需要 text 或 child',
+    );
     final OverlayState? overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) {
       debugPrint(
@@ -306,11 +302,7 @@ class _MagnifierRequest {
   final double gap;
   final OhosThemeData theme;
 
-  _MagnifierRequest copyWith({
-    Offset? anchor,
-    String? text,
-    Widget? child,
-  }) {
+  _MagnifierRequest copyWith({Offset? anchor, String? text, Widget? child}) {
     return _MagnifierRequest(
       anchor: anchor ?? this.anchor,
       text: text ?? this.text,

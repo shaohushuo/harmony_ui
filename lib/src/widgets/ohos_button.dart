@@ -162,7 +162,8 @@ class OhosButton extends StatelessWidget {
     // highlightColor 和 textPrimaryColor 都是纯黑），读者分不出哪个能点。
     // 下划线不是装饰，是这块屏上唯一剩下的可供性线索 —— 交给策略判断，
     // 因为「要不要划线」取决于这块屏的其他线索够不够，不是取决于描边宽度。
-    final bool underline = style == OhosButtonStyle.text &&
+    final bool underline =
+        style == OhosButtonStyle.text &&
         !dimmed &&
         theme.policy.underlinesTextActions;
 
@@ -178,38 +179,35 @@ class OhosButton extends StatelessWidget {
             ),
           )
         : DefaultTextStyle.merge(
-            style:
-                (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
-                    .copyWith(
-                      color: foreground,
-                      // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
-                      // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
-                      // 放行下来。Material 3 的默认 DefaultTextStyle 恰好是
-                      // `TextDecoration.none`，所以彩屏看着没问题 —— 那是巧合，
-                      // 不是保证。可供性既然归按钮判断，就不该外泄给祖先。
-                      decoration: underline
-                          ? TextDecoration.underline
-                          : TextDecoration.none,
-                      // `decorationColor` 同理，**也必须两个分支都给值**。
-                      //
-                      // 这里曾经写成 `decorationColor: underline ? foreground : null`，
-                      // 于是三个字段只有这一个漏了：`decoration` 已经是 none，
-                      // 祖先把我们的橙黄 `decorationColor` 递了下来。flutter_test
-                      // 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`
-                      // （纯黄）—— 那是测试框架给「不该有下划线却有了」留的视觉
-                      // 警报色。结果：墨屏对话框的标题与正文各带一条**黄线**，
-                      // 而所有断言（都只查 `decoration`）全绿。
-                      //
-                      // 真机不显形，是因为 Material 3 的 `decorationColor` 是正文色，
-                      // 即使下划线被关掉也看不出来。**「彩屏看着没问题」在这里第二次
-                      // 掩盖了同一个缺陷**：前一次是 `decoration`（注释已记录），
-                      // 这一次是它的兄弟字段。所以不再走「靠祖先恰好对我有利」这条
-                      // 路，直接给中性值。
-                      decorationColor: underline ? foreground : Colors.transparent,
-                      decorationStyle: underline
-                          ? TextDecorationStyle.solid
-                          : null,
-                    ),
+            style: (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
+                .copyWith(
+                  color: foreground,
+                  // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
+                  // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
+                  // 放行下来。Material 3 的默认 DefaultTextStyle 恰好是
+                  // `TextDecoration.none`，所以彩屏看着没问题 —— 那是巧合，
+                  // 不是保证。可供性既然归按钮判断，就不该外泄给祖先。
+                  decoration: underline
+                      ? TextDecoration.underline
+                      : TextDecoration.none,
+                  // `decorationColor` 同理，**也必须两个分支都给值**。
+                  //
+                  // 这里曾经写成 `decorationColor: underline ? foreground : null`，
+                  // 于是三个字段只有这一个漏了：`decoration` 已经是 none，
+                  // 祖先把我们的橙黄 `decorationColor` 递了下来。flutter_test
+                  // 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`
+                  // （纯黄）—— 那是测试框架给「不该有下划线却有了」留的视觉
+                  // 警报色。结果：墨屏对话框的标题与正文各带一条**黄线**，
+                  // 而所有断言（都只查 `decoration`）全绿。
+                  //
+                  // 真机不显形，是因为 Material 3 的 `decorationColor` 是正文色，
+                  // 即使下划线被关掉也看不出来。**「彩屏看着没问题」在这里第二次
+                  // 掩盖了同一个缺陷**：前一次是 `decoration`（注释已记录），
+                  // 这一次是它的兄弟字段。所以不再走「靠祖先恰好对我有利」这条
+                  // 路，直接给中性值。
+                  decorationColor: underline ? foreground : Colors.transparent,
+                  decorationStyle: underline ? TextDecorationStyle.solid : null,
+                ),
             // 按钮标签按惯例是单行：给 Text 默认省略号，配合上面的
             // Flexible 收缩，窄容器不会再报 overflow。
             maxLines: 1,
@@ -243,7 +241,10 @@ class OhosButton extends StatelessWidget {
       color: background,
       shape: shapeBorder,
       clipBehavior: Clip.antiAlias,
-      elevation: style == OhosButtonStyle.filled && !dimmed && theme.policy.allowsShadow
+      elevation:
+          style == OhosButtonStyle.filled &&
+              !dimmed &&
+              theme.policy.allowsShadow
           ? 1
           : 0,
       shadowColor: highlight.withValues(alpha: 0.25),

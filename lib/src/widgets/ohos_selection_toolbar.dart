@@ -185,7 +185,8 @@ class OhosSelectionToolbar extends StatelessWidget {
     required bool showPaste,
     required bool showSelectAll,
   }) {
-    final List<ContextMenuButtonItem> all = editableTextState.contextMenuButtonItems;
+    final List<ContextMenuButtonItem> all =
+        editableTextState.contextMenuButtonItems;
     ContextMenuButtonItem? pick(ContextMenuButtonType type) {
       for (final ContextMenuButtonItem item in all) {
         if (item.type == type) {
@@ -383,7 +384,11 @@ class _OhosSelectionSurface extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(_radius),
         border: Border.fromBorderSide(
-          ohosBorderSide(context, theme.outlineColor, width: theme.outlineWidth),
+          ohosBorderSide(
+            context,
+            theme.outlineColor,
+            width: theme.outlineWidth,
+          ),
         ),
       ),
       child: theme.policy.allowsBlur
@@ -405,11 +410,7 @@ class _OhosSelectionSurface extends StatelessWidget {
 
 /// 单个 40×40 的动作按钮（图标 24，居中）。
 class _IconActionButton extends StatefulWidget {
-  const _IconActionButton({
-    required this.label,
-    this.icon,
-    this.onTap,
-  });
+  const _IconActionButton({required this.label, this.icon, this.onTap});
 
   /// 无障碍名称，也用作 `Semantics` 的 label。
   final String label;
@@ -433,12 +434,10 @@ class _IconActionButtonState extends State<_IconActionButton> {
     // `InkWell` 会直接抛 "No Material widget found"。这里按策略自己画按压
     // 底色 —— 彩屏给一档浅色叠底，灰阶屏上 `tint` 返回透明，于是整块不画
     // （20% 的灰块既读不出「按下」也刷新慢，那正是策略要挡的东西）。
-    final Color pressed = theme.policy.tint(
-      theme.textPrimaryColor,
-      0.06,
-    );
-    final Color? fill =
-        _pressed && pressed != const Color(0x00000000) ? pressed : null;
+    final Color pressed = theme.policy.tint(theme.textPrimaryColor, 0.06);
+    final Color? fill = _pressed && pressed != const Color(0x00000000)
+        ? pressed
+        : null;
     return Semantics(
       button: true,
       enabled: enabled,

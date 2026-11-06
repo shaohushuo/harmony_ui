@@ -260,9 +260,7 @@ class OhosChipGroup extends StatelessWidget {
   /// indexes are dropped rather than silently selecting nothing.
   Set<int> get _resolvedIndexes {
     final Set<int> raw = selectedIndexes ?? const <int>{0};
-    return raw
-        .where((int i) => i >= 0 && i < items.length)
-        .toSet();
+    return raw.where((int i) => i >= 0 && i < items.length).toSet();
   }
 
   /// True when [index] is selected, honouring `multiple` and the fallback
@@ -322,9 +320,7 @@ class OhosChipGroup extends StatelessWidget {
           // 官方给的是显式圆角（18 / 14），不是 `height / 2`。两档当前恰好
           // 等于折半值，但那是巧合 —— 胶囊观感是结果，不是来源。
           borderRadius: BorderRadius.circular(metrics.radius),
-          border: Border.fromBorderSide(
-            ohosBorderSide(context, borderColor),
-          ),
+          border: Border.fromBorderSide(ohosBorderSide(context, borderColor)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

@@ -325,7 +325,10 @@ class _OhosAlertDialogState extends State<OhosAlertDialog> {
     // 400 是绝对上限而非必然值 —— 360vp 屏上它不可能被满足，只夹 400 会
     // 让弹窗铺满整屏、圆角切在屏幕外。宽度同样要扣安全区（横屏刘海在左右）。
     final double usableWidth =
-        screen.width - safe.left - safe.right - OhosDialogMetrics.sideMargin * 2;
+        screen.width -
+        safe.left -
+        safe.right -
+        OhosDialogMetrics.sideMargin * 2;
     return (
       maxWidth: OhosDialogMetrics.maxWidth < usableWidth
           ? OhosDialogMetrics.maxWidth

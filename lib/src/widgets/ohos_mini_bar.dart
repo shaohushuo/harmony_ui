@@ -140,7 +140,8 @@ class OhosTabsController extends ChangeNotifier {
 
   /// 解除绑定（官方 `unbindScroller`）。
   void unbindScroller(ScrollController scroller) {
-    for (final MapEntry<int, _BoundsScroller> e in _scrollers.entries.toList()) {
+    for (final MapEntry<int, _BoundsScroller> e
+        in _scrollers.entries.toList()) {
       if (e.value.controller == scroller) {
         e.value.detach();
         _scrollers.remove(e.key);

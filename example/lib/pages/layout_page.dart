@@ -26,7 +26,8 @@ class LayoutPage extends StatelessWidget {
         ),
         DemoSection(
           title: '沉浸光感 OhosLightMaterial',
-          description: '背景模糊 + 光池 + 边缘高光；顶部 ULTRA_THIN 渐变模糊、'
+          description:
+              '背景模糊 + 光池 + 边缘高光；顶部 ULTRA_THIN 渐变模糊、'
               '底部 THIN、弹层 THICK（含光感漫射）。',
           child: _LightDemo(),
         ),
@@ -131,7 +132,9 @@ class _ResponsiveDemo extends StatelessWidget {
                     '$columns 列',
                     // 底板是固定浅灰（见上方 fills 的说明），次级文字也就固定
                     // 深色，不跟主题走。
-                    style: const TextStyle(color: OhosColors.textSecondaryLight),
+                    style: const TextStyle(
+                      color: OhosColors.textSecondaryLight,
+                    ),
                   ),
                 ],
               ),
@@ -360,27 +363,26 @@ class _SharedElementDemoState extends State<_SharedElementDemo> {
         transitionDuration: OhosGeometry.durationLong,
         reverseTransitionDuration: OhosGeometry.durationMedium,
         pageBuilder:
-            (BuildContext context, Animation<double> animation,
-                Animation<double> secondaryAnimation) =>
-                _SharedCardPage(
-                  index: index,
-                  color: color,
-                  label: label,
+            (
+              BuildContext context,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation,
+            ) => _SharedCardPage(index: index, color: color, label: label),
+        transitionsBuilder:
+            (
+              BuildContext context,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation,
+              Widget child,
+            ) {
+              return FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: OhosGeometry.easeOut,
                 ),
-        transitionsBuilder: (
-          BuildContext context,
-          Animation<double> animation,
-          Animation<double> secondaryAnimation,
-          Widget child,
-        ) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: OhosGeometry.easeOut,
-            ),
-            child: child,
-          );
-        },
+                child: child,
+              );
+            },
       ),
     );
   }
@@ -552,10 +554,7 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
             children: <Widget>[
               Text(
                 label,
-                style: TextStyle(
-                  color: theme.textSecondaryColor,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: theme.textSecondaryColor, fontSize: 12),
               ),
               const SizedBox(height: 4),
               Container(

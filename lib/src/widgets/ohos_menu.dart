@@ -156,10 +156,9 @@ RelativeRect? _anchorRect(BuildContext context, Object? anchor) {
     return null;
   }
   final RenderBox? box = anchorContext.findRenderObject() as RenderBox?;
-  final RenderBox? overlay = Overlay.maybeOf(
-    context,
-    rootOverlay: true,
-  )?.context.findRenderObject() as RenderBox?;
+  final RenderBox? overlay =
+      Overlay.maybeOf(context, rootOverlay: true)?.context.findRenderObject()
+          as RenderBox?;
   if (box == null || overlay == null || !box.hasSize) {
     return null;
   }

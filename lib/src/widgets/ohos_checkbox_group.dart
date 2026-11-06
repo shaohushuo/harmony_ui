@@ -267,9 +267,7 @@ class OhosCheckboxGroupController extends ChangeNotifier {
     required List<String> allNames,
     Set<String>? selected,
   }) : _allNames = List<String>.unmodifiable(allNames),
-       _selected = <String>{...?selected}.intersection(
-         allNames.toSet(),
-       );
+       _selected = <String>{...?selected}.intersection(allNames.toSet());
 
   final List<String> _allNames;
   Set<String> _selected;
@@ -368,7 +366,8 @@ class OhosCheckboxGroupController extends ChangeNotifier {
 }
 
 /// 把 [OhosCheckboxGroupController] 提供给子树。
-class OhosCheckboxGroupScope extends InheritedNotifier<OhosCheckboxGroupController> {
+class OhosCheckboxGroupScope
+    extends InheritedNotifier<OhosCheckboxGroupController> {
   const OhosCheckboxGroupScope({
     super.key,
     required OhosCheckboxGroupController controller,

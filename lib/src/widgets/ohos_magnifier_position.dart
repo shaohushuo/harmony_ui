@@ -109,10 +109,7 @@ class OhosMagnifierPosition {
       OhosMagnifierSide.belowLeft || OhosMagnifierSide.belowRight => false,
       OhosMagnifierSide.auto => null,
     };
-    final List<bool> rows = <bool>[
-      forcedAbove ?? true,
-      !(forcedAbove ?? true),
-    ];
+    final List<bool> rows = <bool>[forcedAbove ?? true, !(forcedAbove ?? true)];
     final List<bool> columns = <bool>[preferLeft, !preferLeft];
 
     for (final bool above in rows) {

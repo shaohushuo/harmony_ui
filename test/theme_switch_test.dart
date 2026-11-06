@@ -74,7 +74,10 @@ void main() {
       expect(policy.allowsShadow, isFalse);
       expect(policy.allowsBlur, isFalse);
       expect(policy.allowsRipple, isFalse);
-      expect(policy.scaleMotion(const Duration(milliseconds: 300)), Duration.zero);
+      expect(
+        policy.scaleMotion(const Duration(milliseconds: 300)),
+        Duration.zero,
+      );
     });
 
     test('monochrome 只是策略的另一面', () {
@@ -142,8 +145,10 @@ void main() {
         fontFamily: 'HarmonyOS Sans',
       );
       expect(controller.themeData.typography.fontFamily, 'HarmonyOS Sans');
-      expect(controller.materialTheme.textTheme.bodyMedium?.fontFamily,
-          'HarmonyOS Sans');
+      expect(
+        controller.materialTheme.textTheme.bodyMedium?.fontFamily,
+        'HarmonyOS Sans',
+      );
     });
 
     // 以墨水屏初始化时，第一次 toggle 直接走「切回普通」那条分支，拿的是
@@ -263,8 +268,9 @@ void main() {
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute<void>(
-                        builder: (BuildContext context) =>
-                            const OhosScaffold(body: Center(child: Text('二级页'))),
+                        builder: (BuildContext context) => const OhosScaffold(
+                          body: Center(child: Text('二级页')),
+                        ),
                       ),
                     ),
                     child: const Text('进入二级页'),
@@ -352,9 +358,7 @@ void main() {
   group('策略化没有改变彩屏的既有观感', () {
     /// 取一个组件渲染出的 `BoxDecoration.color`。
     Color fillOf(WidgetTester tester, Finder finder) {
-      final AnimatedContainer box = tester.widget<AnimatedContainer>(
-        finder,
-      );
+      final AnimatedContainer box = tester.widget<AnimatedContainer>(finder);
       return (box.decoration! as BoxDecoration).color!;
     }
 
@@ -366,8 +370,7 @@ void main() {
       ),
     );
 
-    testWidgets('启用但未勾选的复选框保持透明，不铺 15% 灰底',
-        (WidgetTester tester) async {
+    testWidgets('启用但未勾选的复选框保持透明，不铺 15% 灰底', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(OhosCheckbox(value: false, onChanged: (_) {})),
       );
@@ -378,8 +381,7 @@ void main() {
       );
     });
 
-    testWidgets('禁用且未勾选的复选框仍然铺 15% 灰底',
-        (WidgetTester tester) async {
+    testWidgets('禁用且未勾选的复选框仍然铺 15% 灰底', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const OhosCheckbox(value: false)));
       expect(
         fillOf(tester, find.byType(AnimatedContainer).first).a,
@@ -387,8 +389,9 @@ void main() {
       );
     });
 
-    testWidgets('plain 按钮禁用态在浅色底上是「黑 8%」而不是「白 8%」',
-        (WidgetTester tester) async {
+    testWidgets('plain 按钮禁用态在浅色底上是「黑 8%」而不是「白 8%」', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         wrap(
           const OhosButton(
@@ -445,12 +448,13 @@ void main() {
     });
 
     test('深色墨水屏反向：点亮态取纯白', () {
-      const InkVisualPolicy darkInk = InkVisualPolicy(
-        paper: Color(0xFF1A1A1A),
-      );
+      const InkVisualPolicy darkInk = InkVisualPolicy(paper: Color(0xFF1A1A1A));
       final Color lit = darkInk.litFill(litYellow);
       expect(lit, const Color(0xFFFFFFFF));
-      expect(lit.computeLuminance(), greaterThan(darkInk.paper.computeLuminance()));
+      expect(
+        lit.computeLuminance(),
+        greaterThan(darkInk.paper.computeLuminance()),
+      );
     });
   });
 }

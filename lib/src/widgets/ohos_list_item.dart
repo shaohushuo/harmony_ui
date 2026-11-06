@@ -73,7 +73,8 @@ class OhosListItem extends StatefulWidget {
   State<OhosListItem> createState() => _OhosListItemState();
 }
 
-class _OhosListItemState extends State<OhosListItem> with SingleTickerProviderStateMixin {
+class _OhosListItemState extends State<OhosListItem>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   double _dragStart = 0;
   double _dragTotal = 0;
@@ -114,8 +115,10 @@ class _OhosListItemState extends State<OhosListItem> with SingleTickerProviderSt
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
     _dragTotal += details.delta.dx;
     final double overshoot = 40 / _actionsWidth;
-    _controller.value =
-        (_dragStart - _dragTotal / _actionsWidth).clamp(0.0, 1.0 + overshoot);
+    _controller.value = (_dragStart - _dragTotal / _actionsWidth).clamp(
+      0.0,
+      1.0 + overshoot,
+    );
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
@@ -170,7 +173,9 @@ class _OhosListItemState extends State<OhosListItem> with SingleTickerProviderSt
             },
             child: GestureDetector(
               onHorizontalDragStart: hasActions ? _onDragStart : null,
-              onHorizontalDragUpdate: hasActions ? _onHorizontalDragUpdate : null,
+              onHorizontalDragUpdate: hasActions
+                  ? _onHorizontalDragUpdate
+                  : null,
               onHorizontalDragEnd: hasActions ? _onHorizontalDragEnd : null,
               behavior: HitTestBehavior.opaque,
               child: widget.child,
@@ -181,7 +186,11 @@ class _OhosListItemState extends State<OhosListItem> with SingleTickerProviderSt
     );
   }
 
-  Widget _actionCell(OhosSwipeAction action, Color defaultFg, OhosThemeData theme) {
+  Widget _actionCell(
+    OhosSwipeAction action,
+    Color defaultFg,
+    OhosThemeData theme,
+  ) {
     final Color color = action.foregroundColor ?? defaultFg;
     return Material(
       color: action.backgroundColor,

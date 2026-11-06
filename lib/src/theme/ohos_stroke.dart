@@ -53,9 +53,7 @@ BorderSide ohosSwatchOutline(
     return BorderSide.none;
   }
   return BorderSide(
-    color: theme.usesOutlines
-        ? theme.dividerColor
-        : const Color(0x42000000),
+    color: theme.usesOutlines ? theme.dividerColor : const Color(0x42000000),
     width: ohosStrokeWidth(context, theme.outlineWidth),
   );
 }

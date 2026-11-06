@@ -58,7 +58,8 @@ class OhosList extends StatelessWidget {
                       // 只有直接放进列表的 tile 才需要「下面还有一行」这个信号。
                       // 非 tile 子节点（包括包了一层 Padding/InkWell 的 tile）
                       // 一律给 false：那条线由列表自己补，里面再画一条就叠成双线。
-                      showBottom: divider &&
+                      showBottom:
+                          divider &&
                           i < children.length - 1 &&
                           children[i] is OhosListTile,
                       child: children[i],

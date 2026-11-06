@@ -353,9 +353,7 @@ class _OhosActionBarState extends State<OhosActionBar> {
 
     final double? margin = style.margin;
     final Widget padded = Padding(
-      padding:
-          widget.padding ??
-          EdgeInsets.symmetric(vertical: margin ?? 0),
+      padding: widget.padding ?? EdgeInsets.symmetric(vertical: margin ?? 0),
       child: backplate,
     );
 
@@ -371,7 +369,9 @@ class _OhosActionBarState extends State<OhosActionBar> {
   /// 背板：默认模糊材质 + 投影；墨屏退化为实色 + 1vp 描边。
   Widget _backplate(OhosThemeData theme, Widget child) {
     final OhosActionBarStyle style = widget.style;
-    final BorderRadius radius = BorderRadius.circular(OhosActionBarMetrics.radius);
+    final BorderRadius radius = BorderRadius.circular(
+      OhosActionBarMetrics.radius,
+    );
     final double barHeight = style.height ?? OhosActionBarMetrics.height;
 
     // 高度只在**水平排列**时是固定值（`ActionBarStyle.height` 的语义是
@@ -494,7 +494,8 @@ class _OhosActionBarState extends State<OhosActionBar> {
     if (buttons.isEmpty) {
       return const SizedBox.shrink();
     }
-    final double gap = widget.style.innerSpace ?? OhosActionBarMetrics.innerSpace;
+    final double gap =
+        widget.style.innerSpace ?? OhosActionBarMetrics.innerSpace;
     final List<Widget> children = <Widget>[
       for (final OhosActionBarButton button in buttons)
         _SecondaryButton(
@@ -527,7 +528,11 @@ class _OhosActionBarState extends State<OhosActionBar> {
       final double width =
           widget.primaryButtonBuilderWidth ?? OhosActionBarMetrics.buttonSize;
       // 自定义主按钮：官方把壳完全交给调用方，本库不套圆底、不加图标色。
-      return SizedBox(width: width, height: OhosActionBarMetrics.buttonSize, child: builder(context));
+      return SizedBox(
+        width: width,
+        height: OhosActionBarMetrics.buttonSize,
+        child: builder(context),
+      );
     }
 
     final OhosActionBarButton? button = widget.primaryButton;
@@ -573,7 +578,8 @@ class _SecondaryButton extends StatelessWidget {
       enabled: enabled,
       // 次要按钮用背板色系：它不是视觉焦点，与主按钮同色会让「哪个是主要操作」
       // 重新变成谜。官方把 `backgroundColor` 留给调用方，默认值没写。
-      background: button.backgroundColor ?? theme.policy.tint(theme.cardColor, 1),
+      background:
+          button.backgroundColor ?? theme.policy.tint(theme.cardColor, 1),
       foreground: button.iconColor ?? theme.textPrimaryColor,
       iconSize: button.iconSize ?? OhosActionBarMetrics.iconSize,
       icon: button.icon,

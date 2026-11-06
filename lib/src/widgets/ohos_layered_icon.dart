@@ -47,7 +47,8 @@ class OhosLayeredIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    final Color stroke = borderColor ?? theme.textTertiaryColor.withValues(alpha: 0.25);
+    final Color stroke =
+        borderColor ?? theme.textTertiaryColor.withValues(alpha: 0.25);
     Widget plate = Container(
       width: size,
       height: size,
