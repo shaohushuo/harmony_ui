@@ -40,6 +40,7 @@
 </p>
 
 [![GitHub CI](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml)
+[![在线演示](https://img.shields.io/badge/在线演示-GitHub%20Pages-0A59F7)](https://shaohushuo.github.io/harmony_ui/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库：`shaohushuo/harmony_ui`，包名 `harmony_ui`）。
@@ -1109,6 +1110,24 @@ OhosProgressIndicator.scaleRing(value: 0.6);                // 刻度环（靠�
 const OhosLoadingIndicator();                               // 加载动效（彗星拖尾）
 
 OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'); // 二维码
+```
+
+## 在线演示（Web / GitHub Pages）
+
+完整组件画廊已编译为 Web 应用：
+
+- 演示站：<https://shaohushuo.github.io/harmony_ui/>
+- 部署说明：[doc/DEMO-DEPLOYMENT.md](./doc/DEMO-DEPLOYMENT.md)
+
+演示站由 GitHub Actions 使用官方 Flutter stable 构建 `example/`，不需要 OHOS SDK，
+也不会把 `build/web` 提交到源码分支。推送 `main` 后自动发布；fork 和自定义域名
+通过 `actions/configure-pages` 自动推导 `base href`。
+
+本地构建：
+
+```bash
+cd example
+flutter build web --release --no-tree-shake-icons --base-href /harmony_ui/
 ```
 
 ## 在 HarmonyOS 模拟器上运行 Demo

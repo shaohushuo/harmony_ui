@@ -10,6 +10,7 @@
 - 仓库（GitHub）：[shaohushuo/harmony_ui](https://github.com/shaohushuo/harmony_ui)
 - 配套图标包：[harmony_icons](https://pub.dev/packages/harmony_icons)（HarmonyOS Symbol 字体图标，已发布 pub.dev）。原 `ohos_icons` 已改名为 `harmony_icons`，旧包在 pub.dev 上标记为 discontinued，类名不变（仍是 `OhosIcons`）
 - 更新日志：[CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)
+- 在线演示：[harmony_ui Web 组件画廊](https://shaohushuo.github.io/harmony_ui/)
 
 ## 下载安装
 
