@@ -10,6 +10,35 @@
   <img src="doc/screenshots/gallery_container.png" alt="容器类" width="230"/>
 </p>
 
+<p align="center">
+  <b>同一套组件，两个维度。</b>顶栏右上角一个按钮：点按在 <b>浅色 → 深色 → 墨水屏</b>
+  之间循环，长按选任意一档。
+</p>
+
+<p align="center">
+  <img src="doc/screenshots/dark_01_home.png" alt="深色：主页" width="230"/>
+  <img src="doc/screenshots/dark_02_action.png" alt="深色：操作类" width="230"/>
+  <img src="doc/screenshots/dark_03_selection.png" alt="深色：选择类" width="230"/>
+  <img src="doc/screenshots/dark_04_input.png" alt="深色：输入类" width="230"/>
+  <img src="doc/screenshots/dark_05_container.png" alt="深色：容器类" width="230"/>
+</p>
+
+<p align="center">
+  <sub><b>深色</b>：只翻令牌明暗（深底浅字），表现规则仍是彩屏 —— 有阴影、有模糊、有水波纹。</sub>
+</p>
+
+<p align="center">
+  <img src="doc/screenshots/ink_01_home.png" alt="墨水屏：主页" width="230"/>
+  <img src="doc/screenshots/ink_02_action.png" alt="墨水屏：操作类" width="230"/>
+  <img src="doc/screenshots/ink_03_selection.png" alt="墨水屏：选择类" width="230"/>
+  <img src="doc/screenshots/ink_07_input.png" alt="墨水屏：输入类" width="230"/>
+  <img src="doc/screenshots/ink_08_container.png" alt="墨水屏：容器类" width="230"/>
+</p>
+
+<p align="center">
+  <sub><b>墨水屏</b>（16 级灰）：换的是<b>表现规则</b> —— 浅底改 1px 实线、无阴影 / 模糊 / 动效。</sub>
+</p>
+
 [![GitHub CI](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -27,6 +56,7 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 | `Switch` / `Checkbox` / `Radio` | `OhosSwitch` / `OhosCheckbox` / `OhosRadio` |
 | `TextField` / `SearchBar` | `OhosTextField` / `OhosSearchBar` |
 | `NavigationBar` / `TabBar` | `OhosNavigationBar` / `OhosTabBar` |
+| 悬浮页签栏 / 迷你栏（`HdsTabs` 的 `barFloatingStyle`） | `OhosFloatingTabBar` / `OhosMiniBar` / `OhosMiniBarScaffold` |
 | `Slider` / `RatingBar` | `OhosSlider` / `OhosRatingBar` |
 | `AlertDialog` / `showDialog` | `OhosAlertDialog` / `showOhosDialog` |
 | `SnackBar` / `showMenu` | `OhosSnackBar` / `showOhosMenu` |
@@ -34,12 +64,14 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 | `FilterChip` | `OhosChip` |
 | `Divider` / `IconButton` | `OhosDivider` / `OhosIconButton` |
 
-配套图标包：[ohos_icons](https://pub.dev/packages/ohos_icons)（HarmonyOS Symbol 字体图标，已发布）。
+配套图标包：[harmony_icons](https://pub.dev/packages/harmony_icons)（HarmonyOS Symbol 字体图标，已发布）。原 `ohos_icons` 已改名为 `harmony_icons`，旧包在 pub.dev 上标记为 discontinued，类名不变（仍是 `OhosIcons`）。
 
 ## 特性
 
 - **HarmonyOS 设计令牌**：主题色 `#0A59F7` / `#317AF7`、11 色多彩色板、功能色、四级文字/图标透明度（90%/60%/40%/20%）、组件分层背景（`comp_background_primary/gray`）、20%/10% 品牌高亮背景（`comp_emphasize_secondary/tertiary`）与交互态色（hover/pressed/focus/select），全部对齐官方 Token 表。
-- **明暗双主题**：`OhosThemeData.light()` / `OhosThemeData.dark()` 开箱即用，支持 `copyWith` 定制。
+- **多主题**：`OhosThemeData.light()` / `.dark()` / `.ink()`（墨水屏，可传 `brightness: Brightness.dark` 得到深色纸）开箱即用，支持 `copyWith` 定制。
+- **四档 + 跟随系统**：`OhosThemeMode` 提供 `system` / `light` / `dark` / `ink`，选 `system` 时跟随系统浅色/深色并自动响应切换。`brightness` 只描述令牌明暗，与「表现规则」正交 —— 因此深色墨水屏（黑底白字）可以与白纸墨屏共用同一套组件。
+- **运行时切换**：`OhosThemeController` + `OhosThemeSwitcher` + `OhosThemeToggleButton` 三件套，顶栏放一个按钮即可在运行中切换，切换不丢页面栈。墨水屏与普通主题的差异集中在 `OhosVisualPolicy`（彩屏靠分层、墨水屏靠 1px 实线），加新屏只需加一个策略子类，组件层不动。按钮的点按语义是「彩屏 ↔ 墨水屏」，深色与跟随系统在长按菜单；示例工程给了一个把它改成「点按循环 浅色 → 深色 → 墨水屏」的版本（`example/lib/theme_switch.dart`）。
 - **API 对齐 Flutter**：使用方式与 Material/Cupertino 组件一致，学习成本低。
 - **原生字体**：默认使用 HarmonyOS 系统字体 `HarmonyOS Sans`（非鸿蒙平台自动回退系统字体）。
 - **沉浸光感材质**：`OhosLightMaterial` 实现官方 ULTRA_THIN … ULTRA_THICK 五档毛玻璃背板，支持顶部/底部渐变模糊，AppBar、底部页签、半模态面板开箱即用。
@@ -52,25 +84,46 @@ Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计�
 
 ## 安装
 
-### 通过 pub.dev（发布后）
+两种方式任选其一。
 
-```bash
-fvm flutter pub add harmony_ui
+### 方式一：添加 pub 上的包
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
 ```
 
-### 通过 Git（当前推荐）
+```bash
+fvm flutter pub get
+```
+
+### 方式二：通过 Git 引用本仓库
 
 ```bash
 fvm flutter pub add harmony_ui \
-  --git-url git@github.com:shaohushuo/harmony_ui.git
+  --git-url https://atomgit.com/oh-flutter/harmony_ui.git
 
 # 或直接在 pubspec.yaml 中声明
 # dependencies:
 #   harmony_ui:
 #     git:
-#       url: https://github.com/shaohushuo/harmony_ui.git
+#       url: https://atomgit.com/oh-flutter/harmony_ui.git
 #       ref: main
 ```
+
+## 升级
+
+从 0.5.x 升到 0.6.0 有 **7 处破坏性变更**（`OhosActionBar` / `OhosDataPanel` /
+`OhosToolbarItem` / `OhosAlertDialog` / `OhosSubheader` /
+`OhosProgressIndicatorVariant` / `OhosChipGroup`），逐条迁移写法见
+[`doc/MIGRATION-0.6.md`](doc/MIGRATION-0.6.md)，完整变更史见 [`CHANGELOG.md`](CHANGELOG.md)。
+
+大部分破坏会在 `flutter analyze` 阶段直接报错，照着改即可。**三处不报错**，
+升级后要自己确认：
+
+- `OhosAlertDialog` 的圆角从 28 变成固定 32（删掉 `borderRadius` 实参不报错，但视觉上大 4vp）
+- `OhosChipGroup` 不传选中项时，现在默认选中第 0 颗（旧版一个都不选）
+- `OhosSubheader` 的 `title` 不再是必填 —— 这只是放宽，旧代码不会因此报错，但三者全空时会命中 `assert`
 
 ## 快速开始
 
@@ -124,78 +177,345 @@ class MyApp extends StatelessWidget {
 }
 ```
 
+## 运行时切换：明暗 / 墨水屏
+
+墨水屏（如华为 MatePad Paper / NoteAir）上，16 级灰只能分辨出约 5 档，靠半透明
+叠色、阴影、模糊分层的界面会整块糊掉。`harmony_ui` 让同一组组件在两种主题下都成
+立，并且能在运行中一键来回：
+
+```dart
+// 1. 建一个控制器（`main()` 里建，或交给状态管理持有）
+final OhosThemeController themeController = OhosThemeController();
+
+// 2. 包住 MaterialApp —— 必须在**外面**，push 出去的页面才拿得到主题
+OhosThemeSwitcher(
+  controller: themeController,
+  builder: (BuildContext context, ThemeData materialTheme) {
+    return MaterialApp(
+      theme: materialTheme,
+      home: OhosScaffold(
+        appBar: OhosAppBar(
+          title: const Text('我的应用'),
+          // 3. 顶栏放一个按钮：点按翻转，长按弹出跟随系统 / 浅色 / 深色 / 墨水屏
+          actions: <Widget>[
+            OhosThemeToggleButton(controller: themeController),
+          ],
+        ),
+        body: const SizedBox.shrink(),
+      ),
+    );
+  },
+);
+
+// 任意位置（包括内层页面）都能切：
+themeController.toggle();      // 普通 ↔ 墨水屏，回来时仍是原来的深/浅色
+themeController.mode = OhosThemeMode.dark;   // 指定档位
+themeController.useMode(OhosThemeMode.dark); // 同上，但会记住「深色」供 toggle 回来
+```
+
+`OhosThemeToggleButton` 的点按语义是「在当前彩屏档位 ↔ 墨水屏之间翻转」，深色与
+跟随系统在长按菜单里。**如果你的场景里深色是主要对照项**（比如组件画廊、设计走查
+工具 —— 用户就是要并排看同一屏在浅色 / 深色 / 墨水屏下的样子），把它做成点按循环
+更顺手：`example/lib/theme_switch.dart` 给了一个 30 行的实现，点按走
+浅色 → 深色 → 墨水屏，长按弹完整菜单。
+
+切换时 `MaterialApp` 原地重建，Navigator 的 State 会被复用，**不会把用户弹回首页**。
+
+### 跟随系统
+
+`OhosThemeMode.system` 把「浅色还是深色」交给系统设置，并**自动响应系统切换**
+（用户改完系统深色模式，界面立刻跟着翻，不用重启）：
+
+```dart
+final theme = OhosThemeController(initialMode: OhosThemeMode.system);
+```
+
+系统亮度**不进 controller 的状态**，而是像 `MediaQuery` 一样由 Widget 树提供，
+`OhosThemeSwitcher` 每次 build 时通过 `controller.resolveTheme(systemBrightness: ...)`
+现算。这样设计是为了避一个坑：如果在 `build()` 里把亮度喂回 controller 再
+`notifyListeners()`，监听者会在当前构建过程中再次触发重建，直接抛
+`setState() or markNeedsBuild() called during build`。
+
+`resolveTheme` / `materialThemeOf` 都是**纯函数** —— 不写状态、不通知，可以安全地在
+`build` 里调用。自己管理 `OhosTheme` 而不走 `OhosThemeSwitcher` 时，用
+`useTheme(controller.resolveTheme(systemBrightness: brightness))` 显式给值即可。
+
+> 选 `system` 之后进入墨水屏再切回来，会落在**离开时那个具体明暗**（深色或浅色），
+> 而不是继续停在 `system` 上 —— 否则切换按钮就成了单向门。
+
+### 深色墨水屏
+
+16 级灰的电子纸不只「白纸黑字」一种。夜间阅读需要黑底白字，这时候**令牌的明暗**
+和**表现规则**必须能各走各的：
+
+```dart
+// 一行拿到完整的深色墨水屏：纸色 #1A1A1A、纯白字阶、禁用灰 #4D4D4D
+final darkInk = OhosThemeData.ink(brightness: Brightness.dark);
+
+darkInk.isDark;      // true  —— 令牌是深底浅字
+darkInk.monochrome;  // true  —— 策略是灰阶屏
+```
+
+这两个维度是正交的，`brightness` **只描述令牌明暗**，不表示系统深色模式、不表示
+档位、不表示是否跟随系统。拆开之前 `ink()` 恒为 `Brightness.light`，`isDark` 恒假，
+深色墨水屏根本做不出来。
+
+为什么不让调用方自己 `copyWith` 一批色值：一份可用的深色墨水屏至少要同时改对 6 个
+色值（纸面 / 卡面 / 弹层 / 正文 / 三级文字 / 分隔线）+ 13 个 `TextStyle` + 策略里的
+`paper`。少改任何一处都会变成「某处黑字压黑纸」，而且窄到跑一遍看不出来 ——
+`typography` 尤其容易漏，它不跟着翻就是整段正文消失。
+
+需要别的纸色时再用 `copyWith`，语义仍然成立：
+
+```dart
+final custom = OhosThemeData.ink().copyWith(
+  brightness: Brightness.dark,
+  policy: const InkVisualPolicy(paper: Color(0xFF202020)),
+  typography: OhosTypography.monochrome(brightness: Brightness.dark),
+  // ...纸色 / 字色 / 分隔线跟着换
+);
+```
+
+### 换屏之后长什么样
+
+同一份代码、同一个页面，只把 `initialMode` 从 `light` 换成 `ink`。对话框与半模态
+面板最能看出差别 —— 墨水屏上它们**完全靠遮罩的明度差**浮起来，没有阴影、没有模糊：
+
+<p align="center">
+  <img src="doc/screenshots/ink_04_dialog.png" alt="墨水屏：对话框靠遮罩浮起" width="230"/>
+  <img src="doc/screenshots/ink_05_popup.png" alt="墨水屏：气泡是白底 + 1px 描边" width="230"/>
+  <img src="doc/screenshots/ink_06_bottom_sheet.png" alt="墨水屏：半模态面板 + 分享宫格" width="230"/>
+</p>
+
+注意半模态面板里的分享图标：彩屏下每个渠道一个品牌色，墨水屏下统一退成
+「灰底 + 黑图标」，靠**形状**而不是颜色区分。更多对照见文末[截图](#截图)里的
+「墨水屏」一节。
+
+### 两种主题为什么不是「深色模式的变体」
+
+墨水屏是黑字白纸（`Brightness.light`），差别不在色值而在**表现规则**：
+彩屏靠分层（20% 叠色、阴影、`BackdropFilter` 模糊、水波纹），墨水屏靠线
+（1px 实线描边、留白、关掉一切动画）。这套规则收在 `OhosVisualPolicy` 里：
+
+| 组件想表达 | 彩屏（`ColorVisualPolicy`） | 墨水屏（`InkVisualPolicy`） |
+| --- | --- | --- |
+| `policy.tint(base, 0.12)` | 12% 叠色 | `Colors.transparent`（托不住形体） |
+| `policy.line(base, 0.4)` | 40% 的线 | 实色（丢掉 alpha） |
+| `policy.allowsShadow` | `true` | `false` |
+| `policy.allowsBlur` | `true` | `false` |
+| `policy.allowsRipple` | `true` | `false` |
+| `policy.allowsGlow` | `true` | `false` |
+| `policy.scaleMotion(200ms)` | `200ms` | `Duration.zero` |
+
+收到透明的底色就改画线 —— 这条约定替代了原先散在 24 个组件里的
+`theme.monochrome ? A : B`。
+
+`allowsGlow` 与 `allowsShadow` 分开而不是合并，因为两者在这块屏上的**失败方式不同**：
+阴影不存在只是「少了点立体感」，而白色的光晕叠在纯黑字上会**直接糊掉正文**，黑底
+场景下又完全看不见。灰阶屏上「光」这个隐喻本身不成立 —— 它没有背光可言。这条策略
+挡住的是 `OhosPointLight`、`OhosPressShadow`、`OhosLightMaterial` 的装饰层，它们真正
+的信息载体（底色、描边、图标）不受影响。
+
+> 已有代码里的 `theme.monochrome` 仍然可用（是 `policy.isMonochrome` 的别名），
+> 但新代码请读 `policy`。判断「要不要补一条线」用 `theme.usesOutlines`。
+
+### 加第三种主题要改哪些文件
+
+答案是「不碰 `lib/src/widgets/` 下的任何一行」。一个主题由两份东西构成：
+
+```dart
+// 1. 表现规则：这块屏上「怎么写才看得见」。不存在就不写，沿用已有两种之一。
+class HighContrastPolicy extends OhosVisualPolicy {
+  const HighContrastPolicy();
+
+  @override bool get isMonochrome => false;
+  @override Color tint(Color base, double alpha) =>
+      base.withValues(alpha: alpha < 0.30 ? 0.30 : alpha);  // 抬地板
+  @override Color line(Color base, double alpha) => base;
+  @override Color quantize(Color color) => color;
+  @override double? get outlineWidth => 2;      // 2px 粗线
+  @override bool get allowsShadow => true;
+  @override bool get allowsBlur => false;
+  @override bool get allowsRipple => true;
+  @override Duration scaleMotion(Duration base) => base;
+  @override Color disabledFill(Color base) => base.withValues(alpha: 0.30);
+}
+
+// 2. 色值：复用任一份现成色板再改。不需要新策略时这步就够了。
+final OhosThemeData highContrast = OhosThemeData.light().copyWith(
+  policy: const HighContrastPolicy(),
+  id: 'high_contrast',
+  textPrimaryColor: const Color(0xFF000000),
+  dividerColor: const Color(0xFF000000),
+);
+
+// 3. 接进切换流程：不需要往 OhosThemeMode 枚举里加值。
+final controller = OhosThemeController.custom(highContrast);
+controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
+```
+
+`allowsGlow` 在基类上有默认值 `true`（而不是声明成抽象成员），所以上面这份
+**已经写好的自定义策略不需要为它补一行** —— 「加一块屏 = 写一个子类」这个承诺不能
+因为库里多一个能力声明就让外部代码编译失败。
+
+`test/theme_extension_test.dart` 里有一份**完整可跑的**自定义主题，用来把这条约束
+固化成回归测试：如果哪天某个 widget 又开始 `switch` 主题枚举、或硬编码某块屏的
+令牌，那个测试就会先红。
+
+### 已知的边界
+
+- **新增内置档位**（写进 `OhosThemeMode`）仍要改两处：`OhosThemeMode.theme()` 的
+  映射，和切换按钮长按菜单的取项（后者是自动遍历 `values`，不用改代码）。除此之外
+  没有 widget 需要动 —— 图标对未知档位走兜底推导，不会编译失败。
+- **`InkVisualPolicy.paper` 只改量化底色**，不改色值。做深色墨水屏请用
+  `OhosThemeData.ink(brightness: Brightness.dark)`（或按上例 `copyWith`），否则正文
+  仍是白纸上的纯黑。
+- **深色墨水屏目前只有两个内置极端**（`#FFFFFF` 纸 / `#1A1A1A` 纸）。中间调纸色
+  （如 `#3A3A3A`）请自行 `copyWith`，并**同时**换 `policy` 的 `paper` 与
+  `typography` —— 三者不一致时量化与字色会各自偏向不同方向。
+- **持久化留给应用层**。核心库只提供 `OhosThemeData.id` 这个稳定字符串
+  （`'light'` / `'dark'` / `'ink'` / `'ink_dark'`），不引入 `shared_preferences`
+  之类的依赖。
+- **`system` 档的持久化要存「这一档」，不要存解析结果**。存成 `dark` 会让应用下次
+  启动后不再跟随系统。
+
+## 应用案例
+
+> 展示基于 harmony_ui 构建的真实应用与开源项目，欢迎[提交你的作品](https://atomgit.com/oh-flutter/harmony_ui/issues)。
+
+<table>
+  <tr>
+    <td width="14%" align="center" valign="middle">
+      <img src="assets/bigeditor/logo.png" width="110" alt="BigEditor Logo"/>
+      <br/>
+      <sub>Powered by</sub>
+      <br/>
+      <strong><font color="#1677FF">harmony_ui</font></strong>
+    </td>
+    <td width="26%" valign="middle">
+      <h3>bige-editor</h3>
+      <p><b>开源项目 · 工具类</b></p>
+      <p>
+        代码阅读器 / 编辑器 + Git 客户端：在手机和平板上读仓库、看代码、
+        改一行、提交上去，不需要电脑。同一份 Dart 代码出鸿蒙 hap 与 Android apk 两种形态。
+      </p>
+      <p>👤 作者：eltoro</p>
+      <p>
+        <a href="https://atomgit.com/eltoro/bige-editor">
+          <img src="https://img.shields.io/badge/项目地址-AtomGit-blue?style=flat-square" alt="项目地址"/>
+        </a>
+      </p>
+    </td>
+    <td width="46%" align="center" valign="middle">
+      <img src="assets/bigeditor/screenshot-1.png" width="32.5%" alt="bige-editor：仓库列表"/>
+      <img src="assets/bigeditor/screenshot-2.png" width="32.5%" alt="bige-editor：变更与提交"/>
+      <img src="assets/bigeditor/screenshot-3.png" width="32.5%" alt="bige-editor：三档主题对照"/>
+    </td>
+    <td width="14%" align="center" valign="middle">
+      <a href="https://appgallery.huawei.com/app/detail?id=ltd.chencan.bige_editor&amp;channelId=SHARE&amp;source=appshare">
+        <img src="assets/bigeditor/qrcode.png" width="120" alt="华为应用市场下载二维码"/>
+      </a>
+      <br/>
+      <sub>扫码下载</sub>
+    </td>
+  </tr>
+</table>
+
+上表三张截图分别取自**仓库列表**、**变更与提交**、**同一份错误态在浅色 / 深色 /
+墨水屏三档下的对照** —— 第三张最能说明这套组件库要解决的问题：同一段业务代码，
+换一块屏不用改一行布局，输入框自动从「灰底无边框」变成「白底 + 1px 黑描边」，按钮
+自动去掉水波纹与阴影。
+
+这个应用也验证了几个关键约束：
+
+- **零组件改动接入** —— bige-editor 只用到 `OhosThemeData.light()` / `.dark()` /
+  `.ink()` 与 `copyWith`（8 个颜色令牌），0.5.0 的策略化重构对它**没有**任何源码
+  影响。
+- **墨水屏可用** —— 索引条受控高亮、无底纹按钮仍可点、输入框描边可读，均在真机
+  与模拟器上验证过。
+- **深色墨水屏不再是理论组合** —— `OhosThemeData.ink(brightness: Brightness.dark)`
+  就是为这类「夜间读代码」场景准备的。
+
 ## 控件覆盖（对应官方「控件概览」42 控件）
+
+> **这张表按「官方形态」逐项勾选，不是只写类名。** 只写类名会掩盖一个事实：一个组件类对应官方几个形态、做了几个，从类名上完全看不出来 —— 例如 `showOhosBottomSheet` 一个函数覆盖官方 `bindSheet` 的 5 种 `SheetType`，而 `OhosGauge` 一个类覆盖数据可视化的 17 个形态项。完整形态清单与逐项状态见 [`doc/CONTROL-MATRIX.md`](doc/CONTROL-MATRIX.md)（当前 **256 行 / 完整 204**）。
+>
+> 标记：`✓` 已实现且有用例；`◐` 部分实现（备注写缺口）；`—` 平台差异无需实现。
 
 ### 导航类
 
-| 控件 | 实现 |
-| --- | --- |
-| 标题栏 | `OhosAppBar` |
-| 子页签 | `OhosTabBar` |
-| 底部页签 | `OhosNavigationBar` |
-| 导航点 | `OhosPageIndicator`（见 `ohos_swiper.dart`）|
-| 轮播 | `OhosSwiper` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 标题栏 | 普通 `✓` / MINI 小标题 56vp `✓` / FREE 滚动缩小 `○` / FULL 大标题 112·138vp `○` / MODAL 半模态 `○` / 底部自定义区 `○` / 可编辑 `○` / 动态模糊 `◐` | `OhosAppBar`（逐项缺口见矩阵）|
+| 子页签 | 文本 `✓` / 胶囊 `✓` / 分割线 3 模式 `✓` / 胶囊三段间距 `✓` / 默认选中首个 `✓` | `OhosTabBar` + `OhosChipGroup` |
+| 底部页签 | 平铺 `✓` / 悬浮 `✓` / 迷你栏 `✓` / 三档宽度 `✓` / 渐变蒙层 `✓` / 折叠动效与滚动联动 `✓` | `OhosNavigationBar`（平铺）/ `OhosFloatingTabBar`（悬浮）/ `OhosMiniBar` + `OhosTabsController`（迷你栏） |
+| 导航点 | 圆点 `✓` / 数字 `✓` / 箭头 `✓` / 超长显示 `○` / 蒙版 `○` / 按压放大 `○` / 任意位置 `○` / 逐项自定义 `○` | `OhosPageIndicator`（见 `ohos_swiper.dart`）|
+| 轮播 | 自动播放 `✓` / 指示器联动 `✓` | `OhosSwiper` |
 
 ### 展示类
 
-| 控件 | 实现 |
-| --- | --- |
-| 文本 / 子标题 | `OhosText`（`OhosTextLevel` 全字阶）/ `OhosSubheader` |
-| 图片 | `OhosImage`（支持选中描边）|
-| 分隔器 | `OhosDivider` |
-| 进度条 | `OhosProgressIndicator`（圆形 / 线性）|
-| 新事件标记 | `OhosBadge`（数字 / 红点）|
-| 索引条 | `OhosAlphabetIndexer`（等高槽位 · 拖动放大镜 · `selectedIndex` 受控高亮 · `onSelectEnd`）|
-| 放大镜 | `OhosMagnifier` / `OhosMagnifierController` / `OhosMagnifierPosition`（跟随手指的浮层，也可用于文本选择）|
-| 滚动条 | `OhosScrollbar` |
-| 即时反馈 / 即时操作 | `showOhosToast` / `showOhosSnackBar` |
-| 气泡提示 | `showOhosPopup` |
-| 数据可视化 | `OhosDataPanel` |
-| 二维码 | `OhosQrCode` |
-| 空白 | `OhosBlank` |
-| 文本时钟 | `OhosTextClock` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 文本 / 子标题 | 单行 / 多行 / 省略 `✓` / 跑马灯 `○` / 子标题 7 项 `✓` | `OhosText`（`OhosTextLevel`）/ `OhosSubheader` |
+| 图片 | 基础 `✓` | `OhosImage` |
+| 分隔器 | 横向 `✓` / 纵向 `✓` / `lineCap` `○` | `OhosDivider` |
+| 进度条 | 圆环 `✓` / 线性 `✓` / 胶囊 `✓` / 月相 `✓` / 刻度环 `✓` / 加载动效 `✓` | `OhosProgressIndicator` / `OhosLoadingIndicator`（彗星拖尾）|
+| 新事件标记 | 数字 `✓` / 红点 `✓` | `OhosBadge` |
+| 索引条 | 弹出气泡 `✓` | `OhosAlphabetIndexer` |
+| 放大镜 | 跟随手指浮层 `✓` / 文本选择复用 `✓` | `OhosMagnifier` / `OhosMagnifierController` |
+| 滚动条 | 有子节点 `✓` / 无子节点 `○` | `OhosScrollbar` |
+| 即时反馈 / 即时操作 | Toast `✓` / SnackBar `✓` | `showOhosToast` / `showOhosSnackBar` |
+| 气泡提示 | 气泡 `✓` / 自定义内容 `○` | `showOhosPopup` |
+| 数据可视化 | 17 个形态项全 `✓` | `OhosDataPanel` + `OhosGauge`（逐项见矩阵）|
+| 二维码 | 基础 `✓` | `OhosQrCode` |
+| 空白 | 基础 `✓` | `OhosBlank` |
+| 文本时钟 | 基础 `✓` | `OhosTextClock` |
 
 ### 操作类
 
-| 控件 | 实现 |
-| --- | --- |
-| 按钮 | `OhosButton`（filled / tonal / outlined / text / plain × 胶囊 / 圆角 / 圆形）|
-| 下拉按钮 | `OhosSelect` |
-| 状态按钮 | `OhosToggleButton` |
-| 操作块 | `OhosChip` |
-| 工具栏 | `OhosToolbar` |
-| 核心操作栏 | `OhosActionBar` |
-| 菜单 | `showOhosMenu`（列表 / 宫格）|
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 按钮 | 5 样式 × 3 形状 `✓` / 3 尺寸 `○` | `OhosButton`（filled / tonal / outlined / text / plain × 胶囊 / 圆角 / 圆形）|
+| 下拉按钮 | 基础 `✓` | `OhosSelect` |
+| 状态按钮 | 开关 `✓` / 勾选 `○` / 按钮 `✓` | `OhosToggleButton` |
+| 操作块 | 基础 NORMAL/SMALL `✓` / 逐项几何 `✓` / 可关闭 `✓` / 后缀图标 `✓` / 前图标 `✓` / 筛选型 `○` | `OhosChip`（默认无描边是 `●` 有意偏离，见矩阵）|
+| 工具栏 | 图标+文本 `✓` / ItemState `✓` / 激活项 `✓` / 几何 `✓` / 收纳更多 `✓` / 侧边距 `✓` / 自定义 slot `○` / 长按与无障碍 `○` | `OhosToolbar` |
+| 核心操作栏 | 起始组+主按钮+末尾组 `✓` / 15 项完整 / 逐按钮阴影 `○` | `OhosActionBar` |
+| 菜单 | 列表 `✓` / 宫格 `✓` / 子菜单 `○` | `showOhosMenu` |
 
 ### 输入类
 
-| 控件 | 实现 |
-| --- | --- |
-| 文本输入 | `OhosTextField`（正常 / 聚焦 / 错误态）|
-| 搜索框 | `OhosSearchBar` |
-| 数字加减 | `OhosCounter` |
-| 图案锁 | `OhosPatternLock` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 文本输入 | 下划线 `✓` / 填充 `✓` / 胶囊 `✓` / **内联** `✓` / 密码 `✓` / 计数器 `✓` / 错误态 `✓` / 逐项几何 7 条 `✓` | `OhosTextField` |
+| 密码输入 | 遮蔽 + 眼睛切换 `✓` / 尾部图标 24vp、命中区 40 `✓` / 容器高 48 `✓` | `OhosTextField(obscurePassword:)` |
+| 字数计数器 | 阈值 `✓` / 溢出高亮 `✓` / 字号 10fp `✓` | `OhosTextField(showCounter:)` + `OhosInputCounterOptions` |
+| 搜索框 | 6 项几何与按钮形态 `✓` / `autoDisable` `✓` | `OhosSearchBar`（默认高 40 / 圆角 20 是 `●` 有意偏离，见矩阵）|
+| 数字加减 | 数字 `✓` / 日期 `✓` / 日期几何 4 条 `✓` / 聚焦段反白 `✓` / 长按连续 `○` / 列表·紧凑·内联型 `○` | `OhosCounter` / `OhosDateCounter` |
+| 图案锁 | 基础 `✓` | `OhosPatternLock` |
 
 ### 选择类
 
-| 控件 | 实现 |
-| --- | --- |
-| 勾选框 / 单选按钮 / 开关 | `OhosCheckbox` / `OhosRadio` / `OhosSwitch` |
-| 评分条 | `OhosRatingBar`（支持半星）|
-| 滑动条 | `OhosSlider`（刻度 / 气泡数值）|
-| 选择器 | `showOhosPicker` |
-| 颜色选择器 | `OhosColorPicker` |
-| 分段按钮 | `OhosSegmentedButton` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 勾选框 / 单选按钮 / 开关 | 单个 `✓` / 全选组 `✓`（全选与半选）/ 圆形 `✓` / 自定义 indicator `✓` / 开关 `✓` | `OhosCheckbox` / `OhosRadio` / `OhosSwitch` |
+| 评分条 | 整星 / 半星 `✓` | `OhosRatingBar` |
+| 滑动条 | OutSet `✓` / InSet `✓` / NONE 无滑块 `✓` / 步点 `✓` / 前后缀 `✓` / 有效区间 `○` | `OhosSlider` |
+| 选择器 | 滚轮 `✓` / 时间日期 `✓` / 月历 `○` | `showOhosPicker`（月历见阶段 C 遗留）|
+| 颜色选择器 | 网格/光谱/滑块 `✓` / 收藏 `✓` / 不透明度 `○` / 屏幕取色 `○` / 色值输入 `○` | `OhosColorPicker` |
+| 分段按钮 | 4 项全 `✓` | `OhosSegmentedButton` |
 
 ### 容器类
 
-| 控件 | 实现 |
-| --- | --- |
-| 列表 / 列表项 | `OhosList` / `OhosListTile` |
-| 卡片 | `OhosCard` |
-| 弹出框 | `OhosAlertDialog` / `showOhosDialog` |
-| 气泡提示 | `showOhosPopup` |
-| 半模态面板 | `showOhosBottomSheet` |
+| 控件 | 官方形态 | 实现 |
+| --- | --- | --- |
+| 列表 / 列表项 | 平铺 `✓` / 分组+组头组尾 `✓` / 组内分割线 `✓` / 卡片样式 `✓` / 吸顶 `✓` / 横滑操作 `✓` / 吸底 `○` / 组头悬浮 `○` / 多列 `○` / 横滑删除类型 `○` / 选中态 `○` / 预览菜单 `○` | `OhosList` / `OhosListTile` |
+| 列表分组 | 卡片样式 `✓` / 组头组尾 `✓` / 吸顶组头 `✓` / 吸底组尾 `○` / 悬浮 `○` / 多列 `○` | `OhosListGroup` / `OhosListGroupSliver` |
+| 列表卡片 | A 区前缀 7 种 `✓` / B 区三层文本 `✓` / C 区后缀 17 种 `✓` / 几何与交互 `✓` / 副 Symbol `○` / 悬浮态圆角 `○` | `OhosListItemCard` / `OhosListItemCardList` |
+| 卡片 | 基础 `✓` / 可点击 `✓` | `OhosCard` |
+| 弹出框 | Confirm `✓` / Alert `✓` / CustomContent `✓` / 几何 6 条 `✓` / `onWillDismiss` `✓` / Tips `◐` / Select·Loading·子窗口·悬停 `○` | `OhosAlertDialog` / `showOhosDialog` |
+| 气泡提示 | 见「展示类」 | `showOhosPopup` |
+| 半模态面板 | BOTTOM `✓` / CENTER `✓` / POPUP `✓` / SIDE `✓` / CONTENT_COVER `✓` / `detents` 多挡位 `✓` / 响应式 `preferType` `✓` | `showOhosBottomSheet` |
 
 ## 设计语言实现（对齐官方设计规范）
 
@@ -782,6 +1102,11 @@ showOhosSnackBar(
 
 const OhosProgressIndicator.circular();                     // 无限转圈
 OhosProgressIndicator.linear(value: 0.6);                   // 线性进度
+OhosProgressIndicator.capsule(value: 0.6);                  // 胶囊（量长度）
+OhosProgressIndicator.ring(value: 0.6);                     // 圆环（量角度）
+OhosProgressIndicator.eclipse(value: 0.5);                  // 月相（量面积，0.5 是整左半圆）
+OhosProgressIndicator.scaleRing(value: 0.6);                // 刻度环（靠换色，不是刻度变多）
+const OhosLoadingIndicator();                               // 加载动效（彗星拖尾）
 
 OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'); // 二维码
 ```
@@ -839,9 +1164,11 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 | 页面 | 截图 |
 | --- | --- |
 | 主页（7 大分类）| `doc/screenshots/gallery_home.png` |
-| 导航类：沉浸光感标题栏 / 下划线+胶囊子页签 / ChipGroup 多选 / 平铺+悬浮底部页签 | `doc/screenshots/gallery_navigation.png` |
-| 导航类（滚动）：胶囊子页签 / ChipGroup / 底部页签 | `doc/screenshots/gallery_navigation_capsule.png` |
-| 导航类（滚动）：平铺式 + 悬浮式底部页签 | `doc/screenshots/gallery_navigation_bottom.png` |
+| 导航类：沉浸光感标题栏 / 状态栏内边距 / 标题栏对齐 | `doc/screenshots/gallery_navigation.png` |
+| 导航类（滚动）：下划线子页签 | `doc/screenshots/gallery_navigation_capsule.png` |
+| 导航类（滚动）：胶囊子页签 / ChipGroup 多选 | `doc/screenshots/gallery_navigation_bottom.png` |
+| 导航类（滚动）：悬浮页签栏 `OhosFloatingTabBar` 与其内容区 | `doc/screenshots/gallery_navigation_floating.png` |
+| 导航类（滚动）：迷你栏 `OhosMiniBar` 折叠/展开与布局切换 | `doc/screenshots/gallery_navigation_minibar.png` |
 | 布局与动效：栅格系统 / 响应式断点 / 沉浸光感 / 转场动效 | `doc/screenshots/gallery_layout_grid.png` |
 | 布局与动效（滚动）：沉浸光感 THIN/THICK 材质 | `doc/screenshots/gallery_layout_light.png` |
 | 布局与动效（滚动）：一镜到底共享元素 / 动效曲线对比 | `doc/screenshots/gallery_layout_motion.png` |
@@ -859,6 +1186,38 @@ hdc file recv /data/local/tmp/home.jpeg ./gallery_home.png
 | 展示类（交互）：`magnifierBuilder` 自定义泡泡 | `doc/screenshots/mag_02_indexer_custom_bubble.png` |
 | 展示类（交互）：独立放大镜跟随色带报色值 | `doc/screenshots/mag_03_magnifier_strip.png` |
 | 导航类：标题栏状态栏分段着色 / `heightOf` | `doc/screenshots/appbar_01_statusbar_band.png` |
+
+### 深色（dark 主题）
+
+同一份代码切到深色档位后的样子。深色**只翻令牌明暗**（深底浅字），表现规则仍是
+彩屏 —— 阴影、模糊、水波纹都还在。这与墨水屏是两件正交的事：前者换色值，后者
+换「怎么表现才看得见」：
+
+| 页面 | 截图 |
+| --- | --- |
+| 主页：深灰卡片浮在近黑页面上，靠明度差分层而不是描边 | `doc/screenshots/dark_01_home.png` |
+| 操作类：品牌蓝在深底上提亮，五种强调样式靠亮度分级 | `doc/screenshots/dark_02_action.png` |
+| 选择类：勾选 / 单选 / 开关的选中态用提亮蓝，未选中走中灰描边 | `doc/screenshots/dark_03_selection.png` |
+| 输入类：下划线、错误红、胶囊搜索框在深底上的对比度 | `doc/screenshots/dark_04_input.png` |
+| 容器类：列表分隔线与卡片面同色系，靠一档亮度差分开 | `doc/screenshots/dark_05_container.png` |
+| 档位菜单：五档并列（跟随系统 / 浅色 / 深色 / 墨水屏 / 深色墨水屏），当前项打勾 | `doc/screenshots/dark_06_menu.png` |
+| **深色墨水屏**：两个维度同时成立 —— 深色纸（令牌明暗）+ 1px 实线、无阴影（表现规则） | `doc/screenshots/dark_07_ink_dark.png` |
+
+### 墨水屏（ink 主题）
+
+同一份代码切到墨水屏档位后的样子。16 级灰上「浅底 = 不存在」，所以这些图里
+**看不到任何半透明叠色**，凡是彩屏用浅底托住形体的地方，这里都换成了 1px 实线：
+
+| 页面 | 截图 |
+| --- | --- |
+| 主页：卡片全部白底 + 1px 框，图标退成灰底实心 | `doc/screenshots/ink_01_home.png` |
+| 操作类：填充=纯黑 / 次级=中黑 / 描边=1px / 禁用=浅灰，四种强调样式的灰度区分 | `doc/screenshots/ink_02_action.png` |
+| 选择类：勾选、开关、评分靠实心与描边而非色相区分 | `doc/screenshots/ink_03_selection.png` |
+| 输入类：`filled` 变体自动退回透明底 + 1px 线 | `doc/screenshots/ink_07_input.png` |
+| 容器类：列表分隔线与卡片描边同为 1px 实色 | `doc/screenshots/ink_08_container.png` |
+| 弹出框（交互）：无阴影，靠遮罩明度差浮起 | `doc/screenshots/ink_04_dialog.png` |
+| 气泡提示（交互）：白底 + 1px 描边 | `doc/screenshots/ink_05_popup.png` |
+| 半模态面板（交互）：分享图标退成灰底黑图标，靠形状区分 | `doc/screenshots/ink_06_bottom_sheet.png` |
 
 ## 设计来源
 

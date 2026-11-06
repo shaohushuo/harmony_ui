@@ -89,7 +89,7 @@ class OhosButton extends StatelessWidget {
     // NoteAir 上「加载中」按钮只剩一个空白药丸，连转圈都看不见）。
     final bool interactive = onPressed != null && !loading;
     final bool dimmed = onPressed == null && !loading;
-    final bool ink = theme.monochrome;
+    final OhosVisualPolicy policy = theme.policy;
     final Color highlight = theme.highlightColor;
     final Color textPrimary = theme.textPrimaryColor;
 
@@ -99,45 +99,48 @@ class OhosButton extends StatelessWidget {
     switch (style) {
       case OhosButtonStyle.filled:
         // 禁用态不能靠「淡化填充 + 白字」表达：高亮色通常是深色，淡化到 20% 是
-        // 浅底，白字压在上面几乎看不见 —— 墨水屏预设里 highlightColor 就是纯黑，
-        // 于是变成「#CCCCCC 底 + 白字」，16 级灰阶上整块消失（真机：NoteAir 变更
-        // 抽屉在没有暂存文件时，「提交 (0)」按钮看不见）。
+        // 浅底，白字压在上面几乎看不见。策略把这种「托不住形体的浅底」判成
+        // 透明，于是自动落到下面的描边分支，与 outlined 同一套。
         //
-        // 墨水屏上更进一步：20% 的浅底本身就留不住形状（同一份预设里已经为
-        // 「10% 黑的分隔线」写过这句话），改成透明底 + 实线描边，与 outlined 同一套。
-        background = dimmed
-            ? (ink ? Colors.transparent : highlight.withValues(alpha: 0.20))
-            : highlight;
+        // 真机背景：NoteAir 变更抽屉在没有暂存文件时，「提交 (0)」按钮看不见。
+        background = dimmed ? policy.tint(highlight, 0.20) : highlight;
         foreground = dimmed ? theme.textTertiaryColor : Colors.white;
-        border = dimmed && ink ? theme.textTertiaryColor : Colors.transparent;
+        border = dimmed && background.a == 0
+            ? policy.line(theme.textTertiaryColor, 1)
+            : Colors.transparent;
       case OhosButtonStyle.tonal:
-        background = highlight.withValues(alpha: dimmed ? 0.06 : 0.12);
+        background = policy.tint(highlight, dimmed ? 0.06 : 0.12);
         foreground = dimmed ? theme.textTertiaryColor : highlight;
-        // 12% / 6% 的底在墨水屏上同样看不见，补一条实线把轮廓留住
-        border = ink ? (dimmed ? theme.textTertiaryColor : highlight) : Colors.transparent;
+        // 底色被策略判成透明（墨屏上 12% / 6% 看不见）时，补一条实线把轮廓留住
+        border = background.a == 0
+            ? policy.line(dimmed ? theme.textTertiaryColor : highlight, 1)
+            : Colors.transparent;
       case OhosButtonStyle.outlined:
         background = Colors.transparent;
         foreground = dimmed ? theme.textTertiaryColor : highlight;
-        // 50% / 40% 的线在 16 级灰上会淡掉，墨水屏一律用实色
-        border = ink
-            ? (dimmed ? theme.textTertiaryColor : highlight)
-            : (dimmed
-                ? theme.textTertiaryColor.withValues(alpha: 0.4)
-                : highlight.withValues(alpha: 0.5));
+        // 50% / 40% 的线在 16 级灰上会淡掉，由策略统一换成实色
+        border = policy.line(
+          dimmed ? theme.textTertiaryColor : highlight,
+          dimmed ? 0.4 : 0.5,
+        );
       case OhosButtonStyle.text:
         background = Colors.transparent;
         foreground = dimmed ? theme.textTertiaryColor : highlight;
         border = Colors.transparent;
       case OhosButtonStyle.plain:
+        // 基准色必须是**黑**而不是 cardColor：浅色档的 cardColor 就是白色，
+        // 白 8% 铺在白页 / 白卡上等于没有（旧实现是 `0x14000000`，黑 8%，
+        // 在浅底上是一块看得见的灰）。墨水屏下 alpha ≤ 0.20 仍被判成透明，
+        // 与旧行为一致，禁用态靠下面那条描边区分。
         background = dimmed
-            ? (ink ? Colors.transparent : const Color(0x14000000))
+            ? policy.tint(const Color(0xFF000000), 0.08)
             : theme.cardColor;
         foreground = dimmed ? theme.textTertiaryColor : textPrimary;
-        border = ink
-            ? theme.textTertiaryColor
-            : (dimmed
-                ? theme.textTertiaryColor.withValues(alpha: 0.2)
-                : theme.textTertiaryColor.withValues(alpha: 0.4));
+        // 彩屏的 plain 是「白底 + 发丝线」，禁用时连那条线也淡掉；极浅的底
+        // 在灰阶屏上等于没有，策略把线换成实色，靠线留住轮廓。
+        border = dimmed
+            ? policy.line(theme.textTertiaryColor, 0.2)
+            : policy.line(theme.textTertiaryColor, 0.4);
     }
 
     // 三个形状共用同一条边：宽度换算与「画在盒内」都走 ohosBorderSide
@@ -155,6 +158,14 @@ class OhosButton extends StatelessWidget {
         shapeBorder = CircleBorder(side: borderSide);
     }
 
+    // 无底色 + 无边框的文字按钮，在灰阶屏上与正文同色（ink 主题的
+    // highlightColor 和 textPrimaryColor 都是纯黑），读者分不出哪个能点。
+    // 下划线不是装饰，是这块屏上唯一剩下的可供性线索 —— 交给策略判断，
+    // 因为「要不要划线」取决于这块屏的其他线索够不够，不是取决于描边宽度。
+    final bool underline = style == OhosButtonStyle.text &&
+        !dimmed &&
+        theme.policy.underlinesTextActions;
+
     final Widget label = loading
         ? SizedBox(
             width: 18,
@@ -169,7 +180,36 @@ class OhosButton extends StatelessWidget {
         : DefaultTextStyle.merge(
             style:
                 (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
-                    .copyWith(color: foreground),
+                    .copyWith(
+                      color: foreground,
+                      // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
+                      // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
+                      // 放行下来。Material 3 的默认 DefaultTextStyle 恰好是
+                      // `TextDecoration.none`，所以彩屏看着没问题 —— 那是巧合，
+                      // 不是保证。可供性既然归按钮判断，就不该外泄给祖先。
+                      decoration: underline
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                      // `decorationColor` 同理，**也必须两个分支都给值**。
+                      //
+                      // 这里曾经写成 `decorationColor: underline ? foreground : null`，
+                      // 于是三个字段只有这一个漏了：`decoration` 已经是 none，
+                      // 祖先把我们的橙黄 `decorationColor` 递了下来。flutter_test
+                      // 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`
+                      // （纯黄）—— 那是测试框架给「不该有下划线却有了」留的视觉
+                      // 警报色。结果：墨屏对话框的标题与正文各带一条**黄线**，
+                      // 而所有断言（都只查 `decoration`）全绿。
+                      //
+                      // 真机不显形，是因为 Material 3 的 `decorationColor` 是正文色，
+                      // 即使下划线被关掉也看不出来。**「彩屏看着没问题」在这里第二次
+                      // 掩盖了同一个缺陷**：前一次是 `decoration`（注释已记录），
+                      // 这一次是它的兄弟字段。所以不再走「靠祖先恰好对我有利」这条
+                      // 路，直接给中性值。
+                      decorationColor: underline ? foreground : Colors.transparent,
+                      decorationStyle: underline
+                          ? TextDecorationStyle.solid
+                          : null,
+                    ),
             // 按钮标签按惯例是单行：给 Text 默认省略号，配合上面的
             // Flexible 收缩，窄容器不会再报 overflow。
             maxLines: 1,
@@ -196,14 +236,16 @@ class OhosButton extends StatelessWidget {
     // 墨水屏（`monochrome`）与 `NoSplash` 主题下不闪水波纹：前者每次点按都会
     // 留一块半透明灰且刷新慢，后者是调用方显式关掉了 splash。
     final bool noSplash =
-        theme.monochrome ||
+        !theme.policy.allowsRipple ||
         Theme.of(context).splashFactory == NoSplash.splashFactory;
 
     return Material(
       color: background,
       shape: shapeBorder,
       clipBehavior: Clip.antiAlias,
-      elevation: style == OhosButtonStyle.filled && !dimmed ? 1 : 0,
+      elevation: style == OhosButtonStyle.filled && !dimmed && theme.policy.allowsShadow
+          ? 1
+          : 0,
       shadowColor: highlight.withValues(alpha: 0.25),
       child: InkWell(
         onTap: interactive ? onPressed : null,

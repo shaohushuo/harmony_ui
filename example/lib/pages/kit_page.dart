@@ -106,6 +106,7 @@ class _PointLightDemoState extends State<_PointLightDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -113,7 +114,11 @@ class _PointLightDemoState extends State<_PointLightDemo> {
           padding: const EdgeInsets.all(14),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF101418),
+              // 这块深底是**点光源的画布**（白点要压在上面才看得见），
+              // 不是品牌色。彩屏固定 #101418；墨屏没有中间调，量化后会
+              // 落成接近纯黑 —— 比「留一块带蓝的深色」更接近这块屏上
+              // 「暗色画布」该有的样子。
+              color: theme.policy.quantize(const Color(0xFF101418)),
               borderRadius: BorderRadius.circular(20),
             ),
             padding: const EdgeInsets.all(14),
@@ -274,7 +279,9 @@ class _PressShadowDemo extends StatelessWidget {
             height: 96,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFF8A8A8E),
+              // 这对色块演示的是「白色混合 vs 径向渐变」两种按压反馈，
+              // 底色本身没有品牌含义；墨屏上该是一档实灰。
+              color: theme.policy.quantize(const Color(0xFF8A8A8E)),
               borderRadius: BorderRadius.circular(24),
             ),
             child: const Text(
@@ -399,13 +406,21 @@ class _SwipeListDemoState extends State<_SwipeListDemo> {
               actions: <OhosSwipeAction>[
                 OhosSwipeAction(
                   icon: const Icon(Icons.share_rounded),
-                  backgroundColor: const Color(0xFF64BB5C),
+                  // 滑动按钮的绿 / 橙是**语义色**（分享 / 复制各一档），不是装饰：
+                  // 彩屏上读者靠色相分「这一滑会做什么」。灰阶屏没有色相可用，
+                  // 只能靠明度差 —— 所以仍然走 policy，由它决定压到哪一档灰。
+                  // 写死 `0xFF64BB5C` 的话，墨屏截图里这两块仍是绿和橙。
+                  backgroundColor: theme.policy.quantize(
+                    const Color(0xFF64BB5C),
+                  ),
                   foregroundColor: Colors.white,
                   onTap: () => showOhosToast(context, '点击分享'),
                 ),
                 OhosSwipeAction(
                   icon: const Icon(Icons.copy_rounded),
-                  backgroundColor: const Color(0xFFED6F21),
+                  backgroundColor: theme.policy.quantize(
+                    const Color(0xFFED6F21),
+                  ),
                   foregroundColor: Colors.white,
                   onTap: () => showOhosToast(context, '点击复制'),
                 ),
@@ -801,7 +816,8 @@ class _ExpandableActionBarDemo extends StatefulWidget {
 }
 
 class _ExpandableActionBarDemoState extends State<_ExpandableActionBarDemo> {
-  bool _expanded = true;
+  bool _expanded = false;
+  bool _iconChanged = false;
 
   @override
   Widget build(BuildContext context) {
@@ -810,32 +826,35 @@ class _ExpandableActionBarDemoState extends State<_ExpandableActionBarDemo> {
       // 底板跟着主题走：固定浅灰配主题配色的图标按钮，深色主题下会变成
       // 浅灰底 + 近白图标。
       color: theme.compBackgroundGrayColor ?? OhosColors.compBackgroundGray,
-      height: 88,
+      height: 120,
       alignment: Alignment.bottomRight,
       padding: const EdgeInsets.all(12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          OhosActionBar(
-            expandable: true,
-            isExpanded: _expanded,
-            onIsExpandedChanged: (bool v) => setState(() => _expanded = v),
-            secondaryActions: const <Widget>[
-              OhosIconButton(
-                icon: Icon(Icons.timer_outlined),
-                tooltip: '计时',
-              ),
-              OhosIconButton(
-                icon: Icon(Icons.mic_none_rounded),
-                tooltip: '录音',
-              ),
-              OhosIconButton(
-                icon: Icon(Icons.more_horiz_rounded),
-                tooltip: '更多',
-              ),
-            ],
+      child: OhosActionBar(
+        isExpand: _expanded,
+        onIsExpandChanged: (bool v) => setState(() => _expanded = v),
+        startButtons: <OhosActionBarButton>[
+          OhosActionBarButton(
+            icon: const Icon(Icons.timer_outlined),
+            tooltip: '计时',
+            onPressed: () {},
+          ),
+          OhosActionBarButton(
+            icon: const Icon(Icons.mic_none_rounded),
+            tooltip: '录音',
+            onPressed: () {},
           ),
         ],
+        primaryButton: OhosActionBarButton(
+          // 官方示例同样是「加号 → 播放」：点一下同时切图标与展开态。
+          icon: const Icon(Icons.add_rounded),
+          altIcon: const Icon(Icons.play_arrow_rounded),
+          tooltip: _iconChanged ? '播放' : '开始',
+          onPressed: () => setState(() {
+            _expanded = !_expanded;
+            _iconChanged = !_iconChanged;
+          }),
+        ),
+        style: OhosActionBarStyle(isPrimaryIconChanged: _iconChanged),
       ),
     );
   }

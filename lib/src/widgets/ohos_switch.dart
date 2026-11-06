@@ -40,17 +40,20 @@ class _OhosSwitchState extends State<OhosSwitch> {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final bool enabled = widget.onChanged != null;
-    final bool ink = theme.monochrome;
+    final OhosVisualPolicy policy = theme.policy;
     final Color active = widget.activeColor ?? theme.highlightColor;
-    // 墨水屏：30% 灰的轨道落在 16 级灰的第 2 级，关闭态等于只有一个白圆点
-    // 悬在白页面上 —— 轨道改成留白 + 1px 实线，滑块也补轮廓。
+    // 30% 灰的轨道落在 16 级灰的第 2 级，关闭态等于只有一个白圆点悬在白页面
+    // 上 —— 用描边的主题一律留白，轮廓交给 [outlineWidth] 那条实线。
     final Color inactive =
         widget.inactiveColor ??
-        (ink
+        (theme.usesOutlines
             ? Colors.transparent
             : theme.textTertiaryColor.withValues(alpha: 0.3));
     // 轨道 / 滑块共用的轮廓色：启用纯黑，禁用降一档到 #767676
-    final Color inkLine = enabled ? theme.dividerColor : theme.textTertiaryColor;
+    final Color lineColor = enabled
+        ? theme.dividerColor
+        : theme.textTertiaryColor;
+    final double? outlineWidth = policy.outlineWidth;
     final double trackWidth = widget.size.width;
     final double trackHeight = widget.size.height;
     final double thumb = trackHeight - 4;
@@ -65,22 +68,23 @@ class _OhosSwitchState extends State<OhosSwitch> {
           width: trackWidth,
           height: trackHeight,
           decoration: BoxDecoration(
+            // 禁用 + 选中时轨道不再是实色，跟着描边一起降档
             color: widget.value
-                ? (ink && !enabled ? theme.textTertiaryColor : active)
+                ? (enabled ? active : policy.tint(active, 0.35))
                 : inactive,
             borderRadius: BorderRadius.circular(trackHeight / 2),
           ),
           // 边框走 `foregroundDecoration`：`BoxDecoration.border` 会占掉内边距，
           // 26vp 的滑块被压成 26×24 的椭圆（轨道高 30、padding 2、边框 1）。
-          foregroundDecoration: ink
-              ? BoxDecoration(
+          foregroundDecoration: outlineWidth == null
+              ? null
+              : BoxDecoration(
                   borderRadius: BorderRadius.circular(trackHeight / 2),
                   border: Border.all(
-                    color: inkLine,
-                    width: ohosStrokeWidth(context),
+                    color: lineColor,
+                    width: ohosStrokeWidth(context, outlineWidth),
                   ),
-                )
-              : null,
+                ),
           padding: EdgeInsets.all((trackHeight - thumb) / 2),
           child: AnimatedAlign(
             duration: OhosGeometry.durationShort,
@@ -94,19 +98,23 @@ class _OhosSwitchState extends State<OhosSwitch> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: ink
-                    ? Border.all(color: inkLine, width: ohosStrokeWidth(context))
-                    : null,
-                // 阴影在墨水屏上不存在，别占一层刷新
-                boxShadow: ink
+                // 白滑块贴在白页面上等于没有滑块，靠描边读出来
+                border: outlineWidth == null
                     ? null
-                    : const <BoxShadow>[
+                    : Border.all(
+                        color: lineColor,
+                        width: ohosStrokeWidth(context, outlineWidth),
+                      ),
+                // 阴影在墨水屏上不存在，别占一层刷新
+                boxShadow: policy.allowsShadow
+                    ? const <BoxShadow>[
                         BoxShadow(
                           color: Color(0x33000000),
                           blurRadius: 4,
                           offset: Offset(0, 2),
                         ),
-                      ],
+                      ]
+                    : null,
               ),
             ),
           ),

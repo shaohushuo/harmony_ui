@@ -42,16 +42,17 @@ class OhosCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final OhosVisualPolicy policy = theme.policy;
     final Color surface = color ?? theme.cardColor;
     final Widget content = Padding(padding: padding, child: child);
     // 墨水屏上卡片默认面与页面同为纯白、阴影也不存在 —— 一整块内容会浮在
     // 白底上分不清边界。默认面补 1px 实线；调用方显式给了 color 就不再插手，
     // 免得把一块有色面（比如反白块）又框一条黑边。
-    final bool outlined = theme.monochrome && color == null;
+    final bool outlined = policy.outlineWidth != null && color == null;
     final BoxDecoration decoration = BoxDecoration(
       color: surface,
       borderRadius: BorderRadius.circular(borderRadius),
-      boxShadow: elevation == 0 || theme.monochrome
+      boxShadow: elevation == 0 || !policy.allowsShadow
           ? null
           : <BoxShadow>[
               BoxShadow(
@@ -69,7 +70,7 @@ class OhosCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: theme.dividerColor,
-              width: ohosStrokeWidth(context),
+              width: ohosStrokeWidth(context, policy.outlineWidth!),
             ),
           )
         : null;
@@ -95,6 +96,8 @@ class OhosCard extends StatelessWidget {
           onTap: onTap,
           splashColor: theme.highlightColor.withValues(alpha: 0.10),
           highlightColor: theme.highlightColor.withValues(alpha: 0.08),
+          // 墨水屏上点按反馈会留一块半透明灰且刷新慢，策略直接关掉
+          splashFactory: policy.allowsRipple ? null : NoSplash.splashFactory,
           child: content,
         ),
       ),

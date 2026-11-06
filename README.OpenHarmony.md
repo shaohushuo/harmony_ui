@@ -8,12 +8,22 @@ Widget naming and APIs are aligned with Flutter's built-in `Material*` / `Cupert
 
 - Repository (AtomGit): [oh-flutter/harmony_ui](https://atomgit.com/oh-flutter/harmony_ui)
 - Repository (GitHub): [shaohushuo/harmony_ui](https://github.com/shaohushuo/harmony_ui)
-- Companion icon package: [ohos_icons](https://pub.dev/packages/ohos_icons) (HarmonyOS Symbol font icons, published on pub.dev)
+- Companion icon package: [harmony_icons](https://pub.dev/packages/harmony_icons) (HarmonyOS Symbol font icons, published on pub.dev). Renamed from `ohos_icons`, which is now marked discontinued — the `OhosIcons` class name is unchanged.
 - Changelog: [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)
 
 ## Installation
 
-Add the git dependency in `pubspec.yaml`:
+Pick either of the two ways below.
+
+**Option 1: Add the published pub package**
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
+  harmony_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
+```
+
+**Option 2: Add the git dependency of this repository**
 
 ```yaml
 dependencies:
@@ -23,7 +33,7 @@ dependencies:
     git:
       url: https://atomgit.com/oh-flutter/harmony_ui.git
       ref: main
-  ohos_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
+  harmony_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
 ```
 
 Fetch dependencies:
@@ -38,7 +48,8 @@ Current version and branch mapping:
 
 | Library version | Branch / TAG | Flutter version |
 | --- | --- | --- |
-| 0.4.0 | `main` / `v0.4.0` | oh-3.35.7-release |
+| 0.5.0 | `main` / `v0.5.0` | oh-3.35.7-release |
+| 0.4.0 | `v0.4.0` | oh-3.35.7-release |
 | 0.3.0 | `v0.3.0` | oh-3.35.7-release |
 | 0.2.0 | historical commit | oh-3.35.7-release |
 | 0.1.0 | historical commit | oh-3.35.7-release |
@@ -125,10 +136,11 @@ hdc shell aa start -a EntryAbility -b com.example.ohos_ui_example
 
 ## Instructions
 
-1. **Theme first**: wrap inside `MaterialApp` with `OhosTheme`; `OhosThemeData.light()` / `dark()` work out of the box. All widget colors come from theme tokens, and `copyWith` supports brand customization.
-2. **Replace widgets one by one**: `ElevatedButton` → `OhosButton`, `ListTile` → `OhosListTile`, etc. API names map one-to-one, so most cases can be migrated with a global replace.
-3. **Upgrade to light material on demand**: enable `lightMaterial: true` on the app bar / bottom navigation / bottom sheet to get the immersive light effect.
-4. **Full demo**: the gallery app under `example/` covers every control (6 categories + layout & motion, 7 entries) and serves as an API reference.
+1. **Theme first**: wrap inside `MaterialApp` with `OhosTheme`; `OhosThemeData.light()` / `dark()` / `ink()` work out of the box. All widget colors come from theme tokens, and `copyWith` supports brand customization.
+2. **Normal ↔ e-ink in one tap**: `OhosThemeController` + `OhosThemeSwitcher` (wraps `MaterialApp`) + `OhosThemeToggleButton` (drop into `OhosAppBar.actions`). The two themes differ by *rendering policy*, not just colors: colour screens layer (20% tints, shadows, blur, ripples), e-ink uses 1px solid lines and no motion. That rule lives in `OhosVisualPolicy` — adding a third screen type means one new subclass, not edits to 24 widgets.
+3. **Replace widgets one by one**: `ElevatedButton` → `OhosButton`, `ListTile` → `OhosListTile`, etc. API names map one-to-one, so most cases can be migrated with a global replace.
+4. **Upgrade to light material on demand**: enable `lightMaterial: true` on the app bar / bottom navigation / bottom sheet to get the immersive light effect.
+5. **Full demo**: the gallery app under `example/` covers every control (6 categories + layout & motion, 7 entries) and serves as an API reference.
 
 ## API Reference
 

@@ -40,6 +40,67 @@
   - 沉浸光感：粉紫蓝渐变压成一块没有意义的灰带，墨屏直接给一档实心深灰 `#333333` 当背景，THIN 退化成纯白后仍然立得住；THICK 退化成纯白后与页面同色，按库的约定（边界交给调用方）自己补 1px 线；`+` 图标改读 `theme.highlightColor`（原来硬编码品牌蓝）。
   - 动效曲线：跑道底由 `#F1F3F5` 换成 `#EEEEEE`，圆点改读 `theme.highlightColor`；进度条仍是 55% 品牌蓝 —— 压到灰阶上是中灰，与彩屏版本对照最直观。
 
+### Bugfix（`DefaultTextStyle` 继承链）
+
+- 修复 `OhosAlertDialog` 的标题与正文在真机（墨屏）上各带**两条黄线**。弹窗由 `showDialog` 挂在 Navigator 的 Overlay 上，**没有 `Material` 祖先**，那两段 `Text` 因此退到 `DefaultTextStyle.fallback` —— 这个常量是 `#FFFF00` + `TextDecorationStyle.double`，专门用来在视觉上标记「这段文字没有任何样式来源」。实测截图有 **5340 个 `#FDFE53` 级黄像素**（标题宽 135px、正文宽 262px 各一条）。修法是在弹窗内部补一层 `DefaultTextStyle`（`TextDecoration.none` + `textPrimaryColor`），一次覆盖标题、正文与任意 `contentWidget`；不是逐处给 `Text` 传 `style`。**按钮文字当时是正常的**（`_OhosDialogActionButton` 自己包了 `Material`），所以只截按钮或只测按钮会完全漏掉这个缺陷
+- 修复 `OhosButton` 的 `TextButton` 变体：`decorationColor: underline ? foreground : null`。非下划线分支给 `null` 等于**把祖先的 `decorationColor` 放行下来** —— `DefaultTextStyle.merge` 只覆盖非 null 字段，`null` 不是「清空」而是「不表态」。这条在真机上表现为墨屏弹窗标题下方一条黄线；`flutter_test` 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`（测试框架给「不该有下划线却有了」留的警报色），而 Material 3 真机该字段是正文色，所以**只在墨屏 + 特定祖先链上显形**。改为两个分支都给值（`Colors.transparent`）
+- 修复对应的弱断言：`test/text_button_affordance_test.dart` 原来用 `isNot(const Color(0xFFFF0000))`，`null` 也能通过。改成强断言 `Colors.transparent` 并做变异验证（撤销修复 → 变红）
+- 排查范围：`showMenu`（内部自带 `Material`）、`showModalBottomSheet`（`ohos_bottom_sheet.dart` / `ohos_picker.dart` 各自有 `Material`）、`OhosToast` / `OhosPopup`（早已显式给中性值）、`OhosMagnifier`（`inherit: false` 断链）均不受影响。**只有 `showDialog` 这一条路会中招** —— `ohos_popup.dart` 的注释里其实早就记过同一个坑，但当时只修了 Toast 那一条路径，没有回头查「还有谁挂在 Overlay 上」
+
+### Tooling
+
+- `tool/capture_theme.sh`：修 `switch_theme` 的词表不匹配 —— 调用方传 `ink`（与 `mode`、目录名、README 一致），主题探针只输出 `gray` / `light` / `dark`，两者永远 `!=`，脚本因此永远判「切不过去」并把主题转走。失败时改为直接退出，不再产出错标主题的截图
+- `tool/capture_theme.sh`：支持按分类过滤与按分类定屏数 —— `./tool/capture_theme.sh <light|ink> 导航类`；导航类与 `UI Design Kit` 各采 11 屏（其余 5 屏），因为这两个页面区块数超过 5，原先 `kit_09` / `kit_10` 会拍成同一张
+- 文档：**主题按钮是 3 态循环**（light → dark → gray → light），不是 4 态；「深色墨水屏」只能在长按菜单里选，脚本的循环拍不到，必须现场操作
+- 文档：交互态截图（弹层 / 放大镜 / 菜单 / 转场）的采法 —— `uinput -M` 的「按下 / 移动 / 抬起」三步可分离执行，能在**按住状态**截到放大镜与索引条泡泡；`uitest uiInput drag` 则用「后台起拖 + 定时截图」卡拖拽中间帧（色带放大镜、共享元素转场靠这个）
+
+### Optimization
+
+- 示例工程与文档的图标包依赖由 `ohos_icons` 迁移到 **`harmony_icons`**。`ohos_icons` 已改名为 `harmony_icons`，旧包在 pub.dev 上标记为 discontinued（`"isDiscontinued": true`），不会再有更新；`harmony_icons` 0.1.0 于 2026-10-13 发布。**类名不变，仍是 `OhosIcons`** —— 两包导出的是同一套 534 个 Symbol 常量，逐个比对只差两处笔误修正（`chevron_down_` → `chevron_down_L`、`chevron_up_` → `chevron_up_L`，旧名末尾多一个下划线），本库用到的 `chevron_right` 不受影响。因此迁移是纯包名替换：`example/pubspec.yaml` 一行 + 8 个示例页的 import 一行，零代码改动。下方 v0.1.0 的条目仍写 `ohos_icons`，那是当时的真实依赖，不改写历史
+
+## v0.6.0
+
+Release date: 2026-11-04
+
+### Features
+
+- 半模态面板 `bindSheet` 的 **5 种 `SheetType` 全部落地**（`OhosSheetType` / `OhosSheetSize` / `OhosSheetDetent` / `OhosSheetSpec`）。这不是「同一块面板换对齐方式」，而是 **5 套能力矩阵**：BOTTOM 只圆上面两角；CONTENT_COVER 无圆角、**无蒙层**、无标题栏与关闭按钮；SIDE 高度恒全屏且无控制条与挡位；CENTER / POPUP 下 `SheetSize.MEDIUM` 与 `LARGE` **无效**（恒 560vp）
+- 半模态多挡位 `detents`：枚举挡位与数值挡位可混写、最多 3 挡、首挡为初始高度、**生效时 `height` 直接失效**。挡位切换按官方判据实现 —— **速度优先**（>1000px/s 直接按手速方向切挡，不看距离），速度不够才退回到「位移 > 当前与目标距离的 1/2」
+- 半模态宽度响应式默认形态（`preferType`）：<600vp BOTTOM、600–840vp CENTER、≥840vp POPUP
+- 悬浮页签栏 `OhosFloatingTabBar` / `OhosFloatingTabItem` / `OhosFloatingTabBarStyle` / `OhosFloatingTabScaffold`，以及三档宽度算法 `OhosTabsWidthDefaults`。**这是另一个形态而非 `OhosTabBar` 的变体** —— 官方把三档宽度、蒙层、迷你栏全部挂在 `barFloatingStyle` 下，它有三个平铺栏不满足的前置条件（栏叠在内容之上、非纵向、位于底部）
+- 迷你栏 `OhosMiniBar` / `OhosMiniBarStyle` / `OhosMiniBarScaffold` 与 `OhosTabsController` / `OhosAnimationMode`。**迷你栏与页签栏是两个独立的栏**（官方单列 `HdsTabsMiniBar`，有自己的宽度分档、折叠状态与动效回调）。控制器含折叠动效三方法（`applyMiniBarStyle` / `applyHideAnimation` / `applyShowAnimation`）与滚动联动（`bindScroller` / `unbindScroller`）
+- 核心操作栏 `OhosActionBar` 按官方结构重写：`startButtons` / `endButtons` 两端按钮组 + 主按钮，落 `OhosActionBarButton`（官方 17 属性取 12）与 `OhosActionBarStyle`（官方 10 字段全落）
+- 数据面板 `OhosDataPanel` 按官方语义重写（占比图 / 环形 / 线形），并新增量规图 `OhosGauge`
+- 列表卡片 `OhosListItemCard` / `OhosListItemCardList`（A-B-C 三区、三层文本、17 种后缀）与列表分组 `OhosListGroup` / `OhosListGroupSliver`（卡片样式、组头组尾、吸顶组头）
+
+### Bugfix
+
+- 半模态圆角由 **24vp 修正为官方 32vp**。24 是 `float.json` 里 `ohos_id_corner_radius_dialog`（**对话框**圆角）的值 —— 同一个「圆角」概念、数值都在 20–30 区间，拿错一个看起来完全合理
+- 半模态墨水屏描边按形态给边：原实现写死 `BorderRadius.vertical(top:)`（只有底部形态成立），现 BOTTOM 只描顶上一条、CENTER / POPUP / SIDE 描四边、CONTENT_COVER 无圆角
+- 悬浮页签栏 **328vp 是绝对上限不是必然值**：容器 340vp 宽时「16 + 328 + 16 = 360」直接溢出 20vp，必须再夹一次可用宽度。`RenderFlex` 不会报错，只是把栏挤出屏幕
+- 悬浮页签栏**必须居中**：用 `Padding(left/right)` 定位会变成左对齐，栏一窄就贴左，肉眼像漏了一半。边距约束的是最小间隙，不是定位锚点
+- 迷你栏**「居中」是相对容器**：用 `Row + Spacer` 时折叠者占掉流式布局空间，展开者中心偏移 28vp（520vp 宽、折叠 56 + 展开 200 时）。改用 `Stack` + `Align`
+- 迷你栏两个栏宽度各自独立算出、**合计可能超容器**：320vp 屏上「200 + 8 + 220 = 428」溢出 68vp，`Row` 不折行且静态分析不报错，是 `example` 溢出矩阵报 `RenderFlex overflowed by 68 pixels` 才暴露
+- `OhosTabsController.bindScroller` **只挂只读监听、绝不 `hold()` 或改写 position** —— 曾写成 `scroller.position.hold()`，会让内容区滚动卡住不动，单看 API 签名完全看不出来
+- 示例「布局与动效」页的动效曲线填充条写死品牌蓝 `#0A59F7`，墨水屏下是一条彩色带。原注释写着「55% 品牌蓝压到灰阶上是中灰，留着反而与彩屏对照最直观」—— 那句话对 16 级灰的**真机**成立，对**截图**不成立。改走 `theme.policy.quantize(...)`
+- 示例「导航类」页的轮播占位页写死四色（蓝/绿/黄/粉），墨水屏下一页里出现四条彩色带。改走 `policy.quantize`，同时**把字色判断从「查写死的表」改成「算量化结果的亮度」** —— 「黄色配黑字」这条规则量化后不再成立
+- 示例「UI Design Kit」页的点光源深底 `#101418` 与按压阴影示范块 `#8A8A8E` 未跟主题退化，墨水屏下带蓝相。两者都是**示例自绘的演示面**（点光源需要暗底才看得见白点），不是品牌色也不是数据，改走 `policy.quantize`
+
+### Breaking changes
+
+- `OhosActionBar` 结构改造：`startButtons` / `endButtons` 取代单一 `secondaryActions`；`primaryLabel` / `onPrimaryPressed` / `primaryLoading` / `expandable` / `isExpanded` / `onIsExpandedChanged` / `primaryIcon` / `primaryTooltip` 全部移除。官方 `HdsActionBar` 从来只有「起始组 + 主按钮 + 末尾组」这个形态
+- `OhosDataPanel` 重写：旧构造语义（KPI 卡片网格）与官方（占比/环形数据图）完全不符，无法兼容
+- `OhosListTile.divider` 由 `bool`（默认 `true`）改为 `bool?`（默认 `null`）。`null` 表示跟随所在的 `OhosList` —— 列表接管分隔线，行边界恰好一条、末行不画
+
+### Optimization
+
+- 文档重新对账：`doc/CONTROL-MATRIX.md` 从 227 行扩到 **256 行 / 完整 204**（口径变严：多个控件从 1–2 行拆成 5–17 行）
+- README 的控件覆盖表从「只写类名」改为「官方形态逐项勾选」，并新增 `tool/check_readme_matrix.py` 校验两者不漂移 —— 两份文件是同一事实的两个副本，矩阵改了 README 没跟上时**不会让任何测试变红**
+- 用例 491 → **649**；`example` 用例 **85 → 175**，其中溢出矩阵 72 → **162**（新增弹层维度 90 条 = 10 种弹层 × 3 尺寸 × 3 字号 —— 页面扫描扫不到**新路由里的面板布局**，这是原有矩阵的真实盲区）
+- 新增 `example/test/ink_no_color_test.dart`：墨水屏「不应出现彩色」回归测试（8 页 × 全树扫 `DecoratedBox`）。补的是一个此前无人守的洞 —— README 的墨水屏图集靠真机截图，而截图的失败方式是**看起来像主题没切**，实际主题切对了、彩色来自示例自绘的占位内容。判据迭代过两版：初版按「单块面积占比」放行小色块，**变异验证时它放过了真实缺陷**（曲线条是四条 `358×10`，每块只占 1% 屏，叠起来却是一整片彩带）；最终改成「默认必须灰，颜色即数据要显式申报」（`example/lib/ink_color_data.dart` 的 `InkColorData`），并对三处真实缺陷逐一做过变异验证
+- 文档源抓取地址由 gitee 迁移到 GitCode（`raw.gitcode.com` / `api.gitcode.com` 是不同 host），动因是旧地址的目录 API 已全线 403、而那正是「不猜文件名」的依据
+- 构建链的环境坑已记录：`hvigor` 的 `ohpm install` 与 `SignHap` 都要删除中间产物，撞上批量删除保护后，报错分别写成 `ohpm install failed`（附「检查网络/仓库地址」）与 `Error Code: 00308018 Unknown Error` —— **两处都完全指不到真正的失败原因**。构建时去掉注入的 `NODE_OPTIONS` 即可通过
+
 ## v0.4.0
 
 Release date: 2026-10-30

@@ -52,7 +52,7 @@ Future<T?> showOhosMenu<T>({
       side: ohosBorderSide(
         context,
         theme.dividerColor,
-        width: theme.monochrome ? 1 : 0.5,
+        width: theme.outlineWidth,
       ),
     ),
     elevation: 8,

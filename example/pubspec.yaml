@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
   harmony_ui:
     path: ../
-  ohos_icons: ^0.1.0
+  harmony_icons: ^0.1.0
 
 dev_dependencies:
   flutter_test:
