@@ -105,11 +105,11 @@ class OhosSelectionMenuItem {
 ///
 /// 2. **独立使用** —— 需要自己摆位置时用 [OhosSelectionToolbar.anchored]。
 ///
-/// 与前四项对不上的一点：Flutter 的 `TextSelectionToolbar` 在
-/// `Theme.of(context).platform == iOS / macOS` 时会换用 Cupertino 的实现，
-/// 那套装不了我们的容器。本组件固定用 `TextSelectionToolbar`，把
-/// `platform` 临时覆盖成 `ohos`，这样三端渲染一致 —— 库的语义就是
-/// HarmonyOS，不该在 iOS 上变成另一个样子。
+/// 本组件直接使用 Material 的 [TextSelectionToolbar]，并通过
+/// `toolbarBuilder` 把外层容器固定成 HarmonyOS 样式。这里刻意不经过
+/// [AdaptiveTextSelectionToolbar] 的平台分支，因此不需要覆盖
+/// `ThemeData.platform`：iOS、macOS、Web 以及 OHOS 都渲染同一种菜单，
+/// 同时避免引用 OHOS Flutter fork 独有的 `TargetPlatform.ohos`。
 class OhosSelectionToolbar extends StatelessWidget {
   const OhosSelectionToolbar._({
     required this.children,
@@ -340,17 +340,13 @@ class OhosSelectionToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    return Theme(
-      // 见类注释：Cupertino 分支装不下我们的容器。
-      data: Theme.of(context).copyWith(platform: TargetPlatform.ohos),
-      child: TextSelectionToolbar(
-        anchorAbove: anchorAbove,
-        anchorBelow: anchorBelow,
-        // 只有一项时也走 `children` 分支的横向容器，形状与多项一致。
-        children: children,
-        toolbarBuilder: (BuildContext context, Widget child) =>
-            _OhosSelectionSurface(theme: theme, child: child),
-      ),
+    return TextSelectionToolbar(
+      anchorAbove: anchorAbove,
+      anchorBelow: anchorBelow,
+      // 只有一项时也走 `children` 分支的横向容器，形状与多项一致。
+      children: children,
+      toolbarBuilder: (BuildContext context, Widget child) =>
+          _OhosSelectionSurface(theme: theme, child: child),
     );
   }
 }
