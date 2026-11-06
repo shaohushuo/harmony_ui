@@ -1,12 +1,13 @@
 {
-    "name": "ohos_ui_example",
-    "short_name": "ohos_ui_example",
+    "name": "harmony_ui 组件画廊",
+    "short_name": "harmony_ui",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F1F3F5",
+    "theme_color": "#0A59F7",
+    "description": "harmony_ui 在线组件画廊：HarmonyOS 设计语言、主题令牌与 Flutter 控件演示。",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

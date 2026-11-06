@@ -10,6 +10,7 @@ Widget naming and APIs are aligned with Flutter's built-in `Material*` / `Cupert
 - Repository (GitHub): [shaohushuo/harmony_ui](https://github.com/shaohushuo/harmony_ui)
 - Companion icon package: [harmony_icons](https://pub.dev/packages/harmony_icons) (HarmonyOS Symbol font icons, published on pub.dev). Renamed from `ohos_icons`, which is now marked discontinued — the `OhosIcons` class name is unchanged.
 - Changelog: [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)
+- Live demo: [harmony_ui web gallery](https://shaohushuo.github.io/harmony_ui/)
 
 ## Installation
 

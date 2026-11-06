@@ -46,3 +46,30 @@ jobs:
       - name: Test (example)
         working-directory: example
         run: flutter test
+
+  web-demo:
+    name: Build web demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.35.7"
+          cache: true
+
+      - name: Install dependencies (example)
+        working-directory: example
+        run: flutter pub get
+
+      # 在线演示由官方 Flutter 构建，不依赖 OHOS SDK。这里在 PR 阶段提前拦住
+      # Web 专用 API、资源路径和图标 tree-shaking 引起的构建回归。
+      - name: Build web demo
+        working-directory: example
+        run: >
+          flutter build web
+          --release
+          --no-source-maps
+          --no-tree-shake-icons
+          --base-href /harmony_ui/
