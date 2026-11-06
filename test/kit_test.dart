@@ -14,7 +14,9 @@ Widget wrap(Widget child) {
 
 void main() {
   group('OhosPressShadow', () {
-    testWidgets('does not throw on press and releases', (WidgetTester tester) async {
+    testWidgets('does not throw on press and releases', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         wrap(
           OhosPressShadow(
@@ -171,7 +173,10 @@ void main() {
       // Tap inside the saturation/value box (lower half of the picker).
       final Rect pickerRect = tester.getRect(find.byType(OhosColorPicker));
       await tester.tapAt(
-        Offset(pickerRect.left + pickerRect.width * 0.7, pickerRect.bottom - 90),
+        Offset(
+          pickerRect.left + pickerRect.width * 0.7,
+          pickerRect.bottom - 90,
+        ),
       );
       await tester.pump();
       expect(picked, isNotEmpty);

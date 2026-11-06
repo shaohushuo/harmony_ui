@@ -82,12 +82,13 @@ void showOhosSnackBar(
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: (theme.typography.bodyMedium ??
-                                  const TextStyle(fontSize: 15))
-                              .copyWith(
-                                color: theme.textPrimaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style:
+                              (theme.typography.bodyMedium ??
+                                      const TextStyle(fontSize: 15))
+                                  .copyWith(
+                                    color: theme.textPrimaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                       if (content != null) ...<Widget>[
                         if (title != null) const SizedBox(height: 2),
@@ -95,18 +96,20 @@ void showOhosSnackBar(
                           content,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: (theme.typography.bodySmall ??
-                                  const TextStyle(fontSize: 13))
-                              .copyWith(color: theme.textSecondaryColor),
+                          style:
+                              (theme.typography.bodySmall ??
+                                      const TextStyle(fontSize: 13))
+                                  .copyWith(color: theme.textSecondaryColor),
                         ),
                       ],
                     ],
                   )
                 : Text(
                     message ?? '',
-                    style: (theme.typography.bodyMedium ??
-                            const TextStyle(fontSize: 15))
-                        .copyWith(color: theme.textPrimaryColor),
+                    style:
+                        (theme.typography.bodyMedium ??
+                                const TextStyle(fontSize: 15))
+                            .copyWith(color: theme.textPrimaryColor),
                   ),
           ),
           if (resident)

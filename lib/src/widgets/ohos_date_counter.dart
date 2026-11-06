@@ -14,11 +14,7 @@ import '../theme/ohos_theme.dart';
 /// which is not what the component does.
 @immutable
 class OhosDate {
-  const OhosDate({
-    required this.year,
-    required this.month,
-    required this.day,
-  });
+  const OhosDate({required this.year, required this.month, required this.day});
 
   /// Drops the time part of [value].
   OhosDate.fromDateTime(DateTime value)
@@ -40,8 +36,7 @@ class OhosDate {
 
   /// Gregorian leap rule, as written in `getDayNumber()`:
   /// `(year % 4 == 0 && year % 100 != 0) || year % 400 == 0`.
-  bool get isLeapYear =>
-      (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+  bool get isLeapYear => (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
 
   /// Days in [month] of [year]; 29 in a leap February.
   int get daysInMonth {
@@ -100,7 +95,11 @@ class OhosDate {
   }
 
   OhosDate copyWith({int? year, int? month, int? day}) => _clampedDay(
-    OhosDate(year: year ?? this.year, month: month ?? this.month, day: day ?? this.day),
+    OhosDate(
+      year: year ?? this.year,
+      month: month ?? this.month,
+      day: day ?? this.day,
+    ),
   );
 
   /// Pulls [day] back to the last day of the month if the month got shorter.
@@ -377,7 +376,9 @@ class _OhosDateCounterState extends State<OhosDateCounter> {
   void _onMonthInput(String raw) {
     if (raw.length != 2) return;
     final int? month = int.tryParse(raw);
-    if (month == null || month < OhosDate.minMonth || month > OhosDate.maxMonth) {
+    if (month == null ||
+        month < OhosDate.minMonth ||
+        month > OhosDate.maxMonth) {
       _month.text = _pad2(widget.value.month);
       return;
     }
@@ -387,7 +388,9 @@ class _OhosDateCounterState extends State<OhosDateCounter> {
   void _onDayInput(String raw) {
     if (raw.length != 2) return;
     final int? day = int.tryParse(raw);
-    if (day == null || day < OhosDate.minDay || day > widget.value.daysInMonth) {
+    if (day == null ||
+        day < OhosDate.minDay ||
+        day > widget.value.daysInMonth) {
       _day.text = _pad2(widget.value.day);
       return;
     }

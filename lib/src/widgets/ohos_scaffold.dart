@@ -76,7 +76,11 @@ class OhosScaffold extends StatelessWidget {
                 //   调用方自己让过」），页面级容器得替它让一次，不然内容顶到
                 //   状态栏下面。
                 if (appBar != null)
-                  SafeArea(top: !appBar!.primary, bottom: false, child: appBar!),
+                  SafeArea(
+                    top: !appBar!.primary,
+                    bottom: false,
+                    child: appBar!,
+                  ),
                 Expanded(
                   child: SafeArea(
                     // 有 AppBar 时状态栏那一段已经被它占掉，body 再让一次就是

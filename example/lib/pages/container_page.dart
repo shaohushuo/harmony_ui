@@ -163,7 +163,9 @@ class ContainerPage extends StatelessWidget {
                 onTap: () => showOhosToast(context, '进入 WLAN 设置'),
               ),
               OhosListItemCard(
-                prefix: const OhosListItemCardPrefix(child: Icon(OhosIcons.bluetooth)),
+                prefix: const OhosListItemCardPrefix(
+                  child: Icon(OhosIcons.bluetooth),
+                ),
                 title: '蓝牙',
                 suffix: const OhosListItemCardSuffix.text('已开启'),
                 onTap: () {},
@@ -187,13 +189,17 @@ class ContainerPage extends StatelessWidget {
                 suffix: const OhosListItemCardSuffix.select('75%'),
               ),
               OhosListItemCard(
-                prefix: const OhosListItemCardPrefix(child: Icon(OhosIcons.icloud)),
+                prefix: const OhosListItemCardPrefix(
+                  child: Icon(OhosIcons.icloud),
+                ),
                 title: '正在同步',
                 subtitle: '三区同时出现时后排让位',
                 suffix: const OhosListItemCardSuffix.loading(size: 20),
               ),
               OhosListItemCard(
-                prefix: const OhosListItemCardPrefix(child: Icon(OhosIcons.trash)),
+                prefix: const OhosListItemCardPrefix(
+                  child: Icon(OhosIcons.trash),
+                ),
                 title: '不可用的一行',
                 subtitle: '整块降到 40% 并挡住点击',
                 enabled: false,
@@ -411,7 +417,10 @@ class ContainerPage extends StatelessWidget {
                           spacing: 18,
                           runSpacing: 12,
                           children: <Widget>[
-                            _ShareIcon(icon: OhosIcons.message_fill, label: '信息'),
+                            _ShareIcon(
+                              icon: OhosIcons.message_fill,
+                              label: '信息',
+                            ),
                             _ShareIcon(
                               icon: OhosIcons.envelope_fill,
                               label: '邮件',

@@ -51,7 +51,8 @@ class OhosMultiWindowEntry extends StatelessWidget {
     final Color fg = iconColor ?? theme.textPrimaryColor;
     final Color bg =
         backgroundColor ??
-        (theme.compBackgroundGrayColor ?? theme.textPrimaryColor.withValues(alpha: 0.06));
+        (theme.compBackgroundGrayColor ??
+            theme.textPrimaryColor.withValues(alpha: 0.06));
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[

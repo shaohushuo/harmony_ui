@@ -226,10 +226,12 @@ class OhosListItemCardSuffix {
       size = OhosListItemCardMetrics.iconSystem;
 
   /// 勾选框后缀。
-  const OhosListItemCardSuffix.checkbox(Widget this.child, {this.enabled = true})
-    : type = OhosListItemCardSuffixType.checkbox,
-      text = null,
-      size = OhosListItemCardMetrics.iconSystem;
+  const OhosListItemCardSuffix.checkbox(
+    Widget this.child, {
+    this.enabled = true,
+  }) : type = OhosListItemCardSuffixType.checkbox,
+       text = null,
+       size = OhosListItemCardMetrics.iconSystem;
 
   /// 开关后缀。
   const OhosListItemCardSuffix.switchButton(
@@ -240,12 +242,10 @@ class OhosListItemCardSuffix {
        size = OhosListItemCardMetrics.iconSystem;
 
   /// 箭头后缀（本库自绘 `Icon >`）。
-  const OhosListItemCardSuffix.arrow({
-    this.enabled = true,
-    this.size = 20,
-  }) : type = OhosListItemCardSuffixType.arrow,
-       text = null,
-       child = null;
+  const OhosListItemCardSuffix.arrow({this.enabled = true, this.size = 20})
+    : type = OhosListItemCardSuffixType.arrow,
+      text = null,
+      child = null;
 
   /// 下拉后缀。[text] 是当前选中的文案，箭头由本库绘制。
   const OhosListItemCardSuffix.select(String this.text, {this.enabled = true})

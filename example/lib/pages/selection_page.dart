@@ -323,7 +323,10 @@ class _SegmentDemoState extends State<_SegmentDemo> {
           onSelected: (String v) => setState(() => _selected = v),
         ),
         const SizedBox(height: 16),
-        Text('tab 型（白背板、无图标）', style: OhosTheme.of(context).typography.bodySmall),
+        Text(
+          'tab 型（白背板、无图标）',
+          style: OhosTheme.of(context).typography.bodySmall,
+        ),
         const SizedBox(height: 8),
         OhosSegmentedButton<String>(
           type: OhosSegmentType.tab,
@@ -336,7 +339,10 @@ class _SegmentDemoState extends State<_SegmentDemo> {
           onSelected: (String v) => setState(() {}),
         ),
         const SizedBox(height: 16),
-        Text('capsule 多选（multiply）', style: OhosTheme.of(context).typography.bodySmall),
+        Text(
+          'capsule 多选（multiply）',
+          style: OhosTheme.of(context).typography.bodySmall,
+        ),
         const SizedBox(height: 8),
         OhosSegmentedButton<String>(
           multiply: true,
@@ -445,8 +451,16 @@ class _WheelDemoState extends State<_WheelDemo> {
             columns: <OhosPickerColumn>[
               OhosPickerColumn(
                 labels: const <String>[
-                  '北京', '上海', '广州', '深圳', '杭州',
-                  '成都', '武汉', '西安', '南京', '重庆',
+                  '北京',
+                  '上海',
+                  '广州',
+                  '深圳',
+                  '杭州',
+                  '成都',
+                  '武汉',
+                  '西安',
+                  '南京',
+                  '重庆',
                 ],
                 initialIndex: _index,
               ),
@@ -465,7 +479,10 @@ class _WheelDemoState extends State<_WheelDemo> {
           child: OhosWheelPicker(
             indicator: OhosPickerIndicator.divider,
             columns: <OhosPickerColumn>[
-              OhosPickerColumn(labels: <String>['标准', '高清', '超清', '原画'], flex: 2),
+              OhosPickerColumn(
+                labels: <String>['标准', '高清', '超清', '原画'],
+                flex: 2,
+              ),
               OhosPickerColumn(labels: <String>['30fps', '60fps']),
             ],
           ),

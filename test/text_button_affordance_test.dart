@@ -66,8 +66,7 @@ void main() {
     // `DefaultTextStyle.merge` 只覆盖非 null 字段，一旦谁把非下划线分支改回
     // `decoration: null`，祖先的下划线就会漏到按钮文字上 —— 而 Material 3 的
     // 默认 DefaultTextStyle 恰好不带下划线，普通用例根本测不出来。
-    testWidgets('祖先带下划线时，彩屏 text 按钮不被传染',
-        (WidgetTester tester) async {
+    testWidgets('祖先带下划线时，彩屏 text 按钮不被传染', (WidgetTester tester) async {
       await tester.pumpWidget(
         OhosTheme(
           data: OhosThemeData.light(),
@@ -106,8 +105,9 @@ void main() {
       );
     });
 
-    testWidgets('其他样式不受影响：filled / outlined 不加下划线',
-        (WidgetTester tester) async {
+    testWidgets('其他样式不受影响：filled / outlined 不加下划线', (
+      WidgetTester tester,
+    ) async {
       for (final OhosButtonStyle style in <OhosButtonStyle>[
         OhosButtonStyle.filled,
         OhosButtonStyle.tonal,
@@ -138,8 +138,7 @@ void main() {
       }
     });
 
-    testWidgets('禁用态的 text 按钮不加下划线 —— 免得读起来还能点',
-        (WidgetTester tester) async {
+    testWidgets('禁用态的 text 按钮不加下划线 —— 免得读起来还能点', (WidgetTester tester) async {
       await tester.pumpWidget(
         OhosTheme(
           data: OhosThemeData.ink(),
@@ -156,26 +155,17 @@ void main() {
           ),
         ),
       );
-      expect(
-        hasUnderline(styleOfLabel(tester, '禁用')),
-        isFalse,
-      );
+      expect(hasUnderline(styleOfLabel(tester, '禁用')), isFalse);
     });
 
-    testWidgets('策略可覆盖：自定主题关掉下划线，即使它是灰阶',
-        (WidgetTester tester) async {
+    testWidgets('策略可覆盖：自定主题关掉下划线，即使它是灰阶', (WidgetTester tester) async {
       // 一个「有配色但仍是灰阶」的主题：isMonochrome 为真但决定不划线
       await tester.pumpWidget(
         page(
-          OhosThemeData.ink().copyWith(
-            policy: const _NoUnderlineInkPolicy(),
-          ),
+          OhosThemeData.ink().copyWith(policy: const _NoUnderlineInkPolicy()),
         ),
       );
-      expect(
-        hasUnderline(styleOfLabel(tester, '了解更多')),
-        isFalse,
-      );
+      expect(hasUnderline(styleOfLabel(tester, '了解更多')), isFalse);
     });
   });
 

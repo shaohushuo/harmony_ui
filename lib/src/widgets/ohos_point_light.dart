@@ -10,7 +10,13 @@ import '../theme/ohos_theme.dart';
 /// - [content]: the surface body receives a soft light pool.
 /// - [borderContent]: both the lit edge and the light pool are drawn.
 /// - [defaultFeatheringBorder]: a wider, feathered border glow.
-enum OhosPointLightIlluminatedType { none, border, content, borderContent, defaultFeatheringBorder }
+enum OhosPointLightIlluminatedType {
+  none,
+  border,
+  content,
+  borderContent,
+  defaultFeatheringBorder,
+}
 
 /// Options of a point light source, mirroring `hdsEffect.pointLight({options})`.
 class OhosPointLightOptions {
@@ -203,7 +209,10 @@ class OhosIlluminated extends StatelessWidget {
     return Stack(
       fit: StackFit.passthrough,
       children: <Widget>[
-        if (clipContent) ClipRRect(borderRadius: borderRadius, child: child) else child,
+        if (clipContent)
+          ClipRRect(borderRadius: borderRadius, child: child)
+        else
+          child,
         IgnorePointer(
           child: CustomPaint(
             painter: _IlluminationPainter(
@@ -254,10 +263,13 @@ class _IlluminationPainter extends CustomPainter {
     // surface radius.
     final Offset center = size.center(Offset.zero);
     final double spread = size.shortestSide / 2;
-    final Offset lightPos = center + Offset(alignment.x, alignment.y) * spread * 0.62;
+    final Offset lightPos =
+        center + Offset(alignment.x, alignment.y) * spread * 0.62;
 
     if (_hasContent) {
-      final double peak = (0.10 + intensity * 0.012).clamp(0.0, 0.55).toDouble();
+      final double peak = (0.10 + intensity * 0.012)
+          .clamp(0.0, 0.55)
+          .toDouble();
       final double poolRadius = size.longestSide * (0.55 + intensity / 240);
       final Rect poolRect = Rect.fromCircle(
         center: lightPos,
@@ -282,8 +294,8 @@ class _IlluminationPainter extends CustomPainter {
       // Crescent edge glow on the lit side.
       final double stroke =
           type == OhosPointLightIlluminatedType.defaultFeatheringBorder
-              ? 10
-              : 4;
+          ? 10
+          : 4;
       final double peak = (0.25 + intensity * 0.02).clamp(0.0, 0.95).toDouble();
       final Paint borderPaint = Paint()
         ..style = PaintingStyle.stroke

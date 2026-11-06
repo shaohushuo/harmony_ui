@@ -3750,6 +3750,40 @@ void main() {
       expect(find.byType(OhosLightMaterial), findsOneWidget);
     });
 
+    testWidgets('不覆盖 ThemeData.platform，兼容官方 Flutter', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          Theme(
+            data: ThemeData(platform: TargetPlatform.iOS),
+            child: OhosSelectionToolbar.anchored(
+              anchorAbove: const Offset(200, 400),
+              anchorBelow: const Offset(200, 420),
+              items: const <OhosSelectionMenuItem>[
+                OhosSelectionMenuItem(
+                  id: 'a',
+                  label: '动作 A',
+                  icon: Icons.star_rounded,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // TextSelectionToolbar 是 Material 实现，不会读取 platform 选择
+      // Cupertino 分支。覆盖 platform 反而会引用 OHOS fork 独有的枚举值，
+      // 让官方 Flutter 的 Web/CI 构建直接编译失败。
+      final ThemeData platformTheme = Theme.of(
+        tester.element(find.byType(TextSelectionToolbar)),
+      );
+      expect(platformTheme.platform, TargetPlatform.iOS);
+      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('anchored 形态能独立摆位置并渲染动作', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(

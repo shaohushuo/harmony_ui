@@ -318,7 +318,11 @@ class OhosFloatingTabBar extends StatelessWidget {
     );
   }
 
-  Widget _bar(BuildContext context, OhosThemeData theme, double containerWidth) {
+  Widget _bar(
+    BuildContext context,
+    OhosThemeData theme,
+    double containerWidth,
+  ) {
     final Widget row = SizedBox(
       height: style.height,
       child: Row(
@@ -431,15 +435,14 @@ class OhosFloatingTabBar extends StatelessWidget {
             item.label!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: (theme.typography.labelSmall ??
-                    const TextStyle(fontSize: 10))
-                .copyWith(
-                  color: fg,
-                  fontWeight:
-                      selected && mark == OhosSelectionMark.emphasis
-                      ? FontWeight.w700
-                      : FontWeight.w400,
-                ),
+            style:
+                (theme.typography.labelSmall ?? const TextStyle(fontSize: 10))
+                    .copyWith(
+                      color: fg,
+                      fontWeight: selected && mark == OhosSelectionMark.emphasis
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                    ),
           ),
         ],
       ],

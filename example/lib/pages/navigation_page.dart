@@ -139,9 +139,9 @@ class _StatusBarInsetDemo extends StatelessWidget {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        padding: const EdgeInsets.only(top: 24),
-      ),
+      data: MediaQuery.of(
+        context,
+      ).copyWith(padding: const EdgeInsets.only(top: 24)),
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: demoFrameBorder(context, theme),
@@ -153,7 +153,11 @@ class _StatusBarInsetDemo extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              _bar(context, primary: true, caption: 'primary: true（默认）· 高 80vp'),
+              _bar(
+                context,
+                primary: true,
+                caption: 'primary: true（默认）· 高 80vp',
+              ),
               Divider(height: 1, color: demoFrameColor(theme)),
               _bar(context, primary: false, caption: 'primary: false · 高 56vp'),
             ],
@@ -207,9 +211,9 @@ class _StatusBarColorDemo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        padding: const EdgeInsets.only(top: 24),
-      ),
+      data: MediaQuery.of(
+        context,
+      ).copyWith(padding: const EdgeInsets.only(top: 24)),
       child: const _StatusBarColorDemoBody(),
     );
   }
@@ -233,7 +237,10 @@ class _StatusBarColorDemoBody extends StatelessWidget {
           bar: const OhosAppBar(
             // 这个示例故意用固定白底（演示 backgroundColor 覆盖），标题就也
             // 固定深色 —— 否则深色主题下是白底白字。
-            title: Text('消息', style: TextStyle(color: OhosColors.textPrimaryLight)),
+            title: Text(
+              '消息',
+              style: TextStyle(color: OhosColors.textPrimaryLight),
+            ),
             backgroundColor: Colors.white,
           ),
         ),
@@ -242,7 +249,10 @@ class _StatusBarColorDemoBody extends StatelessWidget {
           context,
           caption: 'statusBarBackgroundColor：状态栏 = 页面底色，工具栏 = 卡片色',
           bar: const OhosAppBar(
-            title: Text('消息', style: TextStyle(color: OhosColors.textPrimaryLight)),
+            title: Text(
+              '消息',
+              style: TextStyle(color: OhosColors.textPrimaryLight),
+            ),
             backgroundColor: Colors.white,
             statusBarBackgroundColor: Color(0xFFE8EBF0),
           ),
@@ -260,7 +270,11 @@ class _StatusBarColorDemoBody extends StatelessWidget {
     );
   }
 
-  Widget _framed(BuildContext context, {required String caption, required OhosAppBar bar}) {
+  Widget _framed(
+    BuildContext context, {
+    required String caption,
+    required OhosAppBar bar,
+  }) {
     final OhosThemeData theme = OhosTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -277,10 +291,7 @@ class _StatusBarColorDemoBody extends StatelessWidget {
             border: demoFrameBorder(context, theme),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: bar,
-          ),
+          child: ClipRRect(borderRadius: BorderRadius.circular(12), child: bar),
         ),
       ],
     );
@@ -394,11 +405,7 @@ class _AppBarSlotsDemoState extends State<_AppBarSlotsDemo>
               ],
               bottom: OhosTabBar(
                 controller: _tabs,
-                tabs: const <Widget>[
-                  Text('文件'),
-                  Text('提交'),
-                  Text('分支'),
-                ],
+                tabs: const <Widget>[Text('文件'), Text('提交'), Text('分支')],
               ),
             ),
             Divider(height: 1, color: theme.dividerColor),
@@ -572,13 +579,13 @@ class _MiniBarDemoState extends State<_MiniBarDemo> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           const Icon(Icons.alarm, size: 24),
-                          if (_controller.miniBarStyle == OhosBarStyle.expand)
-                            ...<Widget>[
-                              const SizedBox(width: 12),
-                              const Text('点击折叠'),
-                              const SizedBox(width: 12),
-                              const Icon(Icons.pause_circle_outline, size: 24),
-                            ],
+                          if (_controller.miniBarStyle ==
+                              OhosBarStyle.expand) ...<Widget>[
+                            const SizedBox(width: 12),
+                            const Text('点击折叠'),
+                            const SizedBox(width: 12),
+                            const Icon(Icons.pause_circle_outline, size: 24),
+                          ],
                         ],
                       ),
                     ),

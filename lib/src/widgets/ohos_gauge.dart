@@ -496,10 +496,7 @@ class _OhosGaugePainter extends CustomPainter {
     final Path path = Path()
       ..moveTo(tip.dx, tip.dy)
       ..lineTo(base.dx + normal.dx * halfWidth, base.dy + normal.dy * halfWidth)
-      ..lineTo(
-        base.dx - normal.dx * halfWidth,
-        base.dy - normal.dy * halfWidth,
-      )
+      ..lineTo(base.dx - normal.dx * halfWidth, base.dy - normal.dy * halfWidth)
       ..close();
     canvas.drawPath(
       path,

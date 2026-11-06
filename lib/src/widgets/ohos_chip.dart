@@ -142,10 +142,7 @@ class OhosChip extends StatelessWidget {
                 // 占位，激活态优先取 selectedIcon。回落规则见上面的 [leading]。
                 if (leading != null) ...<Widget>[
                   IconTheme.merge(
-                    data: IconThemeData(
-                      color: fg,
-                      size: metrics.iconSize,
-                    ),
+                    data: IconThemeData(color: fg, size: metrics.iconSize),
                     child: leading,
                   ),
                   SizedBox(width: metrics.iconGap),
@@ -164,10 +161,7 @@ class OhosChip extends StatelessWidget {
                 if (suffixIcon != null) ...<Widget>[
                   SizedBox(width: metrics.iconGap),
                   IconTheme.merge(
-                    data: IconThemeData(
-                      color: fg,
-                      size: metrics.iconSize,
-                    ),
+                    data: IconThemeData(color: fg, size: metrics.iconSize),
                     child: suffixIcon!,
                   ),
                 ] else if (allowClose) ...<Widget>[
@@ -185,10 +179,7 @@ class OhosChip extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: enabled ? onClose : null,
                     child: IconTheme.merge(
-                      data: IconThemeData(
-                        color: fg,
-                        size: metrics.iconSize,
-                      ),
+                      data: IconThemeData(color: fg, size: metrics.iconSize),
                       child: const Icon(Icons.close_rounded),
                     ),
                   ),

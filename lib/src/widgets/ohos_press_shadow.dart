@@ -170,8 +170,7 @@ class _PressShadowPainter extends CustomPainter {
       case OhosPressShadowType.blendWhite:
         canvas.drawRect(
           Offset.zero & size,
-          Paint()
-            ..color = Colors.white.withValues(alpha: opacity * progress),
+          Paint()..color = Colors.white.withValues(alpha: opacity * progress),
         );
       case OhosPressShadowType.blendGradient:
         final double radius = size.longestSide * 0.75;

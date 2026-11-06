@@ -81,12 +81,10 @@ class ActionPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '工具栏 OhosToolbar',
-          description: '图标 + 文字，整条 57（56 + 1px 分割线）。'
+          description:
+              '图标 + 文字，整条 57（56 + 1px 分割线）。'
               '激活态要 activeIndex 与 ACTIVATE 同时满足；超过 5 项自动收进「更多」。',
-          child: DemoCard(
-            padding: EdgeInsets.zero,
-            child: _ToolbarDemo(),
-          ),
+          child: DemoCard(padding: EdgeInsets.zero, child: _ToolbarDemo()),
         ),
         const DemoSection(
           title: '核心操作栏 OhosActionBar',
@@ -156,7 +154,10 @@ class ActionPage extends StatelessWidget {
                     tooltip: '发送',
                     onPressed: _noop,
                   ),
-                  style: OhosActionBarStyle(enabled: false, isHorizontal: false),
+                  style: OhosActionBarStyle(
+                    enabled: false,
+                    isHorizontal: false,
+                  ),
                 ),
               ),
             ),
@@ -171,7 +172,6 @@ class ActionPage extends StatelessWidget {
     );
   }
 }
-
 
 class _MenuDemo extends StatefulWidget {
   const _MenuDemo();

@@ -89,10 +89,12 @@ class OhosDataPanelShadow {
           _listEquals(other.colors, colors));
 
   @override
-  int get hashCode =>
-      Object.hash(radius, offsetX, offsetY, colors == null
-          ? null
-          : Object.hashAll(colors!));
+  int get hashCode => Object.hash(
+    radius,
+    offsetX,
+    offsetY,
+    colors == null ? null : Object.hashAll(colors!),
+  );
 
   static bool _listEquals(
     List<OhosDataPanelColor>? a,
@@ -250,10 +252,7 @@ class OhosDataPanel extends StatelessWidget {
     if (max > 0) {
       return max;
     }
-    return effectiveValues.fold<double>(
-      0,
-      (double sum, double v) => sum + v,
-    );
+    return effectiveValues.fold<double>(0, (double sum, double v) => sum + v);
   }
 
   @override
@@ -298,10 +297,7 @@ class OhosDataPanel extends StatelessWidget {
       duration: theme.policy.scaleMotion(const Duration(milliseconds: 400)),
       curve: Curves.easeOutCubic,
       builder: (BuildContext context, double t, Widget? child) {
-        return Transform.rotate(
-          angle: (1 - t) * -math.pi / 2,
-          child: child,
-        );
+        return Transform.rotate(angle: (1 - t) * -math.pi / 2, child: child);
       },
       child: _sized(chart),
     );
@@ -390,9 +386,7 @@ class _OhosDataPanelPainter extends CustomPainter {
     // otherwise. A zero sum (every value zero) has nothing to draw — painting
     // track only is the honest result, and it avoids a 0/0 NaN.
     final List<double> fractions = max > 0
-        ? <double>[
-            for (final double v in values) (v / max).clamp(0.0, 1.0),
-          ]
+        ? <double>[for (final double v in values) (v / max).clamp(0.0, 1.0)]
         : <double>[for (final double _ in values) 0.0];
     switch (type) {
       case OhosDataPanelType.circle:

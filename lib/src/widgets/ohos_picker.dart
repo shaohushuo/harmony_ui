@@ -160,8 +160,8 @@ class OhosWheelPicker extends StatefulWidget {
   /// 某列的初始下标（已夹到合法范围）。
   int initialIndexOf(int column) {
     final OhosPickerColumn c = columns[column];
-    final int requested = initialIndexes != null &&
-            column < initialIndexes!.length
+    final int requested =
+        initialIndexes != null && column < initialIndexes!.length
         ? initialIndexes![column]
         : c.initialIndex;
     if (c.labels.isEmpty) {
@@ -264,7 +264,9 @@ class OhosWheelPickerState extends State<OhosWheelPicker> {
         children: <Widget>[
           // 指示器画在最底层：`DIVIDER` 档的两条线必须穿过所有列，而不是每列
           // 各画一份（那样列与列之间线会断开）。
-          Positioned.fill(child: _Indicator(config: widget, theme: theme)),
+          Positioned.fill(
+            child: _Indicator(config: widget, theme: theme),
+          ),
           ClipRect(
             child: SizedBox(
               height: viewport,
@@ -386,9 +388,7 @@ class _WheelRow extends StatelessWidget {
           fontSize: 20,
           fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
           color: enabled
-              ? (selected
-                    ? theme.textPrimaryColor
-                    : theme.textSecondaryColor)
+              ? (selected ? theme.textPrimaryColor : theme.textSecondaryColor)
               : theme.textTertiaryColor,
         ),
       ),
@@ -540,10 +540,7 @@ class OhosTimePicker extends StatelessWidget {
           initialIndex: minute.clamp(0, 59),
         ),
         if (second != null)
-          OhosPickerColumn(
-            labels: seconds,
-            initialIndex: second!.clamp(0, 59),
-          ),
+          OhosPickerColumn(labels: seconds, initialIndex: second!.clamp(0, 59)),
       ],
       onChanged: (int column, int index) {
         if (onChanged == null) {
@@ -610,11 +607,21 @@ class OhosDatePicker extends StatefulWidget {
     // 与 `OhosDate` 同一套规则，不引 `DateTime` —— 见 ohos_date_counter.dart
     // 里「刻意不用 DateTime」那一段。
     const List<int> days = <int>[
-      31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+      31,
+      28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31,
     ];
     if (month == 2) {
-      final bool leap =
-          (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+      final bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
       return leap ? 29 : 28;
     }
     return days[(month - 1).clamp(0, 11)];

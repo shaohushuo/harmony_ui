@@ -488,11 +488,7 @@ class OhosProgressIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildScaleRing(
-    OhosThemeData theme,
-    Color active,
-    _TrackStyle track,
-  ) {
+  Widget _buildScaleRing(OhosThemeData theme, Color active, _TrackStyle track) {
     final double diameter = size ?? OhosProgressMetrics.scaleRingDiameter;
     final double thickness = strokeWidth ?? OhosProgressMetrics.thickness;
     return SizedBox(
@@ -593,8 +589,8 @@ double ohosProgressStrokeWidth(BuildContext context) {
   if (ratio == null || ratio <= 0) {
     return OhosProgressMetrics.capsuleBorderWidth;
   }
-  final double px =
-      (OhosProgressMetrics.capsuleBorderWidth * ratio).roundToDouble();
+  final double px = (OhosProgressMetrics.capsuleBorderWidth * ratio)
+      .roundToDouble();
   return (px < 1 ? 1.0 : px) / ratio;
 }
 
@@ -837,7 +833,9 @@ class _EclipsePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_EclipsePainter old) =>
-      old.value != value || old.color != color || old.track.color != track.color;
+      old.value != value ||
+      old.color != color ||
+      old.track.color != track.color;
 }
 
 /// 环形带刻度。
@@ -997,11 +995,7 @@ class _CapsulePainter extends CustomPainter {
       return;
     }
     canvas.drawPath(
-      ohosCapsuleProgressPath(
-        size: size,
-        value: value,
-        borderRadius: r,
-      ),
+      ohosCapsuleProgressPath(size: size, value: value, borderRadius: r),
       Paint()..color = color,
     );
   }

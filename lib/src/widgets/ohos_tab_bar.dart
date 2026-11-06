@@ -301,7 +301,6 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-
 /// Renders the strip divider (常显 / 常隐 / 跟手滑动) at the bottom edge.
 class _UnderlineDivider extends StatelessWidget {
   const _UnderlineDivider({
@@ -348,10 +347,12 @@ class _UnderlineDivider extends StatelessWidget {
           final double offset = (controller?.hasClients ?? false)
               ? controller!.offset
               : 0;
-          final double span =
-              (opts.followEndOffset - opts.followStartOffset).clamp(0.1, 1e9);
-          final double t =
-              ((offset - opts.followStartOffset) / span).clamp(0.0, 1.0);
+          final double span = (opts.followEndOffset - opts.followStartOffset)
+              .clamp(0.1, 1e9);
+          final double t = ((offset - opts.followStartOffset) / span).clamp(
+            0.0,
+            1.0,
+          );
           return Opacity(
             opacity: t,
             child: Transform.translate(

@@ -128,9 +128,8 @@ class _OhosNavigationBarState extends State<OhosNavigationBar>
   Offset? _pointerLocal;
   bool _pointerDown = false;
 
-  double get _defaultHeight => widget.type == OhosNavigationBarType.float
-      ? 56
-      : 48;
+  double get _defaultHeight =>
+      widget.type == OhosNavigationBarType.float ? 56 : 48;
 
   double get _effectiveHeight => widget.height ?? _defaultHeight;
 
@@ -157,12 +156,16 @@ class _OhosNavigationBarState extends State<OhosNavigationBar>
         0.0,
         (widget.destinations.length - 1).toDouble(),
       );
-      _indexAnimation = Tween<double>(
-        begin: begin,
-        end: widget.currentIndex.toDouble(),
-      ).animate(
-        CurvedAnimation(parent: _selectionController, curve: OhosGeometry.easeOut),
-      );
+      _indexAnimation =
+          Tween<double>(
+            begin: begin,
+            end: widget.currentIndex.toDouble(),
+          ).animate(
+            CurvedAnimation(
+              parent: _selectionController,
+              curve: OhosGeometry.easeOut,
+            ),
+          );
       _selectedIndex = widget.currentIndex.toDouble();
       _selectionController.forward(from: 0);
     }
@@ -268,8 +271,9 @@ class _OhosNavigationBarState extends State<OhosNavigationBar>
               ]),
               builder: (BuildContext context, Widget? child) {
                 final double press = _pressController.value;
-                final Alignment glowAlignment =
-                    widget.glow ? Alignment(_glowX(), .1) : Alignment.center;
+                final Alignment glowAlignment = widget.glow
+                    ? Alignment(_glowX(), .1)
+                    : Alignment.center;
                 final Widget surface = OhosLightMaterial(
                   level: widget.lightLevel,
                   gradientFade: OhosLightFade.bottom,
@@ -346,10 +350,7 @@ class _OhosNavGlowPainter extends CustomPainter {
     }
     // Colored caustics around the pointer.
     for (int i = 0; i < glowColors.length; i++) {
-      final Offset offset = Offset(
-        (i - 1) * 14,
-        (i.isEven ? -1 : 1) * 8,
-      );
+      final Offset offset = Offset((i - 1) * 14, (i.isEven ? -1 : 1) * 8);
       final Rect causticRect = Rect.fromCenter(
         center: pointer + offset,
         width: 72 + i * 10,
@@ -420,8 +421,7 @@ class _OhosNavItem extends StatelessWidget {
     final Color highlight = theme.highlightColor;
     final Color labelColor = selected ? highlight : theme.textSecondaryColor;
     final Color pillColor = selected
-        ? (theme.emphasizeSecondaryColor ??
-              highlight.withValues(alpha: 0.20))
+        ? (theme.emphasizeSecondaryColor ?? highlight.withValues(alpha: 0.20))
         : Colors.transparent;
     final Widget content = Row(
       mainAxisSize: MainAxisSize.min,
@@ -505,8 +505,7 @@ class _OhosNavItem extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style:
-                  (theme.typography.labelSmall ??
-                          const TextStyle(fontSize: 10))
+                  (theme.typography.labelSmall ?? const TextStyle(fontSize: 10))
                       .copyWith(color: labelColor, fontSize: 10, height: 1.2),
             ),
           ),

@@ -91,10 +91,7 @@ class DisplayPage extends StatelessWidget {
                 OhosListTile(title: Text('列表项：线与文字对齐（indent 16）')),
                 OhosListTile(title: Text('第二条列表项')),
                 OhosDivider(indent: 8, endIndent: 8, height: 16),
-                Padding(
-                  padding: EdgeInsets.all(12),
-                  child: OhosDivider(),
-                ),
+                Padding(padding: EdgeInsets.all(12), child: OhosDivider()),
               ],
             ),
           ),
@@ -182,7 +179,8 @@ class DisplayPage extends StatelessWidget {
         ),
         DemoSection(
           title: '指标卡片 OhosStatGrid',
-          description: '原来的 KPI 卡片网格。它曾叫 OhosDataPanel，但 ArkUI 的 '
+          description:
+              '原来的 KPI 卡片网格。它曾叫 OhosDataPanel，但 ArkUI 的 '
               'DataPanel 是占比图而不是卡片 —— 名字已还给真组件，此处保留原视觉。',
           child: const DemoCard(
             child: OhosStatGrid(
@@ -200,13 +198,15 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '占比图 OhosDataPanel',
-          description: 'DataPanel 的两种形态：环形 / 线形。values ≤ 9 段，'
+          description:
+              'DataPanel 的两种形态：环形 / 线形。values ≤ 9 段，'
               'max > 0 时是标尺（剩余部分留作底槽），max ≤ 0 时按数组之和铺满。',
           child: DemoCard(child: _DataPanelDemo()),
         ),
         const DemoSection(
           title: '量规图 OhosGauge',
-          description: 'Gauge：环是静态装饰（分段色 / 权重），指针才跟 value 走。'
+          description:
+              'Gauge：环是静态装饰（分段色 / 权重），指针才跟 value 走。'
               '起止角度是钟面语义 —— 0 点 0 度、顺时针为正。',
           child: DemoCard(child: _GaugeDemo()),
         ),
@@ -215,7 +215,9 @@ class DisplayPage extends StatelessWidget {
           description: '生成二维码，自动包含静区。',
           child: DemoCard(
             child: Center(
-              child: OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'),
+              child: OhosQrCode(
+                data: 'https://github.com/shaohushuo/harmony_ui',
+              ),
             ),
           ),
         ),
@@ -534,8 +536,9 @@ class _IndexerDemoState extends State<_IndexerDemo> {
                               color: header
                                   ? theme.highlightColor
                                   : theme.textSecondaryColor,
-                              fontWeight:
-                                  header ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: header
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                             ),
                           ),
                         );
@@ -578,11 +581,7 @@ class _IndexerDemoState extends State<_IndexerDemo> {
     );
   }
 
-  Widget _toggle(
-    String label,
-    bool value,
-    ValueChanged<bool> onChanged,
-  ) {
+  Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) {
     final OhosThemeData theme = OhosTheme.of(context);
     return Row(
       children: <Widget>[
@@ -693,11 +692,10 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
     if (width <= 0) {
       return;
     }
-    final int next =
-        (local.dx / width * _swatches.length).floor().clamp(
-              0,
-              _swatches.length - 1,
-            );
+    final int next = (local.dx / width * _swatches.length).floor().clamp(
+      0,
+      _swatches.length - 1,
+    );
     if (next != _index) {
       setState(() => _index = next);
     }
@@ -719,9 +717,7 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
             OhosMagnifier(text: 'Z', size: Size.square(60)),
             OhosMagnifier(
               size: Size(112, 44),
-              child: _HexBubble(
-                swatch: _Swatch(Color(0xFF0A59F7), '#0A59F7'),
-              ),
+              child: _HexBubble(swatch: _Swatch(Color(0xFF0A59F7), '#0A59F7')),
             ),
           ],
         ),
@@ -737,36 +733,36 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
         // 量化成灰之后「拖到紫色报 #8B7FE8」这件事就演示不了了。
         InkColorData(
           child: GestureDetector(
-          key: _stripKey,
-          onHorizontalDragStart: _onDragStart,
-          onHorizontalDragUpdate: _onDragUpdate,
-          onHorizontalDragEnd: (DragEndDetails details) => _magnifier.hide(),
-          onHorizontalDragCancel: () => _magnifier.hide(),
-          behavior: HitTestBehavior.opaque,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: <Widget>[
-                  for (int i = 0; i < _swatches.length; i++)
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: _swatches[i].color,
-                          border: i == _index
-                              ? Border.all(color: Colors.white, width: 2)
-                              : null,
+            key: _stripKey,
+            onHorizontalDragStart: _onDragStart,
+            onHorizontalDragUpdate: _onDragUpdate,
+            onHorizontalDragEnd: (DragEndDetails details) => _magnifier.hide(),
+            onHorizontalDragCancel: () => _magnifier.hide(),
+            behavior: HitTestBehavior.opaque,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: <Widget>[
+                    for (int i = 0; i < _swatches.length; i++)
+                      Expanded(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: _swatches[i].color,
+                            border: i == _index
+                                ? Border.all(color: Colors.white, width: 2)
+                                : null,
+                          ),
+                          // 无子节点的 DecoratedBox 在松散高度约束下会塌成 0 高：
+                          // 给它一个撑满的壳，色块才真的画出来。
+                          child: const SizedBox.expand(),
                         ),
-                        // 无子节点的 DecoratedBox 在松散高度约束下会塌成 0 高：
-                        // 给它一个撑满的壳，色块才真的画出来。
-                        child: const SizedBox.expand(),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ),
       ],
@@ -975,42 +971,15 @@ class _GaugeDemoState extends State<_GaugeDemo> {
 
   /// 官方示例 1 的九段配色（饱和度由暖到冷），每段等权。
   static const List<OhosGaugeSegment> _nineSegments = <OhosGaugeSegment>[
-    OhosGaugeSegment(
-      color: Color(0xFFDEB6FB),
-      endColor: Color(0xFFAC49F5),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFBBB7FC),
-      endColor: Color(0xFF564AF7),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFF5B5C2),
-      endColor: Color(0xFFE64566),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFF8C5A6),
-      endColor: Color(0xFFED6F21),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFFCEB99),
-      endColor: Color(0xFFF7CE00),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFDBEFA5),
-      endColor: Color(0xFFA5D61D),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFC1E4BE),
-      endColor: Color(0xFF64BB5C),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFC0ECE5),
-      endColor: Color(0xFF61CFBE),
-    ),
-    OhosGaugeSegment(
-      color: Color(0xFFB5E0F4),
-      endColor: Color(0xFF46B1E3),
-    ),
+    OhosGaugeSegment(color: Color(0xFFDEB6FB), endColor: Color(0xFFAC49F5)),
+    OhosGaugeSegment(color: Color(0xFFBBB7FC), endColor: Color(0xFF564AF7)),
+    OhosGaugeSegment(color: Color(0xFFF5B5C2), endColor: Color(0xFFE64566)),
+    OhosGaugeSegment(color: Color(0xFFF8C5A6), endColor: Color(0xFFED6F21)),
+    OhosGaugeSegment(color: Color(0xFFFCEB99), endColor: Color(0xFFF7CE00)),
+    OhosGaugeSegment(color: Color(0xFFDBEFA5), endColor: Color(0xFFA5D61D)),
+    OhosGaugeSegment(color: Color(0xFFC1E4BE), endColor: Color(0xFF64BB5C)),
+    OhosGaugeSegment(color: Color(0xFFC0ECE5), endColor: Color(0xFF61CFBE)),
+    OhosGaugeSegment(color: Color(0xFFB5E0F4), endColor: Color(0xFF46B1E3)),
   ];
 
   @override
@@ -1023,10 +992,7 @@ class _GaugeDemoState extends State<_GaugeDemo> {
         // 按可用宽度缩：圆的直径跟着屏宽走，标签字号不动。
         LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final double side = math.min(
-              140,
-              (constraints.maxWidth - 24) / 2,
-            );
+            final double side = math.min(140, (constraints.maxWidth - 24) / 2);
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
@@ -1153,6 +1119,7 @@ class _PlaceholderImage extends StatelessWidget {
     );
   }
 }
+
 /// 墨主题下的几种典型组件：纯色分层、1px 黑线、无模糊无阴影。
 class _InkThemeDemo extends StatelessWidget {
   const _InkThemeDemo();
