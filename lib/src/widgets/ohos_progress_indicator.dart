@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_contrast.dart';
 import '../theme/ohos_theme.dart';
 
 /// 进度条形态，对应 ArkUI 的 `ProgressType`。
@@ -94,15 +95,6 @@ class OhosProgressMetrics {
 /// 这套值。所以这里**只换单位、不减 90** —— 与 `ohos_arc.dart` 的
 /// `ohosCanvasAngle` 不同，那个服务的是 Gauge 的「钟面 0 点在 12 点」语义。
 double _rad(double degrees) => degrees * math.pi / 180;
-
-/// WCAG 2.x 的对比度（1:1 ~ 21:1），用相对亮度线性化后的比值。
-///
-/// 只用来判「这行字压在填充上还能不能读」，不参与配色决策。
-double _contrastRatio(Color a, Color b) {
-  final double la = a.computeLuminance();
-  final double lb = b.computeLuminance();
-  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
-}
 
 /// 月相（Eclipse）的形状。
 ///
@@ -624,10 +616,16 @@ class OhosProgressIndicator extends StatelessWidget {
     final Color backdrop = track.outline || track.color.a == 0
         ? theme.cardColor
         : Color.alphaBlend(track.color, theme.cardColor);
-    final Color composite = Color.alphaBlend(active, backdrop);
-    return _contrastRatio(official, composite) < 2
-        ? theme.onHighlightColor
-        : official;
+    // 阈值取 2 而不是公共默认的 2.5：官方彩屏蓝底深色字本身就站在 2.8 附近，
+    // 抬到 2.5 会把官方观感一起改掉（见上面的 dartdoc）。
+    return ohosOnFillReadable(
+          official,
+          active,
+          backdrop: backdrop,
+          minContrast: 2,
+        )
+        ? official
+        : theme.onHighlightColor;
   }
 
   /// 胶囊上的文字，只上色不做定位 —— 居中由调用方的 `Stack` / `Center` 负责。
