@@ -9,6 +9,9 @@ pubspec.lock
 # macOS
 .DS_Store
 
+# Python 工具脚本的运行缓存
+__pycache__/
+
 # fvm 本地版本目录：里面是绝对路径软链（指向本机 ~/fvm/versions/...），
 # 入库会在别人机器上变成断链。版本约束看 .gitignore 同级的 .fvmrc。
 .fvm/
