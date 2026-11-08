@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_chip_metrics.dart';
+import '../theme/ohos_contrast.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
@@ -325,24 +324,11 @@ Color _selectedForeground(
   if (fill.a == 0) {
     return onNoFill;
   }
-  // 底色可能是半透明 tint：先合成到页面上，`computeLuminance` 读出来的才是
-  // 屏幕上那层实际颜色。
-  final Color backdrop = Color.alphaBlend(fill, theme.backgroundColor);
-  return _contrastRatio(theme.onHighlightColor, backdrop) >= _kChipReadable
+  return ohosOnFillReadable(
+        theme.onHighlightColor,
+        fill,
+        backdrop: theme.backgroundColor,
+      )
       ? theme.onHighlightColor
       : theme.highlightTextColor;
-}
-
-/// 反白字在底色上至少要有这么多对比度才用它，否则退到品牌色字。
-///
-/// 2.5 是「看得清」的下限：官方彩屏实底蓝 + 白字约 6.1:1，10% tint 底 + 白字
-/// 约 1.2:1（这一档必须退），tint 底 + 品牌色字约 4.7:1。
-const double _kChipReadable = 2.5;
-
-/// WCAG 对比度。与 `ohos_progress_indicator.dart` 里的同名私有函数一致；
-/// 出现第三个调用点时再抽到公共 util。
-double _contrastRatio(Color a, Color b) {
-  final double la = a.computeLuminance();
-  final double lb = b.computeLuminance();
-  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
 }
