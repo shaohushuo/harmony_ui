@@ -19,7 +19,7 @@
 
 已抓取 **55 份**参考文档（43 份 ArkUI + 8 份 HDS 闭源 + 4 份反查项），合计 **402 个官方示例** —— 这是「我们照官方做了多少」的分母（`TextInput` 32、`Search` 30、`Image` 30、`Text` 29、`Tabs` 23、`Navigation` 18、`List` 17…）。
 
-另抓取 **29 份组件实现源码**（36,354 行，`doc/source/`，脚本 `tool/fetch_source.sh`）。
+另抓取 **29 份组件实现源码**（36,354 行，`doc/reference/source/`，脚本 `tool/fetch_source.sh`）。
 
 > **不要靠猜 slug 找文档。** 权威清单的唯一来源是 `tool/trace_control_docs.sh`：从概览页取 42 个控件链接 → 打开各自设计文档 → 取末尾「## 开发文档」里的链接 → 剥锚点后拼成参考文档地址。这条链路跑完的结果是 41 个控件有链接且全部可达、1 个（色彩选择器）官方漏给链接但文档存在、**0 个控件真的没有文档**。
 >
@@ -653,6 +653,8 @@ getPrefixSymbolModifier(): SymbolGlyphModifier | undefined {
 5. 墨水屏描边按形态给边。**已完成**：`CONTENT_COVER` 无蒙层无圆角，`CENTER`/`POPUP`/`SIDE` 四边实线，`BOTTOM` 只顶上一条。
 6. 修一处真实偏差：圆角原实现 **24vp**，官方 `SheetOptions.radius` 默认 **32vp**。
    > 24 是 `float.json` 里 `ohos_id_corner_radius_dialog`（**对话框**圆角）的值。同一个「圆角」概念、数值都在 20–30 区间，拿错一个看起来完全合理 —— 与 `gradientMask` / `barBackgroundStyle` 是同一类错误。
+7. 修一处漏实现：`LARGE` 挡 / `BOTTOM` 的显式高度**没给状态栏让位**。**已完成**（配图核查轮）：官方公式是「屏幕/窗口高度 − 信号栏 − **8vp**」（`bindsheet` 正文三处 + `bindsheet_16`/`button_39`/`segmentbutton_10` 三张图），旧实现直接顶到窗口顶。
+   > `OhosSheetSpec.topGap = 8` + `maxPanelHeight()`；`SIDE`/`CONTENT_COVER` 恒全屏**不减** 8vp（减了会漏白边）。**状态栏高必须取 `View.of(context).padding.top`** —— 调用点常在 `OhosScaffold` 的 `SafeArea` 内，`MediaQuery.paddingOf` 在那里恒为 0，用它等于白改。CENTER/POPUP 有两条上限（短边 90% 与「窗口高 − 状态栏 − 8」），取小。
 
 ### 阶段 G：收口
 
@@ -745,7 +747,7 @@ getPrefixSymbolModifier(): SymbolGlyphModifier | undefined {
 
 可执行的落法：
 - `doc/reference/sources.json` 里的字段只允许记录**逐个试过的 slug 与其返回码**，不允许写「该组件无文档」这种结论式表述；确实缺的分两类记（`noDevDocLink` = 官方漏给链接但文档存在 / `confirmedAbsent` = 多个变体全 404），且 `confirmedAbsent` 必须限定层级（「参考文档缺失」不等于「无规格」）。
-- 每次调整抓取表后，跑 `tool/trace_control_docs.sh` 取权威清单，与 `doc/reference/*.md` 做差集；差集非空就是漏抓。
+- 每次调整抓取表后，跑 `tool/trace_control_docs.sh` 取权威清单，与 `doc/reference/api/*.md` 做差集；差集非空就是漏抓。
 - 抓源码用 `tool/fetch_source.sh`，它靠列举目录取真实文件名，不接受「按目录名推文件名」。
 - 抓数值用 `tool/fetch_sys_resources.sh`，它从 `pattern.json` → `float_sys.json` → `float.json` 解析别名链。**任何写进文档的尺寸都必须能在这个脚本里复现**，否则就是自拟值。
 - **判「某个令牌是否生效」时必须 grep 调用方**，不能只 grep `GetAttr`。命中 `GetXxx()` 定义不算证据，要看有没有人调用它、以及调用点落在布局/绘制的哪一环。

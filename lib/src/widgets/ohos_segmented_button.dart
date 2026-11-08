@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_button.dart';
 
 /// 官方 `SegmentButton` 的两种形态，对应 `SegmentButtonOptions.tab()` /
 /// `.capsule()`。
@@ -95,6 +96,7 @@ class OhosSegmentedButton<T> extends StatelessWidget {
     this.multiply = false,
     this.enabled = true,
     this.height,
+    this.maxWidth,
   }) : assert(
          segments.length >= _minItems && segments.length <= _maxItems,
          '分段按钮只支持 $_minItems–$_maxItems 个按钮（官方 '
@@ -105,6 +107,11 @@ class OhosSegmentedButton<T> extends StatelessWidget {
 
   static const int _minItems = 2;
   static const int _maxItems = 5;
+
+  /// 最大宽度上限，默认 448vp（官方设计规范）。传 `double.infinity` 关闭。
+  ///
+  /// 见 [OhosButtonMetrics.maxWidth] —— 两条规格是同一个数，共用一处常量。
+  final double? maxWidth;
 
   /// Segments of the control.
   final List<OhosSegment<T>> segments;
@@ -225,7 +232,14 @@ class OhosSegmentedButton<T> extends StatelessWidget {
       child: row,
     );
 
-    return height == null
+    // 官方最大宽度 448vp（设计规范：「在更大屏幕上，按钮保持最大 448vp 的
+    // 宽度，不再跟随屏幕伸缩而改变宽度」，半模态同理「基于容器的宽度减去
+    // 两侧 16vp，保持最大 448vp」）。
+    //
+    // 与 `OhosButton` 同一条注意：这是**上限**，父级给紧约束
+    // （`SizedBox(width:)`、`stretch`）时会连同 `minWidth` 一起钉死、覆盖它。
+    // 官方把它写成控件自身规格，语义即「不限宽时不无限拉伸」。
+    final Widget sized = height == null
         ? ConstrainedBox(
             // 官方 `constraintSize({ minHeight: segment_button_height })` = 28。
             // 用 minHeight 而不是固定高：图标 + 文本形态自然要 57 左右，钉死
@@ -234,6 +248,12 @@ class OhosSegmentedButton<T> extends StatelessWidget {
             child: baseplate,
           )
         : SizedBox(height: height, child: baseplate);
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: maxWidth ?? OhosButtonMetrics.maxWidth,
+      ),
+      child: sized,
+    );
   }
 
   void _handleTap(T value) {

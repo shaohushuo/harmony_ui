@@ -62,6 +62,12 @@ Future<void> showOhosBottomSheet({
       ? windowWidth
       : windowHeight;
 
+  // 状态栏高度取**视图原始 padding**，不走 `MediaQuery.paddingOf` —— 后者
+  // 会被 `SafeArea` 逐层吃掉。调用点常常在 `OhosScaffold` 的 SafeArea 内部，
+  // 那里 `paddingOf` 已经是 0，量出来面板会直接顶到窗口顶（这正是本轮修的缺陷）。
+  final view = View.of(context);
+  final double statusBarHeight = view.padding.top / view.devicePixelRatio;
+
   switch (resolved) {
     case OhosSheetType.bottom:
     case OhosSheetType.center:
@@ -78,6 +84,7 @@ Future<void> showOhosBottomSheet({
         windowWidth: windowWidth,
         windowHeight: windowHeight,
         shortSide: shortSide,
+        statusBarHeight: statusBarHeight,
         requestedHeight: height,
         requestedWidth: width,
         detents: detents,
@@ -119,6 +126,7 @@ Future<void> _showPanel({
   required double windowWidth,
   required double windowHeight,
   required double shortSide,
+  required double statusBarHeight,
   required double? requestedHeight,
   required double? requestedWidth,
   required List<OhosSheetDetent>? detents,
@@ -161,6 +169,7 @@ Future<void> _showPanel({
         requestedHeight: requestedHeight,
         viewportHeight: windowHeight,
         shortSide: shortSide,
+        statusBarHeight: statusBarHeight,
         initialDetent: initialDetent,
       );
 
@@ -422,12 +431,16 @@ BorderRadius _shapeFor(OhosSheetType type) {
 }
 
 /// 高度解析：detents 生效时 `height` 失效（官方原文），取首挡。
+///
+/// [statusBarHeight] 只影响「面板能给状态栏让位多少」这一件事，
+/// 见 [OhosSheetSpec.topGap]。
 double? _resolvePanelHeight({
   required OhosSheetType type,
   required List<OhosSheetDetent>? detents,
   required double? requestedHeight,
   required double viewportHeight,
   required double shortSide,
+  required double statusBarHeight,
   required int initialDetent,
 }) {
   final List<OhosSheetDetent>? list = detents;
@@ -438,6 +451,7 @@ double? _resolvePanelHeight({
       type: type,
       viewportHeight: viewportHeight,
       shortSide: shortSide,
+      statusBarHeight: statusBarHeight,
     );
     if (resolved != null) {
       return resolved;
@@ -451,6 +465,7 @@ double? _resolvePanelHeight({
       type: type,
       viewportHeight: viewportHeight,
       shortSide: shortSide,
+      statusBarHeight: statusBarHeight,
     );
   }
   // 未指定高度：CENTER / POPUP 给官方默认 560（同样受夹取约束）。
@@ -460,6 +475,7 @@ double? _resolvePanelHeight({
       type: type,
       viewportHeight: viewportHeight,
       shortSide: shortSide,
+      statusBarHeight: statusBarHeight,
     );
   }
   return null;

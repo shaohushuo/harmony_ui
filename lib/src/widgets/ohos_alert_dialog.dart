@@ -11,7 +11,7 @@ import 'ohos_responsive.dart';
 ///
 /// 与 `OhosTextFieldMetrics` / `OhosListItemCardMetrics` 都不同：那两组的来源
 /// 分别是**系统资源表**与**实现源码**，而这一组全部来自
-/// `doc/reference/hds-ts-methods-custom-dialog-box.md` 的
+/// `doc/reference/api/hds-ts-methods-custom-dialog-box.md` 的
 /// `CustomDialogControllerOptions` 参数表 —— 参数表里直接写了默认值，不需要
 /// 再往下追令牌。
 class OhosDialogMetrics {

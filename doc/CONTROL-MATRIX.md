@@ -2,7 +2,7 @@
 
 每一行 = 官方参考文档里明确列出的一个**形态**（不是"一个控件"）。这张表的用途是让「全覆盖」这句话可被核对：谁声称覆盖，就在对应行的 `本库实现` 与 `测试` 两列填上。
 
-- 依据：`doc/reference/` 里的参考文档（`枚举说明` / `对象说明` 章节）与设计规范页。参考文档来自两条链路 —— 开源 ArkUI 组件取自 OpenHarmony 仓库，闭源 HDS 组件（`Hds*`）取自官网 `doccenter-references/api/ui-design-<slug>.md`；两者都是官方原文。
+- 依据：`doc/reference/api/` 里的参考文档（`枚举说明` / `对象说明` 章节）与设计规范页。参考文档来自两条链路 —— 开源 ArkUI 组件取自 OpenHarmony 仓库，闭源 HDS 组件（`Hds*`）取自官网 `doccenter-references/api/ui-design-<slug>.md`；两者都是官方原文。
 - **「依据」列的确定性分三档，不要混着自称「照官方做的」：**①写 `Hds*` / `ts-*` 等组件名 = 有组件级 API 文档；②写「设计规范」= 只有 UX 页描述、没有 API 级规格；③写**令牌名**（如 `search_default_height`）= 数值取自**系统资源表**（`global_system_resources` 的 `pattern.json` → `float_sys.json` → `float.json`，`tool/fetch_sys_resources.sh` 可复跑）。第三档比前两档都硬 —— 它是构建 `resources.index` 的源文件，不是对它的描述。
 - `—` 表示该项无需实现（例如纯平台能力）。
 - 空 `测试` 列 = 有实现但缺可失败的用例，属于未完成。
@@ -116,8 +116,29 @@
 | 数据可视化 | 量规图投影（**颜色随环**，不是黑色投影） | `trackShadow` | `OhosGaugeShadow` | 墨屏不画 |
 | 数据可视化 | 线形数据条圆角 **4** | `datapanel_corner_radius` → `ohos_id_corner_radius_default_xs` | `OhosDataPanel` | |
 | 二维码 | — | `QRCode` | `OhosQrCode` | |
-| 文本时钟 | — | `TextClock` | `OhosTextClock` | |
-| 图片 | — | `Image` | `OhosImage` | |
+| 文本时钟 | 格式串（`y`/`M`/`d`/`E`/`H`/`h`/`m`/`s`/`S`/`a` 十个字母 + 自定义间隔符） | `format`（默认 12 制 `aa hh:mm:ss` / 24 制 `HH:mm:ss`） | `OhosTextClock.format` | 10 条：官方那张 26 行示例表逐条对照（`yyyy年M月d日 EEEE`、`aa hh:mm:ss`、`mm:ss.SS`、`HH`…）、空串回落 `HH:mm:ss`。**链式 `replaceAll` 是错的**：`EEEE` 先吐 `Sat`，随后单字母 `a` 把 `Sat` 里那个 a 换成「下午」、单字母 `S` 换成毫秒，实测吐出 `2026年11月7日 51下午t`、`aa hh:mm:ss` 成「下午下午」。必须**一次扫描、逐字符吐结果**：先吃同字母的整段（`EEEE` 一段、`HH` 一段）再查表 |
+| 文本时钟 | 时区偏移（**负值表示东时区**，范围 `[-14, 12]`） | `timeZoneOffset`（默认当前系统时区） | `OhosTextClock.timeZoneOffset` | 3 条：东八区传 **-8**、越界回落、浮点档。符号按官方「负值表示东时区…东八区为-8」—— 这是 `Date.getTimezoneOffset()` 那套，`本地 = UTC − offset`。第一版写成 `UTC + offset`，`utc=15:22` 时给 `07:22`（正是 UTC-8）而不是 `23:22`。十个档（`9.5 / 3.5 / -3.5 / -4.5 / -5.5 / -5.75 / -6.5 / -9.5 / -10.5 / -12.75`）**不取整**，其余浮点舍小数 |
+| 文本时钟 | 启动 / 停止 | `TextClockController.start()` / `stop()` | `OhosTextClockController` | 2 条：默认 `started = true`、幂等（状态没变不 `notifyListeners`）、未绑定组件时空操作。**停的是刷新不是显示**：官方示例里停下后照旧显示当前时间，所以冻结在最后一帧，不清成空串、也不退回默认格式 |
+| 文本时钟 | 时间变化回调（**Unix 秒**） | `onDateChange(event: (value: number) => void)` | `OhosTextClock.onDateChange` + `OhosTextClockTick{value, dateTime}` | 首帧报一次、之后每秒一次。保留整数秒这层粒度而不给 `DateTime` —— 调用方拿到的就是官方那个数，两边不必猜对方用的单位 |
+| 文本时钟 | 小时是否补前导零 | `dateTimeOptions`（官方「只支持设置 `hour`」，`numeric` / `2-digit`） | `OhosTextClock.hourFormat`（`OhosClockHourFormat`） | **与 12/24 制是两件事**：补不补零归 `dateTimeOptions` 管、与 `H`/`h` 无关；12 还是 24 由格式串里出现 `h` 还是 `H` 决定。`null` 时默认「24 制补零、12 制不补」。第一版把 `H` 写死 `two()`，`hourFormat: numeric` 对 `HH:mm` 失效 |
+| 文本时钟 | 组件不可见时停止变动 | `onVisibleAreaChange`（可见阈值 `ratios > 0`） | `OhosTextClock`（`TickerMode.of(context)`） | 官方原文「组件不可见时，时间变动将停止」。用 `TickerMode` 而不是自己判可见 —— 它是「这棵子树现在该不该动」的官方通道，一屏十个时钟也就只有一个 `Timer` |
+| 文本时钟 | 等宽数字 | `fontFeature`（官方示例 `'"ss01" on'`，即「等宽时钟数字」） | `OhosTextClock`（`FontFeature.tabularFigures()`） | 时钟每秒跳字必须等宽，否则秒数从 `1` 变 `8` 整行会左右抖。`ss01` 是 HarmonyOS Sans 的私有特性名，Flutter 侧等价能力是 `tabularFigures` |
+| 文本时钟 | 字色 / 字号 / 字重 / 字体族 | `fontColor`（默认 `#e6182431`）/ `fontSize`（**16fp**）/ `fontStyle` / `fontWeight` / `fontFamily` | `OhosTextClock.textStyle`（主题字阶） | 官方逐项可配，本库统一吃 `theme.titleMedium` —— 与库内其它文本控件同源，逐项另立参数会让同一屏出现两套字号来源 |
+| 文本时钟 | 阴影 / 自定义内容区 | `textShadow`（11+）/ `contentModifier`（12+） | ○ | 前者 Flutter 侧有 `TextStyle.shadows`，但本库没有「多控件共享的阴影令牌」可接；后者是 ArkTS 的 `ContentModifier` 机制，Flutter 侧对应「给个 builder」，收益与 `textStyle` 重叠 |
+| 文本时钟 | 卡片形态（最小粒度分钟、默认 `hh:mm`、带秒按默认值） | 卡片能力 | — | Flutter 无 ArkTS 卡片概念 |
+| 图片 | 填充效果 8 档（**未设置时默认 `Cover`**） | `objectFit` | `OhosImageFit`（`cover` / `contain` / `fill` / `scaleDown` / `none` / `original` / `auto` / `topStart`） | 2 条：默认 `cover`、八档逐档映射且互相不撞。**`ImageFit` 不能拿 `BoxFit` 顶替**：8 vs 7 档，差在 `original`（原尺寸居中且**不裁**，而 `BoxFit.none` 必然裁）—— 用 `OverflowBox` + `Clip.none` 自实现 |
+| 图片 | 加载中占位图（`alt` 22 前版本） | `alt`（默认 `null`） | `OhosImage.placeholder` | 3 条：加载中显示、完成后让位、永不完成时一直显示。官方「占位图支持使用 `objectFit` 设置填充效果，**与图片的填充效果一致**」⇒ 两张图共用同一个 `fit`，不是各配一份 |
+| 图片 | 加载失败占位图（22+） | `alt(src: ImageAlt)` 的 `ImageAlt.error` 字段 | `OhosImage.errorPlaceholder` | `ImageAlt` 两个字段（`placeholder` / `error`），官方「未配置时默认不显示」。优先级 3 条：`errorPlaceholder` > `placeholder` > 默认断图图标 |
+| 图片 | 加载成功回调（**连发两次**） | `onComplete`：`loadingStatus` 0 = 数据加载成功、1 = 解码成功，官方「均触发该回调」 | `OhosImage.onComplete` + `OhosImageLoadInfo`（**9 字段**） | 断言：回调两次且 `loadingStatus` 0 与 1 各一；`cover` 下实测 `contentWidth 200 / contentHeight 100 / contentOffsetX -50`。官方注明 `content*` 四项**只在 `loadingStatus == 1` 时有效**。Flutter 只有一次合成回调，本库照官方的次数与顺序连发两条而不是「一次了事」 |
+| 图片 | 加载失败回调 | `onError(ImageErrorCallback)` | `OhosImage.onError` + `OhosImageError` | 官方 `ImageError{componentWidth, componentHeight, message}` 三字段全部给出；`error`（20+，`BusinessError`）与 `downloadInfo`（23+，网络下载详情）是**网络图源专有**，Flutter 侧没有对应的错误对象可映射，故不假装——只透 `message` 与组件尺寸 |
+| 图片 | SVG 动效播完 | `onFinish` | ○ | 只在「带动效的 SVG」上触发（无限循环动效不触发）。Flutter 侧 SVG 走 `SvgPicture`（静态渲染），没有「动效播完」这层事件 |
+| 图片 | 重复平铺 | `objectRepeat` | ○ | 需要 `TileMode` 三向组合，Flutter 的 `ImageRepeat` 缺 `X`/`Y` 单轴语义 |
+| 图片 | 九宫拉伸 | `resizable`（`slice` 四边 / `lattice` 网格） | ○ | `BoxFit` 无九宫概念，需自写 `paintImage` 的 centerSlice 逻辑 |
+| 图片 | 渲染与滤镜 | `renderMode` / `fillColor`（SVG 着色）/ `colorFilter` / `interpolation` | ○ | 前三项 Flutter 侧分别是 `ColorFiltered` / `BlendMode.srcIn` 可拼，但都属「调用方一次组合」而非官方形态；`interpolation` 对应 `FilterQuality`，缺 `Medium` |
+| 图片 | 解码与性能 | `sourceSize` / `syncLoad` / `autoResize` | ○ | 三项都是解码器入口，Flutter 的 `Image` 无「按显示尺寸解码」的等价通道（`cacheWidth` 只在 `ImageProvider` 层） |
+| 图片 | 变换与对齐 | `imageMatrix`（15+）/ `orientation`（14+，读 EXIF）/ `matchTextDirection` / `fitOriginalSize` | ○ | `imageMatrix` 是任意 4×4 矩阵，`fitOriginalSize` 与 `OhosImageFit.original` 重叠但不完全（前者是「按原图尺寸请求布局」而非仅绘制） |
+| 图片 | 动态范围与显示增强 | `dynamicRangeMode`（12+）/ `hdrBrightness`（19+）/ `privacySensitive`（12+）/ `enableAnalyzer`（11+）/ `antialiased`（23+）/ `supportSvg2`（21+）/ `contentTransition`（21+） | ○ | 全是平台渲染能力（HDR 提亮、隐私遮蔽需系统截屏通道、AI 分析要 `VisionKit`）。**不列成「其余」而逐条点名**，因为「逐条点名」是这张表能被核对的唯一形式 |
+| 图片 | 拖拽与复制 | `draggable`（9+）/ `copyOption`（9+） | ○ | Flutter 侧 `Draggable` / 系统复制菜单都不归 `Image` 管 |
 | 空白 | — | `Blank` | `OhosBlank` | |
 
 ## 操作类
@@ -252,16 +273,22 @@
 
 | 控件 | 官方形态 | 依据 | 本库实现 | 测试 |
 | --- | --- | --- | --- | --- |
-| 列表 | 平铺 | `List` | `OhosList` | |
-| 列表 | 分组 + 组头 / 组尾 builder | `ListItemGroupOptions.header` / `footer` | `OhosListGroup` + `OhosListGroupSliver` | 盒子与 sliver 两形态共用同一行渲染函数；`headerComponent`/`footerComponent`（13+）只是同一形态的另一种传参，不另立行 |
+| 列表 | 分组 + 组头 / 组尾 builder | `ListItemGroupOptions.header` / `footer` | `OhosListGroup` + `OhosListGroupSliver` | 盒子与 sliver 两形态共用同一行渲染函数；`headerComponent`/`footerComponent`（13+）只是同一形态的另一种传参，不另立行。**sliver 形态不能塞进 `SliverList` 的 `itemBuilder`** —— 会报 `RenderRepaintBoundary expected a child of type RenderBox but received a child of type RenderSliverMainAxisGroup`，分组必须直接作为 sliver 加入 `CustomScrollView` |
 | 列表 | 分组 `space`：只作用于**项与项之间** | `ListItemGroupOptions.space`（默认 0） | `OhosListGroup.space` | 组头→首行、末行→组尾**不受影响**（最易与「给每行加 padding」混淆）；负数按 0；`spaceWidth`（26+）是同一形态的优先版，不另立行 |
-| 列表 | 组内分割线（**默认无**） | `ListItemGroup.divider`（默认 `null`） | `OhosGroupDivider` | 与 `OhosList.divider`（默认 `true`）反；组接管后行内 tile 自带那条被压掉 |
+| 列表 | 平铺（静态卡片） | `List` | `OhosList` | 2 条：静态形态保持 0.5 观感（圆角卡片 + 行间线）、不认 `sticky`/`lanes`。**这不是官方的 `List`**，是 0.5 就有的「圆角卡片 + 若干行」容器 —— 直接改成滚动容器会让所有既有布局凭空多出一个视口高度，所以滚动能力另立 `OhosList.scrollable` |
+| 列表 | 滚动形态 | `List`（滚动视口） | `OhosList.scrollable`（`CustomScrollView` + 固定 `height`） | 1 条：走 `CustomScrollView` 且带着高度。两个构造器各自 `const`，公共字段相同、滚动字段在静态形态里恒为默认值 —— 用「一个构造器 + 一堆可空参数」会让「传了 `lanes` 却没滚起来」变成静默失效 |
+| 列表 | 分割线（**默认无**） | `divider`（默认 `null`）/ `ListDividerOptions` 四字段 | `OhosList.divider` + `OhosListDivider{strokeWidth, color, startMargin, endMargin}` | 4 条：默认画、`divider: false` 一条都不画、四字段落到实绘的线上。**分裂线宽是间距下限**（官方「当 `space` 小于分割线宽度时，子组件主轴方向的间隔取分割线宽度」），不是「画在间距中间的细线」；`startMargin + endMargin` 超列宽时**两个都归零**（不是夹到刚好放得下）。默认 `true` 与官方相反，要官方口径就显式传 `divider: null` |
+| 列表 | 多列布局（`lanes` 数字形态） | `List.lanes: number`（默认 1，`<1` 按默认） | `OhosFixedLanes(count, gutter)` | 列数 < 1 兜到 1。**不能用 `SliverGrid`**：`childAspectRatio` 会把行高钉死，360 屏两列每格 160 宽、按 200/56 比例只给 **44.8** 高，而 `OhosListTile` 常规档自然高 **53** → `RenderFlex overflowed by 13 pixels`（静态分析看不见，example 溢出矩阵抓到）。官方 `lanes` 只说列数、行高由 `ListItem` 自己的高决定 ⇒ 改用 `SliverCrossAxisGroup` **按行并排**，行高由内容决定 |
+| 列表 | 多列布局（`lanes` 最小列宽形态） | `List.lanes: LengthConstrain` + `gutter`（10+） | `OhosLanesByWidth(minWidth, gutter)` | 列数 = `(可用宽 + gutter) / (minWidth + gutter)` 向下取整 —— **gutter 必须同时进分子和分母**，直接用 `extent / min` 会多算一列。`minWidth ≤ 0` 回落 `OhosListMetrics.defaultLanesMinWidth`（**104 是自拟防呆值，官方无默认**）。官方还注明「按 `ListItemGroup` 自身宽度算组内列数」，本库分组是整块独立行，不受影响 |
+| 列表 | 组内分割线（**默认无**） | `ListItemGroup.divider`（默认 `null`） | `OhosGroupDivider` | 与 `OhosList.divider`（默认 `true`）反；组接管后行内 tile 自带那条被压掉。与 `OhosListDivider` **同一组四字段**（`strokeWidth` / `color` / `startMargin` / `endMargin`），两者只是宿主不同 |
 | 列表 | 分组卡片（`style: CARD`） | `ListItemGroupStyle.CARD` | `OhosListGroup` / `OhosListGroupSliver` | 左右外边距 **12** + 上下左右内边距 **4** + 圆角 **24**；三个数分处「令牌 / 文档正文 / 令牌」三个来源，复核方式不同（前者可跑 `fetch_sys_resources.sh`，中者只能对文档） |
 | 列表 | 项卡片（`itemStyle: CARD`） | `ListItemStyle.CARD` | `OhosListGroupItemStyle.card` | 高 **48**、左右内边距 **8**（只在文档正文，无令牌）；与 `group.style` 是**两个独立参数**，官方示例 2 的四种组合都出现过（`CARD+CARD` / `CARD+NONE` / `NONE+CARD`） |
-| 列表 | 吸顶组头（`StickyStyle.Header`） | `StickyStyle.Header` | `OhosListGroupSliver(sticky: header)` | 粒度差异：官方挂在 `List` 上整表一次，本库逐组声明，逐组能表达的集合**严格更大**。**吸顶必须自带背板** —— 官方 `ApplyHeaderFooterStyle`（`list_item_group_pattern.cpp:900`）先补分组圆角再套 `UiMaterialStyle::THICK` 沉浸材质，照文档做会得到一个浮起来却透明的组头 |
-| 列表 | 吸底组尾（`StickyStyle.Footer` / `BOTH`） | `StickyStyle.Footer` / `BOTH`（20+） | ○ | `SliverMainAxisGroup` 内部拿不到可靠的视口末端距离：`remainingPaintExtent` 已被同组前面的子 sliver 扣掉、且滑出视口时被夹到 0。留 `○` 而非「多数情况看着对」的实现，用例钉住缺口 |
+| 列表 | 吸顶组头（`StickyStyle.Header`） | `StickyStyle.Header` | `OhosListGroupSliver(sticky: header)` + `OhosList.scrollable(sticky:)` **广播** | 粒度差异：官方挂在 `List` 上整表一次，本库逐组声明，逐组能表达的集合**严格更大**（「所有组都吸」就是给每个组传同一个值，`OhosList.sticky` 做的正是这件广播）。**吸顶必须自带背板** —— 官方 `ApplyHeaderFooterStyle`（`list_item_group_pattern.cpp:900`）先补分组圆角再套 `UiMaterialStyle::THICK` 沉浸材质，照文档做会得到一个浮起来却透明的组头。2 条：广播后分组被转成 sliver、`sticky: none` 也走 sliver 但不吸顶 |
+| 列表 | 吸底组尾（`StickyStyle.Footer` / `BOTH`） | `StickyStyle.Footer` / `BOTH`（官方 20+ 起 `BOTH` 可直接设，此前靠 `Header` 与 `Footer` 按位或） | ○ | `SliverMainAxisGroup` 内部拿不到可靠的视口末端距离：`remainingPaintExtent` 已被同组前面的子 sliver 扣掉、且滑出视口时被夹到 0。留 `○` 而非「多数情况看着对」的实现，用例钉住缺口。**`sticky: footer` / `both` 传进来组尾仍不吸底**，不假装支持 |
 | 列表 | 组头 / 组尾悬浮（`FLOATING`） | `headerStyle` / `footerStyle`（26.0.0+，默认 `NONE`） | ○ | 与 `sticky` 是两套机制：`sticky` 挂在 List 上管所有组，`FLOATING` 逐组声明 |
-| 列表 | 多列布局（`lanes`） | `List.lanes` | ○ | 官方示例 4 用它演示分组在多列下的表现；与分组正交，属 List 层而非组层 |
+| 列表 | 到达起始位置 | `onReachStart`（官方「初始化时若 `initialIndex` 为 0 会触发一次」） | `OhosList.onReachStart` | 2 条：初始化触发一次、滚回顶部再触发一次。用 `pixels <= minScrollExtent` 判，**不给容差** —— 加容差会让「到达」提前触发，而弹簧效果下「经过时一次 + 回弹时一次」是两个独立事件 |
+| 列表 | 到达末尾位置 | `onReachEnd`（官方「内容未撑满、无需滚动即可完整展示时，首次加载也会触发」） | `OhosList.onReachEnd` | 1 条：滚到底触发、且**只触发一次**（同一位置重复 `jumpTo` 不重复回调，靠 `_atEnd` 去重）。不去重会在每一帧滚动里连发几十次 |
+| 列表 | 可视区首 / 尾 / 中索引 | `onScrollIndex(start, end, center)`（`center` 10+） | `OhosList.onScrollIndex` | 1 条：三索引单调、变化才回调。**这是近似值** —— 官方给的是实际滑入/滑出的那三个索引，Flutter 在不给每项挂 `GlobalKey` 的前提下拿不到，只能按「滚动偏移 ÷ 等比高度」估算，**按等高项成立**（与官方 `scrollSnapAlign` 那句「只支持 item 等高场景」是同一类限制）。官方还注明「`ListItemGroup` 整体占一个索引，不算内部 `ListItem`」，本库分组是独立 sliver，天然符合 |
 | 列表 | 主轴尺寸预估 | `ListItemGroup.childrenMainSize`（12+） | — | ArkUI 的 `List` 需预声明子项尺寸才能精确跳转，Flutter 的 `SliverList` 逐项测量，无对应需求 |
 | 列表 | 横滑操作 | `HdsListItem` / `SwipeAction` | `OhosListItem` | |
 | 列表 | 横滑删除触发类型 | `SwipeDeleteTriggerType`（6.1.0+） | ○ | |
@@ -304,6 +331,7 @@
 | 半模态面板 | 侧边弹窗（SIDE，20+） | `SheetType.SIDE` | `showOhosBottomSheet(type: side)` | 实测靠右、无控制条、高度恒全屏；宽度 md 断点 1/2 窗口，>md 恒 400vp |
 | 半模态面板 | 全屏弹窗（CONTENT_COVER，20+） | `SheetType.CONTENT_COVER` | `showOhosBottomSheet(type: contentCover)` | 实测无标题栏/无关闭按钮/无蒙层、宽高恒全屏 |
 | 半模态面板 | 多挡位 `detents`（最多 3 挡） | `detents` / `detentSelection` | `OhosSheetDetent` + `OhosSheetSpec.resolveDetent` | `detents` 生效时 `height` 失效（实测取首挡）；速度阈值 1000px/s、距离阈值 1/2；`SIDE`/`CONTENT_COVER` 忽略 |
+| 半模态面板 | 高度挡位 `LARGE` / `MEDIUM`（BOTTOM） | `SheetSize.LARGE` = **屏幕/窗口高度 − 信号栏 − 8vp**；`MEDIUM` = 窗口高 60% | `OhosSheetSpec.resolveDetent` / `.maxPanelHeight` | `LARGE` **不是「窗口高」**（旧写法顶到窗口顶、盖住状态栏）；`SIDE`/`CONTENT_COVER` 恒全屏**不减** 8vp。状态栏高取 `View.of(context).padding.top`，不能用 `MediaQuery.paddingOf`（SafeArea 内恒 0） |
 | 半模态面板 | 宽度响应式默认形态 | `preferType` | `OhosSheetSpec.defaultTypeFor` | <600vp 默认 BOTTOM；600–840 默认 CENTER；≥840 默认 POPUP |
 
 ---
@@ -312,12 +340,12 @@
 
 | 状态 | 数量 |
 | --- | --- |
-| 完整（本库实现列只写类名、不加符号） | 204 |
+| 完整（本库实现列只写类名、不加符号） | 223 |
 | `◐` 部分实现 | 4 |
-| `○` 缺失 | 44 |
+| `○` 缺失 | 52 |
 | `●` 有意偏离官方（偏离理由写在备注列） | 2 |
-| `—` 无需实现（平台能力差异） | 2 |
-| 数据行合计 | 256 |
+| `—` 无需实现（平台能力差异） | 3 |
+| 数据行合计 | 284 |
 
 复核方式（改完矩阵请重跑，别手抄数字）：
 
@@ -374,7 +402,33 @@ awk -F'|' '{s=$5; gsub(/^ +| +$/,"",s); print s}' /tmp/rows.txt \
 >
 > 这段对账刻意保留了「先手推、再以命令为准」的过程，因为**手推账与命令输出不一致是常态而不是意外**——只要矩阵动过行，手推就会漏掉「一行拆两行」这种结构变化。规矩是：**先跑命令，再拿命令的输出反推逐条，推不通就说明有一行的归属判断错了**。上一版（操作栏那次）第一次手推得到 `189 / 4 / 53`，与命令的 `54` 差 1，追下去发现「阴影未做」那行被我写成完整（记在了合并行里）—— 拆出来单独记 `○` 才对，改完两边一致。
 >
-> **本版：204 / 4 / 44 / 2 / 2，合计 256。** 相对上一轮 198 / 4 / 50 / 2 / 2：半模态面板 6 行 `○` 转完整（`○` −6、完整 +6），行数不变。`204 + 4 + 44 + 2 + 2 = 256` ✓（命令连跑两次一致）。
+> **本版：222 / 4 / 52 / 2 / 3，合计 283。** 相对上一版 204 / 4 / 44 / 2 / 2：**文本时钟 1 行拆成 10 行**、**图片 1 行拆成 13 行**、**列表 17 行加到 23 行**。前两处原本是「一个控件一行、官方形态列写 `—`」的打平写法（`| 文本时钟 | — | TextClock | OhosTextClock |`）—— 那个 `—` 在**第 2 列**，意思是「官方没有单独列形态」，实现列写的是类名，所以这两行原本就计入**完整**。
+>
+> 逐控件精确账（按「控件」列分组、按「本库实现」列分类，与上面那条总命令同一口径跑出来的，不是手推）：
+>
+> | 控件 | 行数 | 完整 | `○` | `—` |
+> | --- | --- | --- | --- | --- |
+> | 文本时钟 | 1 → **10** | 1 → 8 | 0 → 1 | 0 → 1 |
+> | 图片 | 1 → **13** | 1 → 5 | 0 → 8 | 0 → 0 |
+> | 列表 | 17 → **23** | 10 → 17 | 6 → 5 | 1 → 1 |
+> | 列表卡片 | 14 → 14 | 11 → 11 | 2 → 2 | 1 → 1 |
+>
+> 合计：行数 `256 + 9 + 12 + 6 = 283`、完整 `204 + 7 + 4 + 7 = 222`、`○` `44 + 1 + 8 − 1 = 52`、`—` `2 + 1 = 3`；`222 + 4 + 52 + 2 + 3 = 283` ✓（命令连跑两次一致）。
+>
+> **再 +1 行：半模态「高度挡位 LARGE / MEDIUM」**。这是一处**缺行** —— `LARGE` 的高度公式（窗口高 − 状态栏 − 8vp）此前只活在 `OhosSheetSpec` 的注释里，矩阵里没有对应行，于是那 8vp 从来没被当成「规格」记过账，实现漏掉也就没人发现。补行后 `223 / 4 / 52 / 2 / 3，合计 284` ✓（命令连跑两次一致）。
+>
+> **这里第一次手推全错，值得记**：我先按「文本时钟、图片那两行原来是 `—`、被拆掉」推，得出 `完整 224 / ○ 51 / — 1`，与命令的 `222 / 52 / 3` 三处全对不上。原因两条：
+>
+> ① **把「官方形态」列的 `—` 当成了实现状态**。那两行的 `—` 在第 2 列（官方确实没按「形态」给 `TextClock` / `Image` 分章节，只列属性），第 4 列写的是类名 —— 所以它们从未计入 `—`，我凭空扣了 2。这与上一版「`else` 兜底不能指向符号」是同一族错误：**列的位置决定语义，不能只看某格出现了什么字符**。
+> ② 列表那 6 行里，**「新增 / 拆分 / 转状态」三种变化混在一起**（`分割线`、`滚动形态`、`到达起始/末尾/索引` 是新增；`lanes` 是 1 行 `○` 拆成 2 行完整），漏项必然发生。`—` 的真实账是「2 原有 + 1 新增（文本时钟卡片形态）」= 3。
+>
+> 规矩还是那句：**先跑命令，再拿命令输出反推逐条**；反推不通就说明有一行的归类读错了，不是命令错。
+>
+> 这一版真正值得记的是**「一个控件一行、官方形态列写 `—`」是坏形态**。它读不出任何可核对的信息：不告诉你官方有哪些章节、本库缺了哪些、为什么缺。官方 `TextClock` 那页有 10 个属性章节 + 1 个对象说明 + 3 个事件，拆成 10 行之后「漏了什么」才变成可数的事实。`Image` 那页 2701 行、30 个属性章节，原来同样压成 1 行 —— 于是 `resizable`（九宫拉伸）、`imageMatrix`（任意 4×4 变换）、`sourceSize` 这些**真实缺口**在矩阵里完全没有痕迹。
+>
+> 另一件新事实：**`OhosList` 有 6 行原本不在矩阵里**。`lanes`、`divider` 对象形态、`onReachStart`、`onReachEnd`、`onScrollIndex`、滚动视口形态 —— 它们在 `ts-container-list.md` 里都是独立章节，但 HEAD 的矩阵只列了 `lanes` 一行且标 `○`，另外五项**连行都没有**。这不叫「漏实现」，叫**漏登记**：矩阵作为「全覆盖这句话可被核对」的工具，缺行比标 `○` 更糟 —— `○` 至少还能看出「知道有这件事、暂时没做」。
+>
+> **上一版：204 / 4 / 44 / 2 / 2，合计 256。** 相对上一轮 198 / 4 / 50 / 2 / 2：半模态面板 6 行 `○` 转完整（`○` −6、完整 +6），行数不变。`204 + 4 + 44 + 2 + 2 = 256` ✓（命令连跑两次一致）。
 >
 > 这一版最该记住的是**「5 种形态」不是 5 种皮肤，而是 5 套能力矩阵**。上一版只有 BOTTOM 一种、且把「画什么」写死在渲染里（顶部一条描边、无条件画控制条、标题栏必出、圆角固定 `BorderRadius.vertical(top:)`）。加形态时若只换对齐方式，会在这四处同时出错：
 >
