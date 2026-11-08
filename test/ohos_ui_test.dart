@@ -8840,6 +8840,55 @@ void main() {
       OhosFloatingTabItem(icon: Icon(Icons.person_outline), label: '我的'),
     ];
 
+    // 选中项的药丸是**背景层**，内容区仍占满整条高度。早先靠 `Padding(all: 4)`
+    // 收窄内容区：`Icon(24) + 间距 2 + 单行标签` 在 textScale ≳ 1.5 时撑破
+    // 56−8=48，而未选中项还是 56 —— 于是只有选中项溢出，偏偏大字号正是墨水屏
+    // 阅读器的常用档。
+    testWidgets('墨屏 1.5x 字号：选中项不溢出，且与非选中项同高', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (BuildContext context, Widget? child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.5)),
+            child: child!,
+          ),
+          home: OhosTheme(
+            data: OhosThemeData.ink(),
+            child: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 360,
+                  height: 400,
+                  child: OhosFloatingTabBar(
+                    items: threeItems(),
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 溢出会以 RenderFlex overflowed 异常的形式出现。
+      expect(tester.takeException(), isNull);
+
+      final Finder taps = find.descendant(
+        of: find.byType(OhosFloatingTabBar),
+        matching: find.byType(InkWell),
+      );
+      final Set<double> heights = <double>{};
+      for (int i = 0; i < taps.evaluate().length; i++) {
+        heights.add(tester.getSize(taps.at(i)).height);
+      }
+      // 选中项与其它项同样占满整条，不再矮一圈。
+      expect(heights, <double>{56});
+    });
+
     // 角标压在**选中的那一项**上：墨屏里选中项本身是反白实底，而角标底色
     // 也是 dangerColor，同色叠同色 —— 没有描边就只剩一个浮着的数字。
     Future<void> pumpBadge(WidgetTester tester, OhosThemeData theme) async {

@@ -482,19 +482,28 @@ class OhosFloatingTabBar extends StatelessWidget {
       // 塞进 28 半径的胶囊栏，四个角是直角，两端更是直接顶到栏的圆弧外面
       // —— 选中的那一块看起来溢出了栏体。改成四周各内缩 4vp、圆角取同曲率
       // （内缩后正好是半高圆），选中项就是栏里的一颗黑药丸。
+      //
+      // 关键是这层内缩**只能画在背景上**，不能靠 `Padding` 收窄内容区：
+      // 内容区一收窄，`Icon(24) + 间距 2 + 单行标签` 在 `textScale ≳ 1.5` 时
+      // 就撑破 48，而未选中项仍占满 56 —— 于是只有选中项溢出，偏偏大字号正是
+      // 墨水屏阅读器的常用档。药丸退到 Stack 的背景层，内容继续用满高度。
       const double inset = 4;
-      tapTarget = DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.highlightColor,
-          borderRadius: BorderRadius.circular(
-            (style.radius - inset).clamp(0.0, double.infinity),
+      final Widget pill = Positioned.fill(
+        child: Padding(
+          padding: const EdgeInsets.all(inset),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.highlightColor,
+              borderRadius: BorderRadius.circular(
+                (style.radius - inset).clamp(0.0, double.infinity),
+              ),
+            ),
           ),
         ),
-        child: tapTarget,
       );
-      return Padding(
-        padding: const EdgeInsets.all(inset),
-        child: tapTarget,
+      return Stack(
+        fit: StackFit.passthrough,
+        children: <Widget>[pill, tapTarget],
       );
     }
     return Padding(
