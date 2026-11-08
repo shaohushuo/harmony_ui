@@ -6574,6 +6574,40 @@ void main() {
       expect(right.dx, greaterThan(left.dx));
     });
 
+    testWidgets('角标描边只在墨屏出现，数字色跟着底色反白', (WidgetTester tester) async {
+      Future<void> pumpWith(OhosThemeData theme) async {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: theme,
+            child: MaterialApp(
+              home: OhosScaffold(body: Center(child: OhosBadge(count: 8))),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      // 彩屏：靠底色分层，不加描边 —— 本体仍是官方的 16。
+      await pumpWith(OhosThemeData.light());
+      expect(tester.getSize(find.byType(OhosBadge)).height, 16);
+
+      // 白纸墨屏：多一圈 1vp 纸色描边（16 + 两侧各 1），数字仍反白。
+      // 这一圈是角标压在黑色图标上时唯一的分离手段。
+      await pumpWith(OhosThemeData.ink());
+      expect(tester.getSize(find.byType(OhosBadge)).height, 18);
+      expect(
+        tester.widget<Text>(find.text('8')).style!.color,
+        const Color(0xFFFFFFFF),
+      );
+
+      // 深色墨屏：`dangerColor` 已反成白，字必须跟着转黑，否则白底白字整颗消失。
+      await pumpWith(OhosThemeData.ink(brightness: Brightness.dark));
+      expect(
+        tester.widget<Text>(find.text('8')).style!.color,
+        const Color(0xFF000000),
+      );
+    });
+
     testWidgets('value 走字符串形态；空串退化为圆点（官方口径）', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(

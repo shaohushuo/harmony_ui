@@ -163,13 +163,17 @@ class OhosBadge extends StatelessWidget {
   Widget? _buildLabel(OhosThemeData theme, Color badgeColor) {
     if (isDot || (value != null && value!.isEmpty)) {
       // 圆点：官方 `little_badge_size = 6vp`，不是数字标记的 16。
-      return _decorate(
-        badgeColor,
-        borderRadius: OhosBadgeMetrics.dotSize / 2,
-        child: const SizedBox(
-          width: OhosBadgeMetrics.dotSize,
-          height: OhosBadgeMetrics.dotSize,
+      return _halo(
+        theme,
+        _decorate(
+          badgeColor,
+          borderRadius: OhosBadgeMetrics.dotSize / 2,
+          child: const SizedBox(
+            width: OhosBadgeMetrics.dotSize,
+            height: OhosBadgeMetrics.dotSize,
+          ),
         ),
+        OhosBadgeMetrics.dotSize / 2,
       );
     }
     final String? text = value ?? _countText;
@@ -177,37 +181,49 @@ class OhosBadge extends StatelessWidget {
       return null;
     }
     final double min = _effectiveMinSize;
-    return _decorate(
-      badgeColor,
-      borderRadius: min / 2,
-      child: Container(
-        constraints: BoxConstraints(minWidth: min, minHeight: min),
-        // 总额 6vp 摊到两侧各 3：见 [OhosBadgeMetrics.numericalPadding] 的
-        // 口径说明 —— 每侧 6 会把一位数撑成 22vp，不再是 16 的圆。
-        padding: EdgeInsets.symmetric(
-          horizontal: OhosBadgeMetrics.numericalPadding / 2,
-          vertical: 0,
-        ),
-        // 同老实现：不能用 `alignment:`（会插 `Align`，高度被父级上限拉满）。
-        child: Center(
-          widthFactor: 1,
-          heightFactor: 1,
-          child: Text(
-            text,
-            style: TextStyle(
-              color: textColor ?? Colors.white,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w400,
-              height: 1.2,
-              // 挂在根 Overlay / 裸树时没有 Material 祖先，`MaterialApp` 会
-              // 给这种位置兜底 `_errorTextStyle`（mono + 黄色双下划线）。
-              decoration: TextDecoration.none,
-              inherit: false,
-              fontFamily: theme.typography.fontFamily,
+    // 数字色跟着底色亮度走，不写死白：深色墨屏的 `dangerColor` 已经反成白，
+    // 再配白字就是白底白字，数字整颗消失。彩屏红底（亮度 0.28）仍是白字，
+    // 白纸墨屏黑底也是白字 —— 一条规则三档都对。
+    final Color onBadge =
+        textColor ??
+        (badgeColor.computeLuminance() > 0.5
+            ? const Color(0xFF000000)
+            : const Color(0xFFFFFFFF));
+    return _halo(
+      theme,
+      _decorate(
+        badgeColor,
+        borderRadius: min / 2,
+        child: Container(
+          constraints: BoxConstraints(minWidth: min, minHeight: min),
+          // 总额 6vp 摊到两侧各 3：见 [OhosBadgeMetrics.numericalPadding] 的
+          // 口径说明 —— 每侧 6 会把一位数撑成 22vp，不再是 16 的圆。
+          padding: EdgeInsets.symmetric(
+            horizontal: OhosBadgeMetrics.numericalPadding / 2,
+            vertical: 0,
+          ),
+          // 同老实现：不能用 `alignment:`（会插 `Align`，高度被父级上限拉满）。
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              text,
+              style: TextStyle(
+                color: onBadge,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w400,
+                height: 1.2,
+                // 挂在根 Overlay / 裸树时没有 Material 祖先，`MaterialApp` 会
+                // 给这种位置兜底 `_errorTextStyle`（mono + 黄色双下划线）。
+                decoration: TextDecoration.none,
+                inherit: false,
+                fontFamily: theme.typography.fontFamily,
+              ),
             ),
           ),
         ),
       ),
+      min / 2,
     );
   }
 
@@ -234,6 +250,32 @@ class OhosBadge extends StatelessWidget {
         border: borderWidth > 0
             ? Border.all(color: borderColor ?? badgeColor, width: borderWidth)
             : null,
+      ),
+      child: child,
+    );
+  }
+
+  /// 给角标套一圈纸色外描边 —— 只在这套主题需要轮廓线时生效。
+  ///
+  /// 角标叠在图标右上角，墨屏下两者都是纯黑：不描边就糊成一坨，看不出数字
+  /// 的边界，也分不清它压在谁身上。彩屏靠底色分层（`outlineWidth` 为 null）
+  /// 不做；描边色取 `backgroundColor` 而不是写死白 —— 深色墨屏里角标自身已是
+  /// 白底黑字，纸色是黑，于是自动变成「黑边」，一套规则两端都成立，不必写
+  /// `isMonochrome` 分支。
+  ///
+  /// 用 `padding` 画在外侧而不是 `Border.all`：后者画在盒子内侧，会吃掉数字
+  /// 的内边距，16vp 的圆里再少 2vp 就挤了。本体因此增加 `2 × outline`，相对
+  /// 图标的那点外溢可以忽略。
+  Widget _halo(OhosThemeData theme, Widget child, double radius) {
+    final double? outline = theme.policy.outlineWidth;
+    if (outline == null) {
+      return child;
+    }
+    return Container(
+      padding: EdgeInsets.all(outline),
+      decoration: BoxDecoration(
+        color: theme.backgroundColor,
+        borderRadius: BorderRadius.circular(radius + outline),
       ),
       child: child,
     );
