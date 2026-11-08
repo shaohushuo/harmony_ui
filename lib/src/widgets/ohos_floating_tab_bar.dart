@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_badge.dart';
 import 'ohos_light_material.dart';
 import 'ohos_tabs_width.dart';
 
@@ -485,30 +486,43 @@ class OhosFloatingTabBar extends StatelessWidget {
   }
 }
 
+/// 页签上的角标（14vp / 字号 9）。
+///
+/// 与 [OhosBadge] 是两份实现 —— 那个是 16vp 的圆、挂在图标的角上，这里要更小
+/// 才能塞进栏内的一项。尺寸分开，**墨屏规则共用**（[ohosBadgeHalo] /
+/// [ohosBadgeForeground]）：这一份压在**选中的页签**上，而墨屏里选中项本身
+/// 就是反白实底，角标底色又同为 `dangerColor`，不描边就是一块同色的疙瘩；
+/// 深色墨屏则反过来，底色与字都写死白时整颗消失。
 class _Badge extends StatelessWidget {
   const _Badge({required this.text, required this.color});
 
   final String text;
+
+  /// 角标底色（`theme.dangerColor`）。
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      constraints: const BoxConstraints(minWidth: 14),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFFFFFFFF),
-          fontSize: 9,
-          height: 1.2,
+    return ohosBadgeHalo(
+      OhosTheme.of(context),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        constraints: const BoxConstraints(minWidth: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: ohosBadgeForeground(color),
+            fontSize: 9,
+            height: 1.2,
+          ),
         ),
       ),
+      7,
     );
   }
 }

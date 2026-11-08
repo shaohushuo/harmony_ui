@@ -8840,6 +8840,78 @@ void main() {
       OhosFloatingTabItem(icon: Icon(Icons.person_outline), label: '我的'),
     ];
 
+    // 角标压在**选中的那一项**上：墨屏里选中项本身是反白实底，而角标底色
+    // 也是 dangerColor，同色叠同色 —— 没有描边就只剩一个浮着的数字。
+    Future<void> pumpBadge(WidgetTester tester, OhosThemeData theme) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: theme,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 360,
+                  height: 400,
+                  child: OhosFloatingTabBar(
+                    items: const <OhosFloatingTabItem>[
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.home_outlined),
+                        label: '首页',
+                        badge: '2',
+                      ),
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.search),
+                        label: '搜索',
+                      ),
+                    ],
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    /// 角标本体外那一圈 1vp 的纸色描边；彩屏不加，所以找不到。
+    Finder haloOf(OhosThemeData theme) => find.ancestor(
+      of: find.text('2'),
+      matching: find.byWidgetPredicate(
+        (Widget w) =>
+            w is Container &&
+            w.padding == const EdgeInsets.all(1) &&
+            (w.decoration as BoxDecoration?)?.color == theme.backgroundColor,
+      ),
+    );
+
+    testWidgets('角标：墨屏加纸色描边，字色跟着底色亮度', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await pumpBadge(tester, ink);
+      // 白纸墨屏的 dangerColor 是纯黑 → 白字；本体 14 不变，描边画在外侧
+      expect(tester.widget<Text>(find.text('2')).style!.color,
+          const Color(0xFFFFFFFF));
+      expect(haloOf(ink), findsOneWidget);
+
+      final OhosThemeData inkDark = OhosThemeData.ink(brightness: Brightness.dark);
+      await pumpBadge(tester, inkDark);
+      // 深色墨屏的 dangerColor 已反成纸白 → 字必须转黑，否则白底白字整颗消失
+      expect(tester.widget<Text>(find.text('2')).style!.color,
+          const Color(0xFF000000));
+      expect(haloOf(inkDark), findsOneWidget);
+    });
+
+    testWidgets('角标：彩屏不加描边', (WidgetTester tester) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await pumpBadge(tester, light);
+      // 彩屏靠底色分层就分得开，多一圈线反而偏离官方
+      expect(haloOf(light), findsNothing);
+      expect(tester.widget<Text>(find.text('2')).style!.color,
+          const Color(0xFFFFFFFF));
+    });
+
     // 量**栏体**，不是整个组件，也不是第一个 `SizedBox`。
     //
     // 两层都会坑：外层 `SizedBox(360, 400)` 是宿主撑满的；组件内部第一个

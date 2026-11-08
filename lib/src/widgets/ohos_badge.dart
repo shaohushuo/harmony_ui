@@ -163,7 +163,7 @@ class OhosBadge extends StatelessWidget {
   Widget? _buildLabel(OhosThemeData theme, Color badgeColor) {
     if (isDot || (value != null && value!.isEmpty)) {
       // 圆点：官方 `little_badge_size = 6vp`，不是数字标记的 16。
-      return _halo(
+      return ohosBadgeHalo(
         theme,
         _decorate(
           badgeColor,
@@ -184,12 +184,8 @@ class OhosBadge extends StatelessWidget {
     // 数字色跟着底色亮度走，不写死白：深色墨屏的 `dangerColor` 已经反成白，
     // 再配白字就是白底白字，数字整颗消失。彩屏红底（亮度 0.28）仍是白字，
     // 白纸墨屏黑底也是白字 —— 一条规则三档都对。
-    final Color onBadge =
-        textColor ??
-        (badgeColor.computeLuminance() > 0.5
-            ? const Color(0xFF000000)
-            : const Color(0xFFFFFFFF));
-    return _halo(
+    final Color onBadge = ohosBadgeForeground(badgeColor, override: textColor);
+    return ohosBadgeHalo(
       theme,
       _decorate(
         badgeColor,
@@ -255,32 +251,6 @@ class OhosBadge extends StatelessWidget {
     );
   }
 
-  /// 给角标套一圈纸色外描边 —— 只在这套主题需要轮廓线时生效。
-  ///
-  /// 角标叠在图标右上角，墨屏下两者都是纯黑：不描边就糊成一坨，看不出数字
-  /// 的边界，也分不清它压在谁身上。彩屏靠底色分层（`outlineWidth` 为 null）
-  /// 不做；描边色取 `backgroundColor` 而不是写死白 —— 深色墨屏里角标自身已是
-  /// 白底黑字，纸色是黑，于是自动变成「黑边」，一套规则两端都成立，不必写
-  /// `isMonochrome` 分支。
-  ///
-  /// 用 `padding` 画在外侧而不是 `Border.all`：后者画在盒子内侧，会吃掉数字
-  /// 的内边距，16vp 的圆里再少 2vp 就挤了。本体因此增加 `2 × outline`，相对
-  /// 图标的那点外溢可以忽略。
-  Widget _halo(OhosThemeData theme, Widget child, double radius) {
-    final double? outline = theme.policy.outlineWidth;
-    if (outline == null) {
-      return child;
-    }
-    return Container(
-      padding: EdgeInsets.all(outline),
-      decoration: BoxDecoration(
-        color: theme.backgroundColor,
-        borderRadius: BorderRadius.circular(radius + outline),
-      ),
-      child: child,
-    );
-  }
-
   Widget _positioned(Widget label) {
     final Offset extra = offset;
     switch (position) {
@@ -307,3 +277,44 @@ class OhosBadge extends StatelessWidget {
     }
   }
 }
+/// 给角标套一圈纸色外描边 —— 只在这套主题需要轮廓线时生效。
+///
+/// 角标叠在图标右上角，墨屏下两者都是纯黑：不描边就糊成一坨，看不出数字
+/// 的边界，也分不清它压在谁身上。彩屏靠底色分层（`outlineWidth` 为 null）
+/// 不做；描边色取 `backgroundColor` 而不是写死白 —— 深色墨屏里角标自身已是
+/// 白底黑字，纸色是黑，于是自动变成「黑边」，一套规则两端都成立，不必写
+/// `isMonochrome` 分支。
+///
+/// 用 `padding` 画在外侧而不是 `Border.all`：后者画在盒子内侧，会吃掉数字
+/// 的内边距，16vp 的圆里再少 2vp 就挤了。本体因此增加 `2 × outline`，相对
+/// 图标的那点外溢可以忽略。
+///
+/// 这条规则不只服务 [OhosBadge]：`OhosFloatingTabBar` 的角标是另一份实现
+/// （尺寸 14、字号 9），它压在**选中的那一项**上 —— 墨屏里选中项本身就画成
+/// 反白实底，角标底色又恰好是同一个 `dangerColor`，两团同色连边界都没有。
+/// 两处共用这一个函数，免得一边修好一边继续糊。
+Widget ohosBadgeHalo(OhosThemeData theme, Widget child, double radius) {
+  final double? outline = theme.policy.outlineWidth;
+  if (outline == null) {
+    return child;
+  }
+  return Container(
+    padding: EdgeInsets.all(outline),
+    decoration: BoxDecoration(
+      color: theme.backgroundColor,
+      borderRadius: BorderRadius.circular(radius + outline),
+    ),
+    child: child,
+  );
+}
+
+/// 角标上文字该用的颜色：跟着**底色亮度**走，不写死白。
+///
+/// 深色墨屏的 `dangerColor` 已经反成纸色，再配白字就是白底白字，数字整颗
+/// 消失。彩屏红底（亮度 0.28）与白纸墨屏的黑底都该是白字 —— 一条规则覆盖
+/// 彩屏 / 白纸墨屏 / 深色墨屏三档，比按主题分支少猜两次。
+Color ohosBadgeForeground(Color badgeColor, {Color? override}) =>
+    override ??
+    (badgeColor.computeLuminance() > 0.5
+        ? const Color(0xFF000000)
+        : const Color(0xFFFFFFFF));
