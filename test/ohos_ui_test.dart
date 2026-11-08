@@ -8638,6 +8638,49 @@ void main() {
       // 彩屏靠「浅底 + 品牌色」表达选中，不该被墨屏那套反白带跑
       expect(chip.color, isNot(light.highlightColor));
       expect(chip.color, isNot(Colors.transparent));
+      // 字色也要跟着底走：10% 浅蓝底上压白字 = 白纸白字（约 1.2:1）。
+      expect(paintedTextStyle(tester, '展开').color, light.highlightTextColor);
+    });
+
+    testWidgets('选中底由调用方给成实心品牌色时，字仍取反白', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        wrap(
+          OhosChip(
+            label: const Text('展开'),
+            selected: true,
+            activatedBackgroundColor: light.highlightColor,
+            onPressed: () {},
+          ),
+        ),
+      );
+      // 判据是「合成后的底色有多亮」，不是「底是不是透明」：实心蓝底上
+      // 品牌色字同样读不出来，这里仍要反白。
+      expect(
+        paintedTextStyle(tester, '展开').color,
+        light.onHighlightColor,
+      );
+    });
+
+    testWidgets('选中底被判成透明时，字退回正文色', (WidgetTester tester) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        wrap(
+          OhosChip(
+            label: const Text('展开'),
+            selected: true,
+            activatedBackgroundColor: Colors.transparent,
+            onPressed: () {},
+          ),
+        ),
+      );
+      // 底没了，选中只剩描边：字必须回到常态色，否则反白字会整颗消失。
+      expect(
+        paintedTextStyle(tester, '展开').color,
+        light.textPrimaryColor,
+      );
     });
 
     testWidgets('选中态字重 w500、常态 w400（官方 chip_*_text_font_weight）', (

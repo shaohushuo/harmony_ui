@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_chip_metrics.dart';
@@ -180,22 +182,17 @@ class OhosChip extends StatelessWidget {
               selectedColor ??
               (inverse ? theme.highlightColor : selectedFill))
         : idleFill;
-    // 底色最终是透明时（自定义主题把选中底也判没了），反白字会跟着消失 ——
-    // 这时退回正文色，宁可少一层表达，也不能让字看不见。
-    final bool transparentFill = bg.a == 0;
     // 文字色与图标色**分开**：官方 `LabelOptions.fontColor` 默认
     // `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认
     // `chip_usually_icon_color`（≈ `ohos_id_color_secondary`）。老实现把两者
     // 绑在同一个 `fg` 上，文字常态因此偏淡一档。
     final Color iconFg = !selected
         ? theme.textSecondaryColor
-        : (transparentFill ? theme.highlightColor : theme.onHighlightColor);
+        : _selectedForeground(theme, bg, onNoFill: theme.highlightColor);
     final Color labelFg = !selected
         ? (labelColor ?? theme.textPrimaryColor)
         : (activatedLabelColor ??
-              (transparentFill
-                  ? theme.textPrimaryColor
-                  : theme.onHighlightColor));
+              _selectedForeground(theme, bg, onNoFill: theme.textPrimaryColor));
     // 描边：选中用品牌色，未选中用提示色；墨屏上两者都由策略换成实色
     final Color borderColor = selected
         ? policy.line(theme.highlightColor, 0.20)
@@ -309,4 +306,43 @@ class OhosChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 选中态的文字 / 图标该用什么颜色 —— 按**实际底色**算，不按分支猜。
+///
+/// 官方 `activatedFontColor` 默认 `text_primary_contrary`（≈ 反白），那是在
+/// 「实底 `highlightColor`」这个前提下给的。本库彩屏的选中底是 10% 品牌色
+/// tint，照抄反白就是白字压白纸；反过来，调用方显式传了实心品牌底时，退回
+/// 品牌色字又是蓝字压蓝底。所以判据只能是合成后的真实底色。
+///
+/// [onNoFill] 是底色最终被判成完全透明时的退路（选中表达只剩描边，字要用
+/// 常态色）。
+Color _selectedForeground(
+  OhosThemeData theme,
+  Color fill, {
+  required Color onNoFill,
+}) {
+  if (fill.a == 0) {
+    return onNoFill;
+  }
+  // 底色可能是半透明 tint：先合成到页面上，`computeLuminance` 读出来的才是
+  // 屏幕上那层实际颜色。
+  final Color backdrop = Color.alphaBlend(fill, theme.backgroundColor);
+  return _contrastRatio(theme.onHighlightColor, backdrop) >= _kChipReadable
+      ? theme.onHighlightColor
+      : theme.highlightTextColor;
+}
+
+/// 反白字在底色上至少要有这么多对比度才用它，否则退到品牌色字。
+///
+/// 2.5 是「看得清」的下限：官方彩屏实底蓝 + 白字约 6.1:1，10% tint 底 + 白字
+/// 约 1.2:1（这一档必须退），tint 底 + 品牌色字约 4.7:1。
+const double _kChipReadable = 2.5;
+
+/// WCAG 对比度。与 `ohos_progress_indicator.dart` 里的同名私有函数一致；
+/// 出现第三个调用点时再抽到公共 util。
+double _contrastRatio(Color a, Color b) {
+  final double la = a.computeLuminance();
+  final double lb = b.computeLuminance();
+  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
 }
