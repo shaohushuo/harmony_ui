@@ -79,6 +79,31 @@ class ContainerPage extends StatelessWidget {
           ),
         ),
         DemoSection(
+          title: '滚动列表 OhosList.scrollable（lanes / sticky）',
+          description:
+              '对应官方 List 的滚动能力：固定高度 + CustomScrollView，支持 lanes 多列、'
+              'sticky 吸顶、onReachStart / onReachEnd / onScrollIndex。静态形态（上面两段）'
+              '保持 0.5 的观感不变。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            child: OhosList.scrollable(
+              height: 220,
+              sticky: OhosListStickyStyle.header,
+              lanes: const OhosFixedLanes(2, gutter: 8),
+              onReachEnd: () {},
+              header: OhosSubheader(title: '两列 · 组头吸顶'),
+              children: <Widget>[
+                for (int i = 0; i < 8; i++)
+                  OhosListTile(
+                    density: OhosListTileDensity.compact,
+                    title: Text('条目 ${i + 1}'),
+                    subtitle: Text('两列布局'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        DemoSection(
           title: '分组 OhosListGroup（style: card）',
           description:
               '对应 ArkUI 的 ListItemGroupStyle.CARD：左右外边距 12、四周内边距 4、'

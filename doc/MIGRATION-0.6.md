@@ -1,6 +1,8 @@
 # 0.5.0 → 0.6.0 迁移指南
 
-本版有 **7 处破坏性变更**，全部集中在「旧语义与官方文档对不上」的地方 —— 保留旧参数就无法补齐官方形态，所以选择在一个版本里集中破坏，而不是分散成几次各痛一次。
+本版共 **12 处破坏性变更**，全部集中在「旧语义与官方文档对不上」的地方 —— 保留旧参数就无法补齐官方形态，所以选择在一个版本里集中破坏，而不是分散成几次各痛一次。
+
+其中 7 处是主体实现轮次引入的（第 1–7 条），另外 5 处在收尾一轮按 `doc/AUDIT-0.6.md` 的 42 控件复核清单改实现（P0–P3 共 18 项）时补出（第 8–12 条）：**3 处编译期失败**（第 8 / 9 / 11 条）、**2 处静默的默认值变化**（第 10 / 12 条）。它们同样不可能在保留旧字段的前提下做到。
 
 好消息先说：**所有顶层函数（`showOhosDialog` / `showOhosBottomSheet` / `showOhosPicker` / `showOhosMenu`）只新增了可选参数，没有删除任何一个**。如果你的代码大量用这些函数而不是直接构造组件，升级成本会小很多。
 
@@ -15,6 +17,11 @@
 | 5 | `OhosSubheader` | `padding` 移除（报错）、`title` 改为可选（不报错） | ✅（仅 `padding`） | ✅ |
 | 6 | `OhosProgressIndicatorVariant` | 枚举成员 `circular` → `ring` | ✅ | — |
 | 7 | `OhosChipGroup` | 不传选中项时默认选中第 0 颗 | — | ✅ |
+| 8 | `OhosTextClock` | `timeZone: String?` → `timeZoneOffset: double?` | ✅ | ✅ |
+| 9 | `OhosRatingBar` | `value: int` → `double` | ✅ | — |
+| 10 | `OhosCheckbox` / `OhosCheckboxGroup` | 默认形状改**圆形**、`round` 默认改 `true` | — | ✅ |
+| 11 | `OhosImage` | `fit: BoxFit` → `OhosImageFit` | ✅ | ✅ |
+| 12 | `OhosSelect` | 默认不再画「选中勾」 | — | ✅ |
 
 > 第 7 条没有出现在上面的机械比对里 —— 它不是签名变化，是默认行为变化，只有读源码才能发现。也正因为不报错，它最容易在升级后「看起来正常但选中态错了」。
 
@@ -315,6 +322,92 @@ OhosChipGroup(
 
 ---
 
+## 8. `OhosTextClock` —— `timeZone` 换成 `timeZoneOffset`
+
+**旧写法**
+
+```dart
+OhosTextClock(timeZone: 'Asia/Shanghai')
+```
+
+**新写法**
+
+```dart
+OhosTextClock(timeZoneOffset: -8)   // 东八区。注意是 -8，不是 +8
+```
+
+**为什么必须改**：旧参数**从来没生效过**。实现只有一行
+`_now.toUtc().toLocal()` —— 一个恒等变换，传 `Asia/Shanghai` 与不传的渲染结果完全相同。它是个只在签名上存在的参数，保留它等于继续骗调用方。
+
+符号方向是官方的：`timeZoneOffset` 取值 `[-14, 12]`，**负值表示东时区**
+（`Date.getTimezoneOffset()` 那套）。东八区传 `-8`，写成 `+8` 会得到西八区。
+`-5.75` 这类半小时档官方保留小数（共十个：`9.5 / 3.5 / -3.5 / -4.5 / -5.5 /
+-5.75 / -6.5 / -9.5 / -10.5 / -12.75`），其余浮点值取整。
+
+## 9. `OhosRatingBar` —— `value` 从 `int` 变 `double`
+
+**旧写法**
+
+```dart
+OhosRatingBar(value: 3)
+```
+
+**新写法**
+
+```dart
+OhosRatingBar(value: 3)        // 仍编译通过：int 字面量可赋给 double
+OhosRatingBar(value: 3.5)      // 官方 stepSize 默认 0.5，半星要 double 才表达得出
+```
+
+**注意**：如果 `value` 来自一个 `int` **变量**（不是字面量），会报
+`argument_type_not_assignable`；`onChanged: (int v)` 也须改成 `(double v)`。
+`int` 字面量能自动转换，所以示例里的 `value: 3` 不用动。
+
+## 10. `OhosCheckbox` / `OhosCheckboxGroup` —— 默认形状改圆形
+
+**无编译错误，只有观感变化**（这是本版第 2 处「静默」破坏）。
+
+- `OhosCheckbox.shape` 默认从原先的**圆角方形**改成官方
+  `CheckBoxShape.CIRCLE`（圆形）。要保留方形传 `shape: OhosCheckboxShape.roundedSquare`。
+- `OhosCheckboxGroup.round` / `OhosCheckboxGroupHeader.round` 默认值 `false` → **`true`**，
+  与 `OhosCheckbox` 同源 —— 否则同一个列表里会出现「圆形成员 + 方形组头」。
+- 勾线从字体图标换成手画的 `CustomPaint`（字体字形的线宽是画死的，
+  官方 `mark.strokeWidth` 落不了地）。如果你的代码里 `find.byType(Icon)`
+  去找那个勾，会找不到。
+
+## 11. `OhosImage` —— `fit` 类型换成 `OhosImageFit`
+
+**旧写法**
+
+```dart
+OhosImage(image: ..., fit: BoxFit.cover)
+```
+
+**新写法**
+
+```dart
+OhosImage(image: ..., fit: OhosImageFit.cover)
+```
+
+**为什么不能继续收 `BoxFit`**：两组枚举同名不同义，且有档位在 `BoxFit` 里
+根本不存在。`ImageFit` 有 8 个取值，`BoxFit` 有 7 个 —— 差值就在
+`OhosImageFit.original`（原尺寸居中且**不裁**，`BoxFit` 没有这个组合）。
+`none` 也各有细节差别。逐值硬映射看起来省事，实际会在边界上给出两种结果。
+
+迁移只需把 `BoxFit.xxx` 换成对应的 `OhosImageFit.xxx`：
+`cover` / `contain` / `fill` / `scaleDown` / `none` 五个同名，
+`BoxFit.scaleDown` 之外没有别的需要换算；`fit` 默认仍是 `cover`（与官方一致）。
+
+## 12. `OhosSelect` —— 默认不再画「选中勾」
+
+**无编译错误，只有观感变化**（第 3 处「静默」破坏）。
+
+`showDefaultSelectedIcon` 默认从 `true` 改成 **`false`** —— 官方口径是
+「选中靠突出底色（20% 品牌色），不是靠勾」。老实现总是画勾，与这一条相反。
+要保留旧观感传 `showDefaultSelectedIcon: true`。
+
+---
+
 ## 不需要改的地方
 
 确认过以下几处**没有破坏**，不用动：
@@ -327,6 +420,17 @@ OhosChipGroup(
 | `OhosAlertDialog` 的其余 8 个新参数 | 全是可选的，不传就走默认 |
 | `OhosChip` / `OhosChipItem` 的 `size` | 新增字段，有默认值 |
 | `OhosVisualPolicy` 的自定义子类 | **没有新增抽象成员**（本版只加了带默认实现的 `selectionMark`），外部子类照旧编译 |
+
+---
+
+## 附：两处「不破坏 API、但观感会变」的修正
+
+不是破坏性变更（签名没变、编译不报错），但**截图会不一样**，比对基线时别当成回归：
+
+| 项 | 变化 | 想保留旧观感怎么办 |
+| --- | --- | --- |
+| `showOhosBottomSheet`（`type: bottom` / `detents: [`OhosSheetSize.large`]`） | 面板高度由「窗口高」变成「窗口高 − 状态栏 − 8vp」，顶边不再盖住状态栏 | 没有开关。这是官方公式（`bindsheet` 正文），旧行为是缺陷；确实需要满屏请用 `type: contentCover` |
+| `showOhosMenu` 列表形态 | 条目左右内边距 12 → **16vp**（设计稿值），条目文案改为省略号截断 | 没有开关。宽 224vp 的菜单必须截断，此前是靠「刚好放得下」侥幸不溢出 |
 
 ---
 

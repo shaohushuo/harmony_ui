@@ -1,7 +1,59 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
 import 'ohos_magnifier.dart';
+
+/// 索引条的颜色与尺寸，取自参考文档 `ts-container-alphabet-indexer.md`
+/// 的属性表默认值（这一层就是明文数值，不需要再下资源表）。
+///
+/// 注意 `selectedColor` / `popupColor` 是 **`0xFF007DFF`** 而不是本库主题的
+/// `highlightColor`（0xFF0A59F7）：官方在索引条上钉了一个固定的蓝，不跟随
+/// 品牌色。这是少数「组件自带固定色」的地方，照抄比统一更忠实。
+class OhosIndexerMetrics {
+  const OhosIndexerMetrics._();
+
+  /// 未选中项文本色（官方 `color` 默认 `0x99182431`）。
+  static const Color textColor = Color(0x99182431);
+
+  /// 选中项文本色（官方 `selectedColor` 默认 `0xFF007DFF`）。
+  static const Color selectedColor = Color(0xFF007DFF);
+
+  /// 选中项背景色（官方 `selectedBackgroundColor` 默认 `0x1A007DFF`）。
+  static const Color selectedBackgroundColor = Color(0x1A007DFF);
+
+  /// 提示气泡一级文本色（官方 `popupColor` 默认 `0xFF007DFF`）。
+  static const Color popupColor = Color(0xFF007DFF);
+
+  /// 索引项区域边长（官方 `itemSize` 默认 `16vp`）。
+  ///
+  /// 「索引项区域为正方形」，实际还受组件尺寸约束：宽不超过
+  /// 组件宽 − 左右 padding，高不超过（组件高 − 上下 padding）/ 项数。
+  static const double itemSize = 16;
+
+  /// 组件默认 padding（文档正文：「`padding` 属性默认为 4vp」）。
+  static const double padding = 4;
+}
+
+/// 索引条提示弹窗的对齐档（官方 `IndexerAlign` 4 个成员）。
+///
+/// 官方文档的措辞是「弹窗显示在索引条**右侧**」对应 `Left` —— 按**索引条
+/// 本身**的物理位置命名，不是按弹窗的位置。这里的枚举照它的语义走，别按字面
+/// 直觉反过来用。
+enum OhosIndexerAlign {
+  /// 弹窗在索引条右侧（官方 `Left`，值 0）。
+  left,
+
+  /// 弹窗在索引条左侧（官方 `Right`，值 1）。
+  right,
+
+  /// LTR 下在右侧、RTL 下在左侧（官方 `START`，值 2）。
+  start,
+
+  /// LTR 下在左侧、RTL 下在右侧（官方 `END`，值 3）——**官方默认档**。
+  end,
+}
 
 /// A vertical alphabetical index strip (索引条 in the HarmonyOS guideline)
 /// used to jump through long lists. Tap or drag to select a letter.
@@ -22,6 +74,14 @@ class OhosAlphabetIndexer extends StatefulWidget {
     this.onSelectEnd,
     this.showMagnifier = true,
     this.magnifierBuilder,
+    this.textColor,
+    this.selectedColor,
+    this.selectedBackgroundColor,
+    this.alignStyle = OhosIndexerAlign.end,
+    this.showPopupBubble = false,
+    this.popupColor,
+    this.itemSize,
+    this.padding = const EdgeInsets.all(OhosIndexerMetrics.padding),
   });
 
   /// The letters to display, e.g. `A-Z`, `#`.
@@ -82,6 +142,49 @@ class OhosAlphabetIndexer extends StatefulWidget {
   /// arrow, or a plain colour block. Null keeps the default [OhosMagnifier]
   /// with the letter set large.
   final Widget Function(BuildContext context, String letter)? magnifierBuilder;
+
+  /// 未选中字母的颜色（官方 `color`，默认 `0x99182431`）。
+  final Color? textColor;
+
+  /// 选中字母的颜色（官方 `selectedColor`，默认 `0xFF007DFF`）。
+  ///
+  /// 官方这一档是**固定蓝**，不跟随主题品牌色 —— 传 null 时取
+  /// [OhosIndexerMetrics.selectedColor] 而不是主题的 `highlightColor`，
+  /// 与官方一致。想让它跟随主题就显式传 `theme.highlightColor`。
+  final Color? selectedColor;
+
+  /// 选中字母的底色（官方 `selectedBackgroundColor`，默认 `0x1A007DFF`）。
+  ///
+  /// 老实现完全没有这一档 —— 索引条上「当前是哪个字母」只有颜色深浅的差别，
+  /// 在浅色主题里对比度不够。官方给的是一个 10% 的蓝色圆角底。
+  final Color? selectedBackgroundColor;
+
+  /// 提示弹窗的对齐档（官方 `alignStyle`，默认 `IndexerAlign.END`）。
+  ///
+  /// 这一档官方只用来摆**提示弹窗**的位置，与索引条自身在屏幕的左右无关。
+  /// 本库把它用在两处：气泡/放大镜的落点方向，以及选中底色的圆角朝向
+  /// （贴着屏幕边缘那一侧的角不圆）。
+  final OhosIndexerAlign alignStyle;
+
+  /// 是否显示官方的「提示弹窗气泡」（官方 `usingPopup`，默认 `false`）。
+  ///
+  /// 与 [showMagnifier] 的关系：两者都是「手指旁边出现一个放大/提示的泡泡」，
+  /// 但官方索引条的气泡是**矩形文字块**（`popupColor` 蓝字、`popupBackground`
+  /// 浅底、可显示二级索引），放大镜是**圆形内容投影**。`showPopupBubble`
+  /// 优先：开了它就按官方气泡造型画，否则退回放大镜。
+  final bool showPopupBubble;
+
+  /// 气泡文字颜色（官方 `popupColor`，默认 `0xFF007DFF`）。
+  final Color? popupColor;
+
+  /// 索引项区域边长（官方 `itemSize`，默认 16vp）。
+  ///
+  /// 实际是**上限**：高度方向还要被「可用高 / 项数」夹一次，否则 26 个字母
+  /// 在 360vp 高的条上每格只有 13vp。宽度方向夹到「条宽 − 左右 padding」。
+  final double? itemSize;
+
+  /// 索引条内边距（官方默认 4vp）。
+  final EdgeInsets padding;
 
   @override
   State<OhosAlphabetIndexer> createState() => _OhosAlphabetIndexerState();
@@ -279,13 +382,36 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     TextStyle base,
     int index,
     double fontSize,
+    double slot,
   ) {
     // 只读内部状态：受控值已经在 initState / didUpdateWidget 里回写过了，
     // 所以"外部定位"与"手指拖动"共用一条绘制路径。
     final bool on = index == _current;
+    // 默认取主题色而不是官方那对固定值（`0x99182431` / `0xFF007DFF`）：
+    // 本库的组件颜色统一由 `OhosThemeData` 负责，深色与墨屏都靠它换值。
+    // 写死官方蓝的话，墨屏上这条蓝既不会被 `quantize` 成灰阶，也没法跟
+    // 「当前主题的品牌色」对齐。要严格对齐官方外观就显式传
+    // `textColor: OhosIndexerMetrics.textColor` 与
+    // `selectedColor: OhosIndexerMetrics.selectedColor`。
+    final Color idle = widget.textColor ?? theme.textSecondaryColor;
+    final Color active = widget.selectedColor ?? theme.highlightColor;
+    // 选中底色：官方 `selectedBackgroundColor`。
+    //
+    // 这里**不能**写 `policy.isMonochrome ? 实线 : 10% 叠色` —— 那样一来「加
+    // 一块屏」又得回来改组件（`system_theme_test` 明令禁止）。问策略真正管
+    // 的事：「这个颜色能否在你那块屏上原样表达」。彩屏 `quantize` 原样返回、
+    // 10% 的蓝就是 10% 的蓝；灰阶屏必须合成到纸面并去饱和，必然不等 —— 那时
+    // 才换成 `line` 的实色把选区托住（10% 落在第 0–3 级灰、与白底不可分）。
+    final Color highlightBackground =
+        widget.selectedBackgroundColor ??
+        theme.highlightColor.withValues(alpha: 0.1);
+    final Color selectedFill =
+        theme.policy.quantize(highlightBackground) == highlightBackground
+        ? highlightBackground
+        : theme.policy.line(theme.textPrimaryColor, 1);
     // 字号不作隐式动画：容器高度是立即变的，字号若走 200ms 过渡，拖动期间
     // 每一帧都偏大，字母会互相压住（0.3.0 里直接 `RenderFlex overflowed`）。
-    return DefaultTextStyle(
+    final Widget content = DefaultTextStyle(
       // copyWith 而不是新建 TextStyle：字体家族这类没在这里列出的字段要
       // 从外层 DefaultTextStyle 继承。新建会把 fontFamily 丢掉，真机上看
       // 不出问题，flutter_tester 里 null 家族 = Ahem，整列变成实心方块。
@@ -297,10 +423,25 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
         fontFamily: base.fontFamily ?? theme.typography.fontFamily,
         fontSize: fontSize,
         height: 1,
-        color: on ? theme.highlightColor : theme.textSecondaryColor,
+        color: on ? active : idle,
         fontWeight: on ? FontWeight.w600 : FontWeight.w400,
       ),
       child: Text(widget.indexer[index]),
+    );
+    if (!on) {
+      return content;
+    }
+    // 选中项的圆角底。右下角那个 `Radius` 不圆 —— 索引条贴在屏幕右沿时，
+    // 圆角会切进窗口边界之外，看起来像被裁掉一块。
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: selectedFill,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(slot / 2),
+          bottomLeft: Radius.circular(slot / 2),
+        ),
+      ),
+      child: Center(widthFactor: 1, heightFactor: 1, child: content),
     );
   }
 
@@ -329,7 +470,17 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
           return SizedBox(width: widget.size.width, height: 0);
         }
         // 唯一来源：布局、字号、命中都用这个 slot，不再有第二套几何。
-        final double slot = height / count;
+        //
+        // [OhosAlphabetIndexer.itemSize] 给了就把每格锁成那个正方形的边长，
+        // 没给就按可用高平摊 —— 后者是 0.3.0 起的既有行为（父级压高度时整条
+        // 跟着缩）。官方 `itemSize` 的默认 16vp 是**组件默认**，本库不把它当
+        // 默认值，是因为索引条在真机上永远被放在一个刚好够高的容器里，
+        // 锁死 16 会让「5 个字母、160vp 高」的条只画 80vp 高、下面留白。
+        // 想严格对齐官方方形索引项：传 `itemSize: OhosIndexerMetrics.itemSize`。
+        final double? cap = widget.itemSize;
+        final double slot = cap == null
+            ? height / count
+            : math.min(cap <= 0 ? height / count : cap, height / count);
         // 字号按槽位高度摊分：索引条高度小于 letters × 12vp 时（手机竖屏）
         // 原来 26 个字母会撑破 Column，出斑马线。系统字体放大（如 Mate 60 Pro
         // 默认 1.15）会把文字等比撑高，只按 vp 摊分还会溢出 27px —— 先把缩放
@@ -363,7 +514,9 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
                 for (int i = 0; i < count; i++)
                   SizedBox(
                     height: slot,
-                    child: Center(child: _letter(theme, base, i, fontSize)),
+                    child: Center(
+                      child: _letter(theme, base, i, fontSize, slot),
+                    ),
                   ),
               ],
             ),

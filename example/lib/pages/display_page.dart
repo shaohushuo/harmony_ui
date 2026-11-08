@@ -223,7 +223,10 @@ class DisplayPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '文本时钟 OhosTextClock',
-          description: '每秒刷新，支持自定义格式。',
+          description:
+              '对应官方 TextClock：controller 控制启停（默认 started = true）、'
+              'timeZoneOffset 按官方符号（东八区传 -8）、onDateChange 每秒给一次'
+              ' Unix 秒数。组件不可见时自动停走。',
           child: DemoCard(
             child: Wrap(
               spacing: 24,
@@ -231,13 +234,17 @@ class DisplayPage extends StatelessWidget {
               children: <Widget>[
                 OhosTextClock(format: 'HH:mm:ss'),
                 OhosTextClock(format: 'yyyy年MM月dd日'),
+                // 东八区：官方符号是 -8（负数表示东时区）
+                OhosTextClock(format: 'HH:mm', timeZoneOffset: -8),
               ],
             ),
           ),
         ),
         const DemoSection(
           title: '图片 OhosImage',
-          description: '圆角图片容器，支持选中描边。',
+          description:
+              '圆角图片容器。fit 用官方的 ImageFit 语义（8 档，与 BoxFit 不同名不同义），'
+              '失败态有独立的 errorPlaceholder（官方 22+ 的 ImageAlt 就是这件事）。',
           child: DemoCard(
             child: Wrap(
               spacing: 12,
@@ -245,7 +252,16 @@ class DisplayPage extends StatelessWidget {
               children: <Widget>[
                 _PlaceholderImage(width: 96, height: 64),
                 _PlaceholderImage(width: 96, height: 64, selected: true),
-                _PlaceholderImage(width: 96, height: 64),
+                _PlaceholderImage(
+                  width: 96,
+                  height: 64,
+                  fit: OhosImageFit.contain,
+                ),
+                _PlaceholderImage(
+                  width: 96,
+                  height: 64,
+                  fit: OhosImageFit.scaleDown,
+                ),
               ],
             ),
           ),
@@ -1093,11 +1109,13 @@ class _PlaceholderImage extends StatelessWidget {
     required this.width,
     required this.height,
     this.selected = false,
+    this.fit = OhosImageFit.cover,
   });
 
   final double width;
   final double height;
   final bool selected;
+  final OhosImageFit fit;
 
   @override
   Widget build(BuildContext context) {
@@ -1106,6 +1124,7 @@ class _PlaceholderImage extends StatelessWidget {
       width: width,
       height: height,
       selected: selected,
+      fit: fit,
       image: const NetworkImage('https://picsum.photos/seed/ohos1/200/120'),
       placeholder: Container(
         color: theme.textTertiaryColor.withValues(alpha: 0.1),

@@ -34,7 +34,7 @@ enum OhosProgressIndicatorVariant {
 ///
 /// 数值出处分两类，混在一起会看不出哪些是能核对的：
 ///
-/// - 系统资源表（`doc/source/systemres/float.json`）：
+/// - 系统资源表（`doc/reference/resources/float.json`）：
 ///   [thickness] = `ohos_id_progress_thickness`、
 ///   [linearWidth] = `ohos_id_progress_default_width`、
 ///   [diameter] = `ohos_id_progress_default_diameter`、

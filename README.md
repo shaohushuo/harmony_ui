@@ -439,7 +439,7 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 
 ## 控件覆盖（对应官方「控件概览」42 控件）
 
-> **这张表按「官方形态」逐项勾选，不是只写类名。** 只写类名会掩盖一个事实：一个组件类对应官方几个形态、做了几个，从类名上完全看不出来 —— 例如 `showOhosBottomSheet` 一个函数覆盖官方 `bindSheet` 的 5 种 `SheetType`，而 `OhosGauge` 一个类覆盖数据可视化的 17 个形态项。完整形态清单与逐项状态见 [`doc/CONTROL-MATRIX.md`](doc/CONTROL-MATRIX.md)（当前 **256 行 / 完整 204**）。
+> **这张表按「官方形态」逐项勾选，不是只写类名。** 只写类名会掩盖一个事实：一个组件类对应官方几个形态、做了几个，从类名上完全看不出来 —— 例如 `showOhosBottomSheet` 一个函数覆盖官方 `bindSheet` 的 5 种 `SheetType`，而 `OhosGauge` 一个类覆盖数据可视化的 17 个形态项。完整形态清单与逐项状态见 [`doc/CONTROL-MATRIX.md`](doc/CONTROL-MATRIX.md)（当前 **284 行 / 完整 223**）。
 >
 > 标记：`✓` 已实现且有用例；`◐` 部分实现（备注写缺口）；`—` 平台差异无需实现。
 

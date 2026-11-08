@@ -32,11 +32,11 @@
 #   下面那句「首字符必须是 `{`」的校验就是为这类「200 但内容不是 JSON」准备的。
 #   旧 gitee 的 API 已全线 403（Rate Limit Exceeded），raw 也建议一起迁。
 #
-# 输出落到 doc/source/systemres/（已被 .gitignore 挡住，见 README）。
+# 输出落到 doc/reference/resources/（已被 .gitignore 挡住，见 README）。
 set -u
 
 RAW="https://raw.gitcode.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element"
-OUT="$(cd "$(dirname "$0")/.." && pwd)/doc/source/systemres"
+OUT="$(cd "$(dirname "$0")/.." && pwd)/doc/reference/resources"
 mkdir -p "$OUT"
 
 FILES=(pattern.json float.json float_sys.json)

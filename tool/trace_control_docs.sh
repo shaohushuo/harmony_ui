@@ -12,11 +12,11 @@
 # 链接是官方自己写的，不需要猜。
 #
 # 用法：./tool/trace_control_docs.sh          # 只解析并写报告
-#       ./tool/trace_control_docs.sh --fetch  # 顺便把能取到的参考文档下到 doc/reference/
+#       ./tool/trace_control_docs.sh --fetch  # 顺便把能取到的参考文档下到 doc/reference/api/
 set -e
 cd "$(dirname "$0")/.."
 
-OUT=doc/reference
+OUT=doc/reference/api
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 

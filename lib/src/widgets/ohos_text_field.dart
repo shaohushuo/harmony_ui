@@ -114,7 +114,7 @@ class OhosInputCounterOptions {
 ///
 /// **与 `OhosListItemCardMetrics` 相反，这一组几乎每个值都能沿
 /// `$float:` 链走到具体的 vp/fp** —— 因为 `TextInput` 是开源组件，
-/// `doc/source/systemres/pattern.json` 里的 `ohos_textfield_pattern`
+/// `doc/reference/resources/pattern.json` 里的 `ohos_textfield_pattern`
 /// 有 115 个属性、且都有对应资源。**「令牌有值」不等于「令牌生效」**，
 /// 所以下面标了适用形态的那几条，来源是组件真正读它的那条路径
 /// （`textfield_height` / `textfield_content_height` / `textfield_border_radius`

@@ -1,6 +1,8 @@
 # 组件实现源码（本地快照）
 
-`*.ets` 由 `tool/fetch_source.sh` 生成，`systemres/*.json` 由 `tool/fetch_sys_resources.sh` 生成，**均已加入 `.gitignore`，不入库**（上游内容、约 1.6MB、会与上游漂移）。本 README 入库，说明来源与这两层各解决什么问题。
+本目录的 `*.ets` 由 `tool/fetch_source.sh` 生成；令牌表 `*.json` 由 `tool/fetch_sys_resources.sh` 生成到**同级的 [`../resources/`](../resources/)**。两者**均已加入 `.gitignore`，不入库**（上游内容、约 1.6MB、会与上游漂移）。README 入库，说明来源与这两层各解决什么问题。
+
+> 2026-11 重构：原先 `doc/source/` 一个目录同时装 `.ets` 与 `systemres/`，现在按「上游哪个仓」拆开 —— `.ets` → 本目录，令牌表 → `../resources/`。下面的 `systemres/` 一律读作 `../resources/`。
 
 ## 这一层解决什么问题
 
@@ -13,7 +15,7 @@
 | 快照 | 回答 | 来源 |
 | --- | --- | --- |
 | `*.ets` | 源码里**硬编码**的部分 | `raw.gitcode.com/openharmony/arkui_ace_engine/raw/master/advanced_ui_component/<组件>/source/*.ets` |
-| `systemres/*.json` | **令牌**的真实值 | `raw.gitcode.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element/` |
+| `../resources/*.json` | **令牌**的真实值 | `raw.gitcode.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element/` |
 
 > **仓址（2026-11 迁到 GitCode）。** 旧地址 `gitee.com/openharmony/arkui_ace_engine` 已作废，新仓 <https://gitcode.com/openharmony/arkui_ace_engine>。raw 直链必须走 `raw.gitcode.com`（`gitcode.com/<仓>/raw/...` 与 `/-/raw/...` 只返回 HTML，状态码仍 200）；目录列表 API 走 `api.gitcode.com/api/v5/repos/.../contents/<路径>?ref=master`，与 raw 是**不同 host**。迁移的动因是旧 gitee 的目录 API 已全线 403 —— 而那正是本层「不猜文件名」的依据。
 
@@ -34,7 +36,7 @@
 > **别再往这里抄行号。** 上一版写的是「`chipgroup.ets` 第 46 行」「第 63 行」「`chip.ets` 第 371 行」——2026-11 一次同步之后三个全部失效：`chipGroupSpace` 往后漂了几行，`chip.ets` 那批常量则落在文件三分之一处而非三百七十行。这批 `.ets` 本就**随上游漂移、不入库**，行号是最脆弱的定位方式。要定位就直接搜键名：
 >
 > ```zsh
-> python3 -c "import io,sys;t=io.open('doc/source/chip.ets',encoding='utf-8').read().split(chr(10));[print(i+1,l.strip()) for i,l in enumerate(t) if 'minLabelWidth' in l]"
+> python3 -c "import io,sys;t=io.open('doc/reference/source/chip.ets',encoding='utf-8').read().split(chr(10));[print(i+1,l.strip()) for i,l in enumerate(t) if 'minLabelWidth' in l]"
 > ```
 
 > **`chipgroup.ets` 的 `enum ChipGroupHeight { NORMAL = 36, SMALL = 28 }` 已不存在（2026-11）。** 上游把尺寸枚举并进了 `chip.ets` 的 `ChipSize`，而且它的成员是**字符串**：
@@ -48,7 +50,7 @@
 `subheader.ets` 还额外带一张 `RESOURCE_CACHE_MAP`，把「令牌 → 真实值」直接列出来。**旧版记的是「28 条」，2026-11 已增至 59 个不同的 `sys.float.*` 键**（其中 47 个是 `subheader_*`，其余是 `padding_levelN` / `margin_*` / `corner_radius_level4` 这类基础令牌）。数字会随上游漂移，用到时现数：
 
 ```zsh
-python3 -c "import io,re;t=io.open('doc/source/subheader.ets',encoding='utf-8').read();print(len(set(re.findall(r'sys\.float\.([a-z0-9_]+)',t))))"
+python3 -c "import io,re;t=io.open('doc/reference/source/subheader.ets',encoding='utf-8').read();print(len(set(re.findall(r'sys\.float\.([a-z0-9_]+)',t))))"
 ```
 
 ## 令牌的真值：`resources.index` 不是黑盒
@@ -68,7 +70,7 @@ systemres/main/resources/base/element/float_sys.json  507 条  组件级令牌�
 > ```zsh
 > python3 -c "
 > import json, glob
-> for p in sorted(glob.glob('doc/source/systemres/*.json')):
+> for p in sorted(glob.glob('doc/reference/resources/*.json')):
 >     d = json.load(open(p, encoding='utf-8'))
 >     print(p, len(d[list(d)[0]]), '条')
 > "

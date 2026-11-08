@@ -2,11 +2,13 @@
 
 Release date: 2026-11-04
 
-> 本版把官方「控件概览」42 控件按**形态**逐项做完并重新对账：矩阵从本轮起点的 **227 行** 扩到 **256 行 / 完整 204**，口径变严（多个控件从 1–2 行拆成 5–17 行）。用例 491 → **651**，`example` 用例 **85 → 175 条**（其中溢出矩阵 72 → 162：新增弹层维度 90 条 = 10 种弹层 × 3 尺寸 × 3 字号）。
+> 本版把官方「控件概览」42 控件按**形态**逐项做完并重新对账：矩阵从本轮起点的 **227 行** 扩到 **284 行 / 完整 223**，口径变严（多个控件从 1–2 行拆成 5–23 行）。用例 491 → **745**，`example` 用例 **85 → 183 条**（其中溢出矩阵 72 → 170：新增弹层维度 90 条 = 10 种弹层 × 3 尺寸 × 3 字号）。
 >
-> **7 处破坏性变更**，逐条迁移写法见 [`doc/MIGRATION-0.6.md`](doc/MIGRATION-0.6.md)：`OhosActionBar`（9 个参数移除）、`OhosDataPanel`（语义调换，旧用法改名 `OhosStatGrid`）、`OhosToolbarItem.selected` → `state` 枚举、`OhosAlertDialog.borderRadius` 移除（默认 28 → 32）、`OhosSubheader.padding` 移除、`OhosProgressIndicatorVariant.circular` → `ring`、`OhosChipGroup` 默认选中第 0 颗。共同理由是「旧语义与官方文档对不上，无法在保留旧参数的前提下补齐」。
+> **7 + 5 = 12 处破坏性变更**，逐条迁移写法见 [`doc/MIGRATION-0.6.md`](doc/MIGRATION-0.6.md)：`OhosActionBar`（9 个参数移除）、`OhosDataPanel`（语义调换，旧用法改名 `OhosStatGrid`）、`OhosToolbarItem.selected` → `state` 枚举、`OhosAlertDialog.borderRadius` 移除（默认 28 → 32）、`OhosSubheader.padding` 移除、`OhosProgressIndicatorVariant.circular` → `ring`、`OhosChipGroup` 默认选中第 0 颗；以及审计轮新增的 `OhosTextClock.timeZone` → `timeZoneOffset`、`OhosRatingBar.value` `int` → `double`、`OhosCheckbox` 默认圆形、`OhosImage.fit` `BoxFit` → `OhosImageFit`、`OhosSelect` 默认不画勾（其中 3 处编译期失败、2 处静默）。共同理由是「旧语义与官方文档对不上，无法在保留旧参数的前提下补齐」。
 >
 > 好消息：**所有顶层函数（`showOhosDialog` / `showOhosBottomSheet` / `showOhosPicker` / `showOhosMenu`）只新增可选参数、没有删除**；`OhosVisualPolicy` 没有新增抽象成员，外部自定义子类不受影响。
+>
+> 收尾一轮按 [`doc/AUDIT-0.6.md`](doc/AUDIT-0.6.md) 的 42 控件复核清单**实际改实现**，P0–P3 共 18 项全部落地，用例 **651 → 745**，矩阵 **256 → 284 行**。详见文末「按审计清单对齐（P0–P3）」一节——那里记的是**改动做了什么**与**四条实施中才暴露的事实**（紧约束下「最大宽度」在 Flutter 布局模型里不成立、`SwitchStyle.pointRadius` 是算法不是常数、组件层禁用 `policy.isMonochrome`；以及 P3 轮补充的「链式 `replaceAll` 做模板格式化是错的」「`SliverGrid.childAspectRatio` 会钉死行高」）。
 
 - 新增：`OhosSheetType` / `OhosSheetSize` / `OhosSheetDetent` / `OhosSheetSpec`（`ohos_sheet_type.dart`）—— 对应官方 `bindSheet` 的 `SheetType`（5 值）、`SheetSize`、`detents` 与 `preferType`。**「5 种形态」不是 5 种皮肤，是 5 套能力矩阵**：形状决定的不只是位置，还有圆角（BOTTOM 只圆上面两角、CONTENT_COVER 完全不圆）、蒙层（CONTENT_COVER「不支持蒙层效果」）、标题与关闭按钮（CONTENT_COVER 都没有）、控制条与挡位（SIDE / CONTENT_COVER 都无）、宽高（SIDE 高度恒全屏、CONTENT_COVER 恒全屏）。只换对齐方式会在这五处同时出错
 - 新增：`showOhosBottomSheet` 五形态全落 —— 上一版只有 BOTTOM 一种、且把「画什么」写死在渲染里（顶部一条描边、无条件画控制条、标题栏必出、圆角固定 `BorderRadius.vertical(top:)`）。现按 `type` 分别渲染，`SIDE` 用 `showGeneralDialog` + `SlideTransition` 从右滑入（官方「从右向左进入，原地向右退出，不支持自定义转场」），`CONTENT_COVER` 用 `barrierColor: Colors.transparent` 实现「无蒙层」
@@ -40,7 +42,7 @@ Release date: 2026-11-04
 - 文档：**悬浮栏的几何大多是自拟**。`hds` / `floating` 在 `pattern.json` / `float_sys.json` / `float.json` 三张系统资源表里**零命中**（与 `HdsActionBar` 完全同型）；能指到令牌的只有 ArkUI 通用 tabs 家族那批（`ohos_id_tab_padding` 16vp、`ohos_id_tab_gradient_width` 24vp、`ohos_id_tab_default_height` 56vp、`ohos_id_bottomtab_height` 48vp），它们属于**平铺栏**，用来给 `OhosTabBar` 对账，不能拿来当悬浮栏的值
 - 文档：矩阵「底部页签」由 **4 行改写成 6 行**（+2），当时统计为 253 行 / 完整 193 / `◐` 4 / `○` 52 / `●` 2 / `—` 2（已被迷你栏那次更新到 254）。用例数 580 → **599**（宽度算法 6 条 + 悬浮栏 13 条）
 - 文档：**源码快照更新后，`chipgroup.ets` 的 `enum ChipGroupHeight { NORMAL = 36, SMALL = 28 }` 已不存在** —— 上游把尺寸并进 `chip.ets` 的 `ChipSize { NORMAL = "NORMAL", SMALL = "SMALL" }`（字符串成员），高度改由 `$r('sys.float.chip_normal_height')` / `chip_small_height` 令牌给出。这是与 `subheader.ets` 同类的**判据退化**：源码从「写字面值」变成「只写令牌名」，源码层对 chip 高度不再答得出数值。核对令牌真值 `36vp` / `28lpx` 与原硬编码**一致**，故 `OhosChip` / `OhosChipGroup` 实现无需改动
-- 文档：`doc/source/README.md` 与 `doc/ROADMAP-0.6.md` 里的 `.ets` **行号引用全部移除**，改为「搜键名」。这批快照随上游漂移且不入库，行号是最脆弱的定位方式 —— 本轮三个行号（`chipgroup.ets` 46 / 63、`chip.ets` 371）在同步后同时失效。三张资源表的行数（9701 / 4112 / 1816）同样过期，改记**条目数** 67 / 1080 / 507
+- 文档：`doc/reference/source/README.md` 与 `doc/ROADMAP-0.6.md` 里的 `.ets` **行号引用全部移除**，改为「搜键名」。这批快照随上游漂移且不入库，行号是最脆弱的定位方式 —— 本轮三个行号（`chipgroup.ets` 46 / 63、`chip.ets` 371）在同步后同时失效。三张资源表的行数（9701 / 4112 / 1816）同样过期，改记**条目数** 67 / 1080 / 507
 - 行为变更（**破坏性**）：`OhosActionBar` 结构改造 —— `startButtons` / `endButtons` 两端按钮组取代单一 `secondaryActions`，`primaryLabel` / `onPrimaryPressed` / `primaryLoading` / `expandable` / `isExpanded` / `onIsExpandedChanged` / `primaryIcon` / `primaryTooltip` 全部移除。官方 `HdsActionBar` 从来只有「起始组 + 主按钮 + 末尾组」这个形态，0.5.x 的「全部放一侧」是当时没读文档的产物。布局用三段 `Expanded`（左右各一段 + 中间主按钮）而不是 `Spacer` —— 两侧按钮数量不等时（左 1 右 3）`Spacer` 会把主按钮推偏，居中失效。`isExpand` **默认 `false`**（官方值），与旧 `expandable` 默认展开相反
 - 行为变更（**破坏性**）：`OhosDataPanel` 把名字还给官方，旧的 KPI 卡片网格改名 `OhosStatGrid`（`ohos_stat_grid.dart`，签名与旧 `OhosDataPanel` **逐字相同**，视觉不变）。这是一次「名字对、语义不符」的纠正：0.5.x 的 `OhosDataPanel` 是「标题 + 若干数值 + 列数」的统计卡片，而官方 `DataPanel` 是**占比图**（环形 / 条形，表示数据构成比例）—— 两者语义完全不同却占着同一个名字。新的 `OhosDataPanel` 按官方落 `values` / `max` / `type`（`OhosDataPanelType.circle` / `.line`）/ `strokeWidth` / `trackShadow` / `closeEffect`。升级时旧代码会报 `'title' isn't defined` 与 `'values' is required`，**编译期就能拦下**，不会悄悄画错
 - 新增：`OhosActionBarButton`（官方 `ActionBarButton` 17 个属性里落 12 个）与 `OhosActionBarStyle`（官方 `ActionBarStyle` 10 个字段全落），`OhosActionBarMetrics` 几何常量表，`OhosBlurStrategy` 枚举。样式是值对象、实现 `==` / `hashCode` —— 缺了它 `updateShouldNotify` 静默失效
@@ -132,7 +134,7 @@ Release date: 2026-11-04
 - 修复：`OhosSearchBar` 尺寸对齐官方：放大镜 18 → **16**、清除按钮命中区 32 → **40**（`search_close_icon_hot_zone_horizontal`，手指够得着的下限，32 在真机偏窄）、圆角由 `OhosGeometry.radiusCapsule`(999) 改为新增的 `OhosGeometry.radiusSearch`(20)。最后一项不是数值变化（999 一直被钳到 `height/2 = 20`），而是语义修正 —— 只要有人把高度调到 48，折半半径就变成 24、与官方 20 脱钩。空态占位同步 32 → 40，否则空↔有字切换时输入区会横向跳 24vp
 - 文档：**纠正上一版自己写错的一条缺口 —— `OhosSearchBar` 的左内边距本来就是对的**。上一版从 `search_theme.h:71` 读到 `theme->leftPadding_ = pattern->GetAttr("search_text_field_padding_left", 0.0_vp)`，据此断定「官方输入区左 padding = 4，本库 12 多了 8」，写进了矩阵、ROADMAP 和阶段 D 任务。实际去查调用方：`GetLeftPadding()` 在整个 `search/` 目录**零调用方**，是旧框架 `frameworks/core/components/search` 的遗留字段。真正的水平几何在 `search_layout_algorithm.cpp` 的 `LayoutSearchIcon`(`:738`) / `LayoutTextField`(`:929`)，用的是 `search_icon_left_space`(12) + `search_icon_right_space`(8)。**教训：`GetAttr` 只证明「令牌被读进了字段」，不证明「字段被用了」** —— 判官方值必须再往下追一层调用方。这是 ROADMAP §七 第 8 条
 - 文档：**矩阵统计命令本身有 bug，上一版的「完整 57」是扣出来的、不是数出来的**。`awk` 复核命令写的是 `if($0=="")print "完整"; else if(~/^○/)...`，而「完整」行的实现列里**有内容**（就一个类名），`$0==""` 永远不成立 → 62 行完整项落到四个分支之外、被静默丢弃（`awk` 不匹配时不报错、只是不输出）。真实值：**173 行 / 完整 62 / `◐` 9 / `○` 100 / `●` 2**，且各类之和 173 == 行数。现在 `else` 兜底指向「完整」，文件里写明了这个坑，并要求每次改完手工验一次「各类之和 == 合计」。`◐` 从 15 降到 9 是因为本轮修掉了搜索框 3 行 + 芯片 3 行的偏差
-- 文档：`CONTROL-MATRIX.md` / `ROADMAP-0.6.md` / `doc/source/README.md` 三处同步：`search_text_field_padding_left` 标注为**死令牌**并附调用方查证结论；搜索框与芯片的偏差行从 `◐` 改为完整实现；阶段 D 第 4、10 项标注尺寸部分已完成、剩余工作只剩新形态（chip 的 `allowClose`、search 的右侧按钮）；用例数 268 → 271
+- 文档：`CONTROL-MATRIX.md` / `ROADMAP-0.6.md` / `doc/reference/source/README.md` 三处同步：`search_text_field_padding_left` 标注为**死令牌**并附调用方查证结论；搜索框与芯片的偏差行从 `◐` 改为完整实现；阶段 D 第 4、10 项标注尺寸部分已完成、剩余工作只剩新形态（chip 的 `allowClose`、search 的右侧按钮）；用例数 268 → 271
 
 - 文档：**令牌真实数值找到了，此前「拿不到」的结论是错的**。上一版明确写着「`Search` 这类系统组件的圆角/高度拿不到确切数值，`resources.index` 是 RestoolV2 二进制、本机解不出」，据此把这些行归到「只能以设计稿为准」。实际上 `resources.index` 只是 `global_system_resources` 仓库里 `systemres/main/resources/base/element/` 三份 JSON 的**编译产物**，直接读源文件即可：`pattern.json`（9701 行，组件主题模式）→ `float_sys.json`（1816 行，别名表）→ `float.json`（4112 行，真实值）。**这是「没找到就说没有」的第三次出现**（前两次：闭源 HDS 无文档、`EditableTitleBar` 无规格），已写进 ROADMAP §1.4(c)。新增 `tool/fetch_sys_resources.sh` 固化解析（含一个坑：pattern 层与 float_sys 层键同名，在 pattern 里反复回查会自引用成环，必须只跳一次）
 - 文档：**`Search` 全部尺寸首次有了官方数值** —— 圆角 **20**、默认高 **40**、放大镜图标 **16**（左距 12、距文字 8）、清除按钮图标 16 且**命中区 40**、按钮文字 padding 14、按钮与分隔线间距各 2、默认无描边（`search_border_width` = 0）、聚焦光边 1。据此与 `OhosSearchBar` 逐项对账，查出三处偏差：放大镜 18（官方 16，大 2）、清除按钮命中区 32（官方 40，小 8）、圆角用 `radiusCapsule = 999`（被钳到 `height/2` 恰好也是 20，数值等价但**语义不同** —— 改高度半径会跟着变）。另两条当时写进文档的判断**后来被推翻**：`search_height` = 56 被当成「带搜索按钮时整栏高」（实际是死令牌，见上方条目）、`search_text_field_padding_left` = 4 被当成「官方左内边距」（同为死令牌，本库的 12 本就正确）。矩阵「搜索框」由 1 行拆成 7 行
@@ -151,14 +153,14 @@ Release date: 2026-11-04
 - 文档：靠差集比对补上 **4 份从未抓过的参考文档** —— `ohos-arkui-advanced-ChipGroup`（子页签）、`ts-methods-custom-dialog-box`（弹出框）、`ts-universal-attributes-sheet-transition`（半模态面板）、`arkts-apis-uicontext-promptaction`（即时反馈，Toast 挂在 `UIContext` 上、不是独立组件，这解释了为什么在开源仓库里搜不到）。参考文档 51 → **55 份**，示例 369 → **402**。其中 **31 个示例来自新增的 4 份**，说明分母里最缺的一块正是形态最多的两个组件。原抓取表用的是 `ohos-arkui-advanced-Chip`（单个 Chip）而不是 `ChipGroup`，等于子页签的官方文档从来没被抓过
 - 文档：`bindSheet` 文档推翻「半模态面板已完整」的判断 —— 这是本轮**最没有依据**的一个 `●`。官方 `SheetType` 是 **5 值**：`BOTTOM` / `CENTER` / `POPUP` / `SIDE`(20+) / `CONTENT_COVER`(20+)，并且**按窗口宽度自动选型**（<600vp 默认底部、600–840 默认居中、≥840 默认跟手）。现有 `showOhosBottomSheet` 只做了底部一种；控制条还是**无条件**画的，而官方只在多挡位 `detents` 生效时才默认显示。另外缺多挡位（最多 3 挡，生效时 `height` 失效）、缺居中/跟手的最小 320vp 与最大窗口短边 90% 限制（且这两型下 `LARGE`/`MEDIUM` 无效、恒 560vp）、缺侧边型（高度恒全屏、宽度 md 断点 1/2 窗口、>md 恒 400vp）、缺全屏型（无圆角/边框/阴影/标题/关闭按钮/蒙层，仅侧滑关闭）。矩阵从 1 行 `●` 拆成 7 行（1 完整 6 缺失）
 - 文档：子页签由 `●` 降为 `◐`。`ChipGroup` 文档给出三个此前没对过的默认值：`selectedIndexes` **默认 `[0]`**（不传也会选中第一个，且 `multiple=true` 时同样如此；`multiple=false` 时传多个只取第一个）、`chipGroupSpace` 默认 `{itemSpace:8, startSpace:16, endSpace:16}`（现有 `spacing` 只映射了中间的 8，首尾 16vp 没画）、`chipGroupPadding` 默认 `{top:14, bottom:14}`。还缺 `allowClose` 与后缀图标的关系：`suffixSymbol` / `suffixImageIcon` 任一存在时 `allowClose` **失效**，优先级 `suffixSymbol` > `suffixImageIcon` > `allowClose`
-- 文档：**新增第四层对照基准 —— 组件实现源码**（`doc/source/` + `tool/fetch_source.sh`，29 份 `.ets` / 36,354 行）。前三层（设计规范 / 参考文档 / 文档示例）答得了「有哪些形态、默认值是什么」，答不了「具体画多大」：官方 `Chip` 文档把高度写成 `$r('sys.float.chip_normal_height')`，那是令牌**引用**不是数值，而令牌的真实值编在二进制 `resources.index`（RestoolV2，1.3MB）里、`strings` 只能读到名字。源码里不走 `$r(...)` 的部分则直接写着数值。抓取范围刻意只限 ArkTS 进阶组件：系统组件的 C++ 侧几何值几乎全走 `theme->GetAttr(...)`，同样退回令牌，实测 `search_layout_algorithm.cpp` 1060 行只有一条 `DEFAULT_DIVIDER_HEIGHT = 12.0_vp`
+- 文档：**新增第四层对照基准 —— 组件实现源码**（`doc/reference/source/` + `tool/fetch_source.sh`，29 份 `.ets` / 36,354 行）。前三层（设计规范 / 参考文档 / 文档示例）答得了「有哪些形态、默认值是什么」，答不了「具体画多大」：官方 `Chip` 文档把高度写成 `$r('sys.float.chip_normal_height')`，那是令牌**引用**不是数值，而令牌的真实值编在二进制 `resources.index`（RestoolV2，1.3MB）里、`strings` 只能读到名字。源码里不走 `$r(...)` 的部分则直接写着数值。抓取范围刻意只限 ArkTS 进阶组件：系统组件的 C++ 侧几何值几乎全走 `theme->GetAttr(...)`，同样退回令牌，实测 `search_layout_algorithm.cpp` 1060 行只有一条 `DEFAULT_DIVIDER_HEIGHT = 12.0_vp`
 - 文档：源码层第一次核对就推翻了一条「已确认无文档」的结论 —— **`editabletitlebar.ets` 存在，958 行，规格完整**：栏高 56、标题 20vp、副标题 14vp、主标题最多占 65% / 副标题 35%、头像 64vp、编辑弹窗 216–256vp、Symbol 24vp。「`EditableTitleBar` 确实无文档」只在**参考文档**范围内成立（三个 slug 变体全 404 是真的），但**把「文档没有」当成「没有规格」是错的** —— 这与 §0.2「闭源 ⇒ 无文档」是同一个错误模式，只是这次跨了一层。矩阵该行已改为「源码有，文档无」
 - 文档：`SubHeader`（子标题）按源码真实数值重核，由 3 行扩到 7 行。`subheader.ets` 是唯一带 `RESOURCE_CACHE_MAP` 的文件（28 条令牌→真实值），据此拿到此前拿不到的尺寸：**高度三档 56 / 56 / 72**、标题 18、副标题 14（权重 400）、`titles_space` 2、左图标 16、图标文字间距 8、左右边距 16/16、内容 padding 8。现有 `OhosSubheader`（`ohos_text.dart:118`）**没有高度概念**，只有一个 `padding: (16,16,16,8)`、行高全靠字阶撑，与官方 56/72 对不上；且没有副标题行、没有左图标
 - 修复（工具）：`tool/fetch_source.sh` 不猜文件名。目录名与文件名不一致且方式不统一 —— `chip/source/chip.ets` 同名，但 `gridobjectsortcomponent/source/GridObjectSortComponent.ets` 是全驼峰，试「首字母大写」仍 404。改为用 API 列目录取真实 `.ets` 名。**这是「猜名字」这个错误的第三次出现**（前两次：猜 slug 判文档有无、`Chip` 误当 `ChipGroup`），已写进 ROADMAP 头部
 - 文档：新增 `doc/ROADMAP-0.6.md` 第七节「方法教训」，把三轮补查归结成三条（只读设计规范会读错形态数 / 基于类比推断"闭源=无文档" / 矩阵写"无文档"会污染下游判断），并把落法写进 `sources.json` 的 `missing` 字段约定：只允许记录**试过的 slug 与返回码**，不允许写「该组件无文档」这种结论式表述，把三轮补查归结成三条（只读设计规范会读错形态数 / 基于类比推断"闭源=无文档" / 矩阵写"无文档"会污染下游判断），并把落法写进 `sources.json` 的 `missing` 字段约定：只允许记录**试过的 slug 与返回码**，不允许写「该组件无文档」这种结论式表述
 - 修复：`OhosActionBar` 不传 `primaryLabel` 时渲染出一个**空白药丸** —— legacy 布局无条件画 `OhosButton(child: Text(primaryLabel ?? ''))`，于是官方「去掉主按钮」这一形态（`primaryButton` 本就是可选参数）实际不可达，调用方拿到的是一个看着像加载失败的空按钮，比不画更糟。现在无标签时整块不渲染；`primaryLoading: true` 仍保留按钮，因为转圈是「正在做某事」的唯一反馈，这时候抽掉会让人以为请求丢了。补 3 条用例（无标签不画 / 有标签照画 / loading 无标签仍画），已验证回退后第一条会红
 - 文档：新增 `doc/CONTROL-MATRIX.md` —— 按**官方形态**而非「控件个数」统计的覆盖矩阵，每行带「依据 / 本库实现 / 测试」三列。0.5 声称「42 控件全覆盖」是按控件名统计，按形态统计实际有大量缺口（如进度条缺 `Eclipse`/`ScaleRing`/`Capsule`，分段按钮缺 tab 型与多选，列表缺 `ListItemGroup` 的 CARD 分组与吸顶）
-- 文档：新增 `doc/reference/`（ArkUI 参考文档本地快照）与 `tool/fetch_reference.sh`。中文站参考页是 SPA，静态抓取只得到 404（页面里 `<link rel="alternate" type="text/markdown">` 指的地址同样 404），因此改抓 OpenHarmony 仓库原文 —— 内容与官网同源且自带完整 ArkTS 示例。文档本体不入库（上游内容、2.9MB、会漂移），用脚本可复现；`README.md` 与 `sources.json` 入库，负责记录两条链路与缺口
+- 文档：新增 `doc/reference/api/`（ArkUI 参考文档本地快照）与 `tool/fetch_reference.sh`。中文站参考页是 SPA，静态抓取只得到 404（页面里 `<link rel="alternate" type="text/markdown">` 指的地址同样 404），因此改抓 OpenHarmony 仓库原文 —— 内容与官网同源且自带完整 ArkTS 示例。文档本体不入库（上游内容、2.9MB、会漂移），用脚本可复现；`README.md` 与 `sources.json` 入库，负责记录两条链路与缺口
 - 文档：新增 `doc/ROADMAP-0.6.md` 规划。其中纠正了上一轮基于设计规范得出的三处错误结论：滑块**没有**双值区间（`slideRange` 是「有效滑动区间」）、进度条是 **5 种**而非 3 种、列表分组样式是官方枚举 `NONE`/`CARD` 而非自拟视觉
 - 新增：`example/test/ink_no_color_test.dart` —— **墨水屏下「不应出现彩色」的回归测试**（8 个示例页 × 全树扫 `DecoratedBox`）。这条测试补的是一个此前无人守的洞：README 的墨水屏图集靠真机截图，而截图的失败方式是**看起来像主题没切**。实际主题切对了（`switch_theme()` 会用平均饱和度探针确认），彩色来自**示例自绘的占位内容** —— 沉浸光感的渐变壁纸、轮播的四色页、动效曲线的填充条、点光源的深底、按压阴影的灰块。这些既不是组件令牌也不是状态表达，`policy` 管不到，所以**库层测试全绿也拦不住**
 - 新增：`example/lib/ink_color_data.dart` 的 `InkColorData` —— 给「**颜色本身就是数据**」的子树做显式申报（取色带、取色泡泡里的色点）。判据因此是「默认必须灰，数据要显式申报」，而不是给颜色猜一个宽容度
@@ -175,6 +177,121 @@ Release date: 2026-11-04
 - 文档：`tool/capture_theme.sh` 修了两处**导致重采失败**的缺陷。① `switch_theme` 的词表不匹配：调用方传 `ink`（与 `mode`、目录名、README 一致），探针只输出 `gray` / `light` / `dark`，两者永远 `!=`，脚本因此永远判「切不过去」并把主题转走（转一圈后停在第 4 态）——加 `[ "$want" = "ink" ] && target=gray` 映射；失败时改为**直接退出**，不再产出错标主题的图。② 增加分类过滤与按分类定屏数：`./tool/capture_theme.sh <light|ink> 导航类`，导航类与 `UI Design Kit` 各采 11 屏（其余 5 屏）—— 这两个页面区块数超过 5，原先 `kit_09` / `kit_10` 都拍成了同一个常驻通知
 - 文档：**主题按钮是 3 态循环**（light → dark → gray → light），不是 4 态；「深色墨水屏」只能在长按菜单里选。这条是脚本连采失败后手动点 5 次实测出来的，此前按「四态」写的循环次数永远差一
 - 文档：截图归档按 README 的 45 个手选文件名逐一核对，**按帧号推测映射会错位**（`capsule` 拍的是 ChipGroup、`bottom` 拍的是下划线子页签），须逐帧裁上部拼图核对后才敢改名。交互态（弹层 / 放大镜 / 菜单 / 转场）无法由脚本采到，改用 `hdc uitest` 现场操作：`uinput -M` 的「按下 / 移动 / 抬起」可分离，能在**按住状态**截到放大镜与索引条泡泡；`uitest uiInput drag` 则用「后台起拖 + 定时截图」卡住拖拽中间帧（色带放大镜、共享元素转场都靠这个）
+
+## 按审计清单对齐（P0–P3）
+
+> 依据 `doc/AUDIT-0.6.md`（42 控件逐条对照设计规范 / 参考文档 / 资源表 / 源码）。
+> 每项都做了**变异验证**：把改动还原成老实现后对应断言必须变红。
+
+### P0 功能缺失
+
+- 修复：`OhosRatingBar` 的 `value` 由 `int` 改为 **`double`** —— 官方 `stepSize` 默认 **0.5**，`int` 根本表达不出半星。新增 `stepSize` / `indicator` / `activeIcon` / `inactiveIcon` / `starSize`，并把 `OhosRatingMetrics`（`starCount 5` / `starSize 28` / `indicatorStarSize 12`，均出自 `float.json` 的 `ohos_id_rating_*`）单独成表。半星用 `ClipRect + Align(widthFactor: fill)` 裁切**已选中图形**而不是 `ClipPath` —— 换图标不用改代码。点击落点决定分值（`ceil(fraction / step)`）。同时删掉自加的「再点一次清零」语义，官方没有这一条
+- 修复：`OhosCounter` 的 `enabled` 拆成 **`enableInc` / `enableDec` 两个独立开关**（null 时跟随 `enabled`）+ 独立的 `onInc` / `onDec`。「库存为 0 时只能减不能加」这类场景原先无法表达
+- 修复：`OhosScrollbar` 条宽 8 → **4**、`minThumbLength 48`、`timeToFade 2s`、距边 4（`padding` 而非 `crossAxisMargin`，后者会把轨道撑宽）。**官方要求的 32vp 热区做不到**：`RawScrollbar` 把 `_kMinInteractiveSize = 48.0` 写死，命中带恒为拇指中心 ± 24，条宽 4 + 距边 4 实际只有 30vp；也没有 `onThumbPress` 一类回调，「激活加粗到 8vp」无法实现。这两处以 `OhosScrollbarMetrics.touchWidth` / `activeWidthUnsupported` 常量留痕，不假装对齐
+- 修复：`OhosBadge` 补 `OhosBadgePosition` 3 档（`rightTop` / `right` / `left`）、`OhosBadgeMetrics`（`size 16` / `fontSize 10` / `dotSize 6` / `maxCount 99`）、字符串形态 `value`（空串退化为圆点）。`numerical_badge_padding = 6` 按**总额**而非每侧取，才能保住一位数徽标仍是 16vp 的圆。`badgeSize < fontSize` 时按 `fontSize` 生效（官方口径）
+- 修复：`OhosAlphabetIndexer` 补 4 个颜色属性 + `OhosIndexerAlign` 4 档 + `itemSize` + 弹窗气泡。**默认色最终取主题来源而不是官方固定值**（`0x99182431` / `0xFF007DFF`）：写死会绕开 `policy.quantize`，墨水屏上无法退化成灰阶，且 `ink_no_color_test` 必红。要严格对齐官方外观可显式传 `OhosIndexerMetrics.textColor` / `.selectedColor`
+
+### P1 数值不符
+
+- 修复：`OhosToast` 最大宽 320 → **400**（并按「屏宽 − 两侧 16」夹取）、圆角 18、距底 80、位置默认 `bottom`。**padding 取 16/8 而不是审计写的 10vp** —— 10 出自设计规范的**智能穿戴**段落，手机侧真值是资源表 `toast_padding_horizontal_api_twelve = 16vp` / `toast_padding_vertical_api_twelve = 8vp`
+- 修复（**形态级**）：`OhosPopup` 从「无箭头浮层」重写为**指向型气泡** —— 圆角 20、箭头 16×8、`targetSpace 8`、最大宽 400（并夹屏宽）、`OhosPopupPlacement.bottom` / `.top` 两档、放不下自动翻边。`_OhosPopupLayout` 是 `SingleChildLayoutDelegate`，居中 + 夹边 + 翻边；箭头 x 与 `getPositionForChild` 用**同一条公式**（注释标明「改一处必须改另一处」）
+- 修复：`OhosMenu` 补 **224vp 固定宽**（手机），电脑 224 可配、下限 64。圆角 16 → **20**（`menu_default_radius_token` / `ohos_id_corner_radius_menu`）
+- 修复：`OhosButton` / `OhosSegmentedButton` 补 **448vp 最大宽度**。⚠ **它是上限，不是必然值**：`SizedBox(width: 700)` 给的是紧约束，`ConstrainedBox.maxWidth` 与 `Align(widthFactor:)` 都会被 `constraints.constrain()` 夹回 700 —— 实测两种写法渲染都是 700。**没有任何 Widget 能在紧约束下变窄**，所以断言改用松约束父级（`Align`）。这条一度把「实现没修好」和「测试写错了」混在一起，改了三轮才分开
+- 修复：`OhosDivider` 厚度从固定 `0.5vp` 改为 **`1px` 物理像素**（`1 / devicePixelRatio`）—— `0.5vp` 在三档密度下给出三种不同粗细的线，而官方规格是「1px」，物理像素与逻辑像素不是一回事。另补 `vertical`（官方默认 `false`）与 `#33182431` 默认色
+
+### P2 可配置性
+
+- 新增：`OhosSwitchStyle{pointRadius, unselectedColor, pointColor, trackBorderRadius}` + `OhosSwitch.pointColor`（官方 `switchPointColor`）。**`pointRadius` 的默认值跟着高度算**（官方 `h/2 - 2*h/20`：30 高 → 12、44 高 → 17.6），老实现是「高度减 4」，两种口径在 30 高差 1vp、44 高差 2.4vp。`trackBorderRadius` 超 `h/2` 夹到 `h/2`（官方原话）。官方明写 `switchStyle` **仅当 `type` 为 `Switch` 生效**，所以 `OhosToggleButton` 不加 —— 审计把两者合成一项是对官方语义的宽松读法
+- 新增：`OhosCheckboxShape{circle, roundedSquare}`（**默认改成官方 `CheckBoxShape.CIRCLE`**，0.5 默认是圆角方形）+ `OhosCheckboxMarkStyle{strokeColor, strokeWidth: 2, size: 20}` + `unselectedColor`。勾从 `Icons.check_rounded` 换成手画 `CustomPaint`：字体图标的线宽是字形画死的，官方 `mark.strokeWidth` 落不了地。`OhosCheckboxGroup` / `OhosCheckboxGroupHeader` 的 `round` 默认同步改为 `true`，否则同一列表里会出现「圆形成员 + 方形组头」
+- 新增：`OhosSelect` 的 `selectedOptionBgColor` / `selectedOptionFontColor` / `optionBgColor` / `optionFontColor` / `showDefaultSelectedIcon` / `OhosSelectMenuAlign`（3 档）/ `OhosSelectArrowPosition`（2 档）/ `optionWidth` / `optionHeight` / `showDivider` / `dividerColor`，并补 `OhosSelectMetrics`（`space 8` / `popupRadius 16` / `popupMinWidth 136` / `optionMinHeight 48`，均出自资源表）。**`showDefaultSelectedIcon` 默认改为 `false`** —— 官方口径是「选中靠突出底色，不是靠勾」，老实现总是画勾，与这一条相反。`center` / `end` 两种对齐是**近似**：`showMenu` 定位先于布局，拿不到菜单实际宽度
+- 新增：`OhosChip` 的 `suffixSelectedIcon`（后缀双态）、`backgroundColor` / `activatedBackgroundColor` / `labelColor` / `activatedLabelColor` / `labelFontSize` / `labelFontFamily`，以及**字重双态 400 / 500**（`chip_text_font_weight` / `chip_activated_text_font_weight`）。**文字色与图标色拆成两条**：官方 `LabelOptions.fontColor` 默认 `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认 `chip_usually_icon_color`（≈ secondary），老实现绑在同一个 `fg` 上，文字常态偏淡一档
+- 修复：`OhosToast` / `OhosAlphabetIndexer` 里读 `policy.isMonochrome` 的两处回归 —— 组件层按主题档位分支是被 `system_theme_test` 明令禁止的（加一块屏就得回来改 52 个文件）。改成问策略「这个颜色能否在你那块屏上原样表达」：`policy.quantize(c) == c`（彩屏原样返回、灰阶必然不等）。`tint` 不能用于这种探测，它的阈值是 ≤20%，而 toast 遮罩是 90%，两边都返回非透明
+
+### P3 结构缺口
+
+- 新增（**形态级**）：`OhosList.scrollable` —— 上一版 `OhosList` 只有 4 个参数（`children`/`header`/`headerPadding`/`divider`）、是一个**不滚动的卡片容器**，而官方 `List` 是滚动容器、53 个属性。补上 `CustomScrollView` 形态：固定高度、`OhosListLanes`（`OhosFixedLanes` 列数 / `OhosLanesByWidth` 最小列宽 + `gutter`）、`OhosListDivider` 对象形态（`strokeWidth`/`color`/`startMargin`/`endMargin`）、`sticky` 广播到每个分组、`onReachStart`/`onReachEnd`/`onScrollIndex`。**静态形态原样保留** —— 直接改成滚动容器会让所有既有布局凭空多出一个视口高度
+- 新增：`OhosImage` 的 `OhosImageFit`（8 档官方 `ImageFit` 语义）、`errorPlaceholder`（官方 `ImageAlt` 22+ 的第二张图）、`onError`（`OhosImageError`）、`onComplete`（`OhosImageLoadInfo` **9 字段**，`loadingStatus` 0 与 1 各回调一次）、`placeholder` 与图片**共用同一个 `fit`**（官方「占位图支持使用 objectFit 设置填充效果，与图片的填充效果一致」）。**`ImageFit` 不能拿 `BoxFit` 顶替**：新增 `original` 档（原尺寸且不裁）在 `BoxFit` 里没有对应值
+- 新增：`OhosTextClockController`（`start()` / `stop()`，官方默认 `started = true`）、`timeZoneOffset`（**官方符号：东八区传 -8**，范围 `[-14, 12]`，十个半小时档不取整）、`onDateChange`（Unix **秒**）、`OhosClockHourFormat`（官方 `dateTimeOptions` 两个取值）、官方 `format` 全部十个字母，以及「组件不可见时停走」（`TickerMode`）。**旧参数 `String? timeZone` 是空操作**（实现只做 `toUtc().toLocal()` 恒等变换，传 `America/New_York` 与不传结果完全相同），已替换
+- 文档：`OhosActionBar` 的 `margin`（官方 6.1.0(23)）**已经在本版里**，语义与官方「上下边距」一致 —— 审计 §5 那一条是过期待办
+- 文档：`CONTROL-MATRIX.md` 按 P3 的实现回填 —— **文本时钟 1 行拆成 10 行、图片 1 行拆成 13 行、列表 17 行加到 23 行**，统计重算为 **283 行 / 完整 222 / `◐` 4 / `○` 52 / `●` 2 / `—` 3**（`222+4+52+2+3 = 283` ✓，命令连跑两次一致）。两处旧写法是「一个控件一行、官方形态列写 `—`」，读不出任何可核对的信息 —— 矩阵要么逐形态登记，要么等于没登记
+
+### 实施中才暴露的四件事
+
+1. **紧约束下的「最大宽度」不存在**（见 `OhosButton` 那条）—— 比修复本身更值得记住的一条。
+2. **`SwitchStyle.pointRadius` 的默认值是算法不是常数**，且 30 高给 **12**（我自己一度算成 13）。老实现 `h - 4` 在 30 高给**半径 13 / 直径 26**，与官方的**半径 12 / 直径 24** 只差 1vp，肉眼几乎看不出 —— 测试必须挑 44 高才把两条公式分开。
+3. **官方文档本身有口径差**：审计写的 Toast「10vp」出自智能穿戴段落。遇到两处不一致时先问「哪个是编译产物的一手来源」，别按文档等级排优先级。
+4. **链式 `replaceAll` 做模板格式化是错的**：`yyyy年M月d日 EEEE` 会把 `EEEE → Sat` 里的 `a`、`S` 再吃一遍，实测吐出 `2026年11月7日 51下午t`；`aa hh:mm:ss` 被拆成「下午下午」。模板串必须**一次扫描、逐字符吐结果**。附带两条环境事实：`SliverGrid` 的 `childAspectRatio` 会把行高钉死（360 屏两列时每格 44.8 高、tile 要 53 → 溢出矩阵报 `overflowed by 13 pixels`，改用 `SliverCrossAxisGroup`）；`Localizations.localeOf` 在 `flutter_test` 里恒给 `en_US`（`locale: Locale('zh')` 也会被回落到英文）
+
+## 配图数值核查后修正的三处
+
+> 背景：84 条手机形态配图数值逐条对过「配图 / 正文 / 令牌 / 实现」四层（明细见
+> [`doc/AUDIT-IMAGE-SPECS.md`](doc/AUDIT-IMAGE-SPECS.md)）。45 条是「令牌表根本没这一项」——
+> 这类写带出处的常量是对的，不用改。真正要动代码的三条如下。
+
+- 修复：**半模态 `LARGE` 挡 / `BOTTOM` 显式高度没有给状态栏让位**。官方公式是
+  「屏幕/窗口高度 − 信号栏 − 8vp」（`bindsheet` 正文三处 + `bindsheet_16`/`button_39`/
+  `segmentbutton_10` 三张图），旧实现 `OhosSheetSize.large => viewportHeight` 直接顶到窗口顶，
+  面板把状态栏盖在下面。新增 `OhosSheetSpec.topGap`（8vp，令牌表无此项）与
+  `maxPanelHeight(...)`（`SIDE`/`CONTENT_COVER` 恒全屏**不减**，其余三型减「状态栏 + 8」），
+  `LARGE`、`BOTTOM` 的显式高度、`CENTER`/`POPUP` 的 90% 上限统一走它（两条上限取小）。
+  **状态栏高度必须用 `View.of(context).padding.top`**：调用点常在 `OhosScaffold` 的 `SafeArea` 内，
+  `MediaQuery.paddingOf` 在那里恒为 0，用它等于白改（这条是修的时候才发现的）
+- 修复：**菜单内容左右内边距实际是 12vp，不是设计稿的 16vp**。此前没声明、吃的是框架
+  `PopupMenuItem` 默认值（实测 12，与直觉里的 16 差 4）。新增 `OhosMenuMetrics.contentPaddingHorizontal = 16`
+  显式钉住。改完立刻暴露第二个问题：长文案 `RenderFlex overflowed by 4.3 pixels`
+  （可用宽 224 − 32 = 192，文案要 196.3）—— 固定 224vp 宽的菜单本来就必须截断，
+  条目文案改为 `Expanded` + `maxLines: 1` + 省略号。这两件事是同一个原因的两面：
+  **靠框架默认值兜着的规格，一旦写实就会露馅**
+- 文档：悬浮页签栏的 `76/80` 与设计稿的 `80/88` 是**两套都在官方材料里**的值（每页签恒差 4vp，
+  四张图能被 80/88 精确复现）。组件默认仍取参考文档的 76/80（编译产物的一手来源），
+  但把这层关系写进了 `ohos_tabs_width.dart` 的注释 —— 否则下一个人照配图改会把默认宽度整体放大约 5%
+- 文档：矩阵补回一行「半模态高度挡位 LARGE / MEDIUM」—— 这是**缺行**，不是实现问题：
+  8vp 公式此前只活在代码注释里，矩阵没有对应行，于是漏实现也没人发现。统计重算为
+  **284 行 / 完整 223 / `◐` 4 / `○` 52 / `●` 2 / `—` 3**（`223+4+52+2+3 = 284` ✓，命令连跑两次一致）
+- 修复：`README.md` 顶部引用的矩阵数字停在 **256 行 / 完整 204**（P3 回填时只改了矩阵、没改 README）。
+  `tool/check_readme_matrix.py` 当场报红，已改成 284 / 223 —— 这个脚本存在的理由正是「两份文件是
+  同一事实的两个副本，矩阵改了 README 没跟上不会让任何测试变红」
+- 明确不做两条（理由写进 `doc/AUDIT-IMAGE-SPECS.md`，不是「待办」）：列表行高五档是**内容自然高的五种结果**
+  而非五个可选高度，加 `height` preset 会与「按内容撑」的官方语义相反；超长文本 16vp 渐隐依附
+  **滚动文本**才成立，本库没有滚动文本组件
+- 用例：739 → **745**（半模态 5 条 + 菜单 1 条）；`example` 183 条不变
+
+### 这一轮踩到的两件事
+
+1. **断言里引用被改的常量，等于没断言**。P1 第一版写成
+   `expect(resolveDetent(...), 800 - OhosSheetSpec.topGap)`，把 `topGap` 改成 `0` 做变异验证，
+   用例**全绿** —— 断言跟着常量一起变了。改成字面值并与 `expect(topGap, 8)` 拆开后，
+   同一次变异 5 条全红。凡是 `expect(f(x), g(CONST))` 且 `g` 里含 `CONST`，都要先问
+   「把 `CONST` 改坏，这条会红吗」。
+2. **「值相同」不等于「同一个令牌」在实现侧也成立**。`divider_padding_horizontal = 16vp`
+   数值与设计稿的菜单内边距一样，但语义是分割线的内边距；用它当出处，会让实现看起来
+   「有令牌支撑」，实际 16 从来没在菜单里生效过（真正生效的是框架的 12）。
+
+## 上游资料知识库（`doc/reference/`）
+
+> 这一节不涉及 API，只改「规格从哪来、怎么刷新」。但它是上面 P0–P3 全部结论的基础 ——
+> 每一条数值都要能指回一个上游文件。
+
+- 重构：四层上游资料合并到 `doc/reference/` 的四个子目录 —— `design/`（42 份设计规范 + 608 张配图）、
+  `api/`（56 份开发参考文档）、`source/`（29 份 `.ets`）、`resources/`（3 份令牌表）。
+  原先是 `doc/reference/` + `doc/source/` + `.tmp/ux/` 三处，**配图放在 `.tmp/` 里**
+  —— 这个名字本身就在说「可删」，而它实际是 180MB、要十几分钟重抓、且是「配图是唯一写数值处」这条结论的唯一依据。
+- 新增：`tool/upstream.sh` 作为唯一入口（`all` / `api` / `source` / `resources` / `ux` / `index` /
+  `manifest` / `verify` / `status`）。此前五个 `fetch_*` 脚本各自为政，没有任何东西记录
+  「上次什么时候抓的、抓全了没有」—— 少一份文档和根本没抓过，在 `ls` 里长得一样。
+- 新增：`doc/reference/manifest.json`（入库）记录每层的路径、上游地址、条数、字节数、最新文件时间；
+  `upstream.sh verify` 重算后比对，不一致非零退出。**只比数量与字节数，不比 mtime**
+  （本地 checkout 会改 mtime；字节数变了才是上游真的动过）。
+- 新增：用户级 skill `upstream-sync`（`~/.workbuddy/skills/`），把「先判快照新不新 → 只刷新变化的那层 →
+  重跑派生索引」固化成流程；详细规则仍以仓库内 `doc/reference/README.md` 为准，避免两处各说一套。
+- 文档：三份 README 收敛为一份总说明（`doc/reference/README.md`），讲清四层各回答什么问题、四条抓取链路、
+  已知缺口、配图再处理流程；`doc/reference/source/README.md` 保留（源码层与令牌层的判据细节只在那里）。
+- 修复：顺手纠正三处**过期数字**，都是「写死之后上游变了自己不知道」——
+  开发文档 `55 → 56` 份（漏数一份）、官方示例 `402 → 442`（前两次都是手抄漏项，这次是上游真的新增）、
+  `UX-SPEC-FROM-IMAGES.md` 的「非候选 548 / 大尺寸无标注色 213」`→ 495 / 194`（标注判据从 `b>190`
+  改成色相窗口后候选从 60 涨到 113，文档却还写着旧值）。后一处已改成**从 `ux-images.scan.json` 现算**。
+- 文档：`doc/source/` 目录删除，全仓 50 个文件里的路径引用机械改写（含 `lib/` 中 4 处「规格出处」注释），
+  改完 grep 旧路径残留为 0。
 
 ## 0.5.0
 
@@ -370,7 +487,6 @@ Release date: 2026-10-22
   - 状态按钮示例补充行间距；分段按钮移除选中项外阴影（不再向相邻分段渗色）
   - 颜色选择器：容器过窄时自适应缩小色块，`Row`/`Expanded` 内不再溢出
   - 「一镜到底」示例改用 `Hero` 共享元素转场，卡片连续放大进入全屏页
-
 
 - 包名由 `ohos_ui_kit` 更名为 `harmony_ui`，主库文件改为 `lib/harmony_ui.dart`，导入语句同步更新
 
