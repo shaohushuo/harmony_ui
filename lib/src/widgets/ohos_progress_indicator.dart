@@ -542,7 +542,7 @@ class OhosProgressIndicator extends StatelessWidget {
     // 两段字色：轨道上照官方的深色，填充上在同色时才换成反白色
     // （见 _capsuleOnFillColor）。
     const Color onTrack = OhosProgressMetrics.capsuleTextColor;
-    final Color onFill = _capsuleOnFillColor(theme, active);
+    final Color onFill = _capsuleOnFillColor(theme, active, track);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.hasBoundedWidth
@@ -571,12 +571,19 @@ class OhosProgressIndicator extends StatelessWidget {
               // 填充与官方字色几乎同色时才叠第二层：只保留填充区那一段的
               // 反白字。整段换色不行 —— 文字跨在填充边界上（如 `52%`）时，
               // 落在轨道上的那半个字形会跟着变白、直接消失。
-              if (label != null && onFill != onTrack)
+              // `fill <= 0` 时裁切矩形是空的，这一层画不出任何东西，也就不该
+              // 进语义树 —— 否则「进度 0%」读屏仍会多念一遍。
+              if (label != null && onFill != onTrack && fill > 0)
                 Positioned.fill(
-                  child: ClipRect(
-                    clipper: _CapsuleFillClipper(fill * width),
-                    child: Center(
-                      child: _capsuleLabelWidget(theme, label, onFill),
+                  // 这一层只是同一行字的反白拷贝：必须排除语义，否则读屏会把
+                  // 「70%」连读两次（同 `ohos_list_item_card` / `ohos_magnifier`
+                  // 的处理）。语义只保留上面轨道层那一份。
+                  child: ExcludeSemantics(
+                    child: ClipRect(
+                      clipper: _CapsuleFillClipper(fill * width),
+                      child: Center(
+                        child: _capsuleLabelWidget(theme, label, onFill),
+                      ),
                     ),
                   ),
                 ),
@@ -596,9 +603,29 @@ class OhosProgressIndicator extends StatelessWidget {
   /// 换成主题现成的 [OhosThemeData.onHighlightColor]（白纸墨屏 = 纸白，
   /// 深色墨屏 = 纸黑）。阈值取 2 而不是 WCAG 的 3，正是因为官方彩屏本身
   /// 就站在 2.8 —— 抬到 3 会把彩屏一起改掉，偏离官方。
-  Color _capsuleOnFillColor(OhosThemeData theme, Color active) {
+  Color _capsuleOnFillColor(
+    OhosThemeData theme,
+    Color active,
+    _TrackStyle track,
+  ) {
     const Color official = OhosProgressMetrics.capsuleTextColor;
-    return _contrastRatio(official, active) < 2
+    // `computeLuminance()` 只看 RGB、**不看 alpha**：半透明填充必须先跟它
+    // 实际压着的背景合成，否则判的是「这块色如果实心」的亮度。彩屏上
+    // `color: Colors.black.withValues(alpha: .15)` 会被算成接近纯黑 ⇒ 判进
+    // 反白档，而画出来几乎是白纸 ⇒ 白字压白底、整段标签消失（issue #8 的
+    // 症状，只是触发条件从「墨屏」换成「半透明填充」）。
+    //
+    // 背景取轨道色：填充是画在轨道上的。轨道在灰阶屏是 1px 实线（`outline`，
+    // 铺底透明），那时实际背景是纸面，用 `cardColor` 顶上。
+    //
+    // 轨道自己也是**半透明**的（`policy.tint(highlightColor, .15)`），所以
+    // 要先把它合成到纸面上得到一块不透明背景，再让填充压上去 —— 只叠一层
+    // 的话背景仍是半透明，`computeLuminance` 照样读不出真实亮度。
+    final Color backdrop = track.outline || track.color.a == 0
+        ? theme.cardColor
+        : Color.alphaBlend(track.color, theme.cardColor);
+    final Color composite = Color.alphaBlend(active, backdrop);
+    return _contrastRatio(official, composite) < 2
         ? theme.onHighlightColor
         : official;
   }

@@ -13803,6 +13803,56 @@ void main() {
       );
     });
 
+    testWidgets('胶囊文字：半透明填充不判反白，不会白字压白底', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 200,
+            height: 40,
+            child: OhosProgressIndicator.capsule(
+              value: 0.7,
+              // 15% 的黑压在白轨道上几乎是白纸。按「实心黑」算亮度会误判成
+              // 低对比 ⇒ 走反白档 ⇒ 白字落在近白底上，整段标签消失。
+              color: Colors.black.withValues(alpha: 0.15),
+              showDefaultPercentage: true,
+            ),
+          ),
+        ),
+      );
+      // 合成背景后再判：只有一层，仍是官方深色字。
+      expect(find.text('70%'), findsOneWidget);
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        <Color?>{OhosProgressMetrics.capsuleTextColor},
+      );
+    });
+
+    testWidgets('胶囊文字：反白层不进语义树，读屏只念一遍', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await pumpInkCapsule(tester, 0.7);
+      // 视觉上两层（轨道层 + 填充反白层），语义上只能有一层。
+      expect(find.text('70%'), findsNWidgets(2));
+      expect(find.bySemanticsLabel('70%'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('胶囊文字：进度为 0 时不叠反白层', (WidgetTester tester) async {
+      await pumpInkCapsule(tester, 0);
+      // 裁切区为空，那层字画不出来 —— 也就没必要存在（语义树同理）。
+      expect(find.text('0%'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(OhosProgressIndicator),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsNothing,
+      );
+    });
+
     testWidgets('value 为 null：线性/环形给不确定态，月相不画进度', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
