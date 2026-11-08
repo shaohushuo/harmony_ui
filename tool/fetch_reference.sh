@@ -1,5 +1,5 @@
 #!/bin/zsh
-# 抓取 ArkUI 官方参考文档到 doc/reference/。
+# 抓取 ArkUI 官方参考文档到 doc/reference/api/。
 #
 # 两条链路，别混：
 #
@@ -23,7 +23,10 @@ cd "$(dirname "$0")/.."
 
 BASE="https://raw.gitcode.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts"
 HDS_BASE="https://developer.huawei.com/consumer/cn/doc/doccenter-references/api"
-OUT=doc/reference
+OUT=doc/reference/api
+# sources.json 记的是「整个知识库的抓取口径」，放在 reference/ 根而不是 api/ 里，
+# 免得它看起来像一份组件文档。
+REF=doc/reference
 mkdir -p "$OUT"
 
 # 与官方「控件概览」42 项对应的 ArkUI 组件。改这张表等于改对照范围。
@@ -118,7 +121,7 @@ done
 # 记录来源与时间，方便判断快照多旧。
 # 放在 mkdir 之后、循环之前写一次即可 —— 注意本脚本会先删掉旧快照（见下），
 # README.md 不入这份清单，别一起清掉。
-cat > "$OUT/sources.json" <<JSON
+cat > "$REF/sources.json" <<JSON
 {
   "overview": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380",
   "openHarmony": "$BASE",
@@ -129,7 +132,7 @@ cat > "$OUT/sources.json" <<JSON
     "色彩选择器": "color-picker-0000002574393143.md 只有「如何使用/最佳实践/布局规则」三节，官方未给「开发文档」链接；但 ui-design-hdscolorpicker 参考文档确实存在（本快照已收录）。属于设计文档漏链接，不是文档缺失"
   },
   "confirmedAbsent": {
-    "EditableTitleBar（仅限参考文档层）": "参考文档确实查不到：ui-design-editable-title-bar / ui-design-editabletitlebar / hdseditabletitlebar / hdseditabletitle-bar 均 404，HdsNavigation 里也无对应章节。**但规格并不缺** —— advanced_ui_component/editabletitlebar/source/editabletitlebar.ets 一直存在（958 行），栏高 56 / 标题 20vp / 副标题 14vp / 主副标题占宽 0.65:0.35，见 doc/source/README.md。「文档没有」不等于「没有规格」，本字段必须写明限定层级"
+    "EditableTitleBar（仅限参考文档层）": "参考文档确实查不到：ui-design-editable-title-bar / ui-design-editabletitlebar / hdseditabletitlebar / hdseditabletitle-bar 均 404，HdsNavigation 里也无对应章节。**但规格并不缺** —— advanced_ui_component/editabletitlebar/source/editabletitlebar.ets 一直存在（958 行），栏高 56 / 标题 20vp / 副标题 14vp / 主副标题占宽 0.65:0.35，见 doc/reference/source/README.md。「文档没有」不等于「没有规格」，本字段必须写明限定层级"
   }
 }
 JSON

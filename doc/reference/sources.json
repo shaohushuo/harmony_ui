@@ -2,12 +2,12 @@
   "overview": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380",
   "openHarmony": "https://raw.gitcode.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts",
   "hds": "https://developer.huawei.com/consumer/cn/doc/doccenter-references/api",
-  "fetchedAt": "2026-11-04T02:01:22Z",
+  "fetchedAt": "2026-11-07T12:19:37Z",
   "_traceMethod": "权威清单来自 tool/trace_control_docs.sh：概览页 42 个控件的链接 → 各自设计文档末尾「## 开发文档」→ 组件参考文档。不要靠猜 slug。",
   "noDevDocLink": {
     "色彩选择器": "color-picker-0000002574393143.md 只有「如何使用/最佳实践/布局规则」三节，官方未给「开发文档」链接；但 ui-design-hdscolorpicker 参考文档确实存在（本快照已收录）。属于设计文档漏链接，不是文档缺失"
   },
   "confirmedAbsent": {
-    "EditableTitleBar（仅限参考文档层）": "参考文档确实查不到：ui-design-editable-title-bar / ui-design-editabletitlebar / hdseditabletitlebar / hdseditabletitle-bar 均 404，HdsNavigation 里也无对应章节。**但规格并不缺** —— advanced_ui_component/editabletitlebar/source/editabletitlebar.ets 一直存在（958 行），栏高 56 / 标题 20vp / 副标题 14vp / 主副标题占宽 0.65:0.35，见 doc/source/README.md。「文档没有」不等于「没有规格」，本字段必须写明限定层级"
+    "EditableTitleBar（仅限参考文档层）": "参考文档确实查不到：ui-design-editable-title-bar / ui-design-editabletitlebar / hdseditabletitlebar / hdseditabletitle-bar 均 404，HdsNavigation 里也无对应章节。**但规格并不缺** —— advanced_ui_component/editabletitlebar/source/editabletitlebar.ets 一直存在（958 行），栏高 56 / 标题 20vp / 副标题 14vp / 主副标题占宽 0.65:0.35，见 doc/reference/source/README.md。「文档没有」不等于「没有规格」，本字段必须写明限定层级"
   }
 }
