@@ -10325,6 +10325,35 @@ void main() {
       expect(paintedColor(tester, 'A'), ink.textSecondaryColor);
     });
 
+    testWidgets('墨屏：显式 selectedColor 优先，不被反白默认值吞掉', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      // 宿主自己挑的可读色：反白只是**默认值**，不是强制覆盖。
+      const Color custom = Color(0xFF808080);
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosAlphabetIndexer(
+                  indexer: letters,
+                  size: const Size(24, 160),
+                  selectedIndex: 2,
+                  selectedColor: custom,
+                  onSelected: (String _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 实底分支仍走 `selectedColor`：量化型主题不该静默改掉调用方的配色。
+      expect(paintedColor(tester, 'B'), custom);
+      expect(paintedColor(tester, 'B'), isNot(ink.onHighlightColor));
+    });
+
     testWidgets('选中圆标等径：窄字母 I 与宽字母 W 的底圆一样大', (WidgetTester tester) async {
       Widget host(int selected) => wrap(
         OhosAlphabetIndexer(
@@ -10356,6 +10385,37 @@ void main() {
       // 直径 = 一格高，但被条宽 24 收住（64vp 高 / 2 个字母 ⇒ slot 32）。
       expect(narrow.width, 24);
       expect(narrow.height, 24);
+    });
+
+    testWidgets('父级比 size.width 窄时，圆标按实际宽度收住，不变竖椭圆', (
+      WidgetTester tester,
+    ) async {
+      // size.width 只是期望：外面套一层 16vp 宽的盒子，实际只有 16。
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 16,
+            child: OhosAlphabetIndexer(
+              indexer: const <String>['I', 'W'],
+              size: const Size(24, 64),
+              selectedIndex: 0,
+              onSelected: (String _) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final Size dot = tester.getSize(
+        find.descendant(
+          of: find.byType(OhosAlphabetIndexer),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      // 按 size.width(24) 算会得到一个 24x24 的圆，塞进 16 宽的条里变竖椭圆。
+      expect(dot.width, 16);
+      expect(dot.height, 16);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('彩屏：选中字母仍是品牌色，没被反白顺手改掉', (WidgetTester tester) async {

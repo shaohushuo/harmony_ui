@@ -162,8 +162,10 @@ class OhosAlphabetIndexer extends StatefulWidget {
   /// 提示弹窗的对齐档（官方 `alignStyle`，默认 `IndexerAlign.END`）。
   ///
   /// 这一档官方只用来摆**提示弹窗**的位置，与索引条自身在屏幕的左右无关。
-  /// 本库把它用在两处：气泡/放大镜的落点方向，以及选中底色的圆角朝向
-  /// （贴着屏幕边缘那一侧的角不圆）。
+  ///
+  /// **当前尚未生效**：气泡（[showPopupBubble]）还没有实现，放大镜也不看这
+  /// 一档；选中底色在 0.6 起改成等径正圆，不再有「贴着屏幕边缘那一侧的角不
+  /// 圆」这回事。留作接口对齐，实现气泡时按它决定落点方向。
   final OhosIndexerAlign alignStyle;
 
   /// 是否显示官方的「提示弹窗气泡」（官方 `usingPopup`，默认 `false`）。
@@ -417,7 +419,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     final Color selectedFill = solidFill
         ? theme.policy.line(theme.textPrimaryColor, 1)
         : highlightBackground;
-    final Color selectedText = solidFill ? theme.onHighlightColor : active;
+    // 反白只是**默认值**，不是强制：宿主显式给了 `selectedColor` 就听它的。
+    // 否则墨屏（以及任何 `quantize` 会改色的自定义策略）下，调用方挑好的可读
+    // 色会被静默换成 `onHighlightColor`，配色与对比度意图丢失且无处告警。
+    // 反白要解决的只是「默认值别把字画成和底同色」（issue #7）。
+    final Color selectedText = widget.selectedColor ??
+        (solidFill ? theme.onHighlightColor : active);
     // 字号不作隐式动画：容器高度是立即变的，字号若走 200ms 过渡，拖动期间
     // 每一帧都偏大，字母会互相压住（0.3.0 里直接 `RenderFlex overflowed`）。
     final Widget content = DefaultTextStyle(
@@ -482,8 +489,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
         // minHeight，这正是「scroll 里再套 ConstrainedBox(minHeight)」的场景，
         // 那时 hasBoundedHeight 为 false，绕过约束就会退回 size.height 而错位。
         final double height = constraints.constrainHeight(widget.size.height);
+        // 宽度同理：`size.width` 是**期望**，父级更窄时实际只有 maxWidth。
+        // 几何一律按夹过之后的实际值算，否则「按 size.width 算出来的圆」会被
+        // 父级压成竖椭圆，与上面 height 的口径也对不上。
+        final double width = constraints.constrainWidth(widget.size.width);
         if (count == 0 || height <= 0) {
-          return SizedBox(width: widget.size.width, height: 0);
+          return SizedBox(width: width, height: 0);
         }
         // 唯一来源：布局、字号、命中都用这个 slot，不再有第二套几何。
         //
@@ -506,10 +517,11 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
         final double textScale = scaled <= 0 ? 1 : scaled / 12;
         final double fontSize = (slot / textScale * 0.95).clamp(1, 12);
         // 选中圆标的直径：与格子同高；条本身比格子窄时（5 个字母、160vp 高的
-        // 条，slot 会到 32vp）收到条宽，免得圆被左右裁掉。
-        final double dot = math.min(slot, widget.size.width);
+        // 条，slot 会到 32vp）收到条宽，免得圆被左右裁掉。这里取夹过约束的
+        // `width`，不是期望的 `size.width`。
+        final double dot = math.min(slot, width);
         return SizedBox(
-          width: widget.size.width,
+          width: width,
           height: height,
           child: GestureDetector(
             // opaque：整条（含字形两侧的留白与字间空隙）都参与命中。默认的
