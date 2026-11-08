@@ -596,7 +596,9 @@ class OhosProgressIndicator extends StatelessWidget {
 ///
 /// 官方的不确定态（Linear 的 `StartLinearSweepingAnimation`、Ring 的
 /// `ProgressStatus.LOADING`）都是 2000ms 一轮、循环往复。周期先过一遍
-/// [OhosVisualPolicy.scaleMotion]：墨水屏策略把它压成 0，这时回调拿到 null，
+/// [OhosVisualPolicy.statusMotion] —— 不是 [OhosVisualPolicy.scaleMotion]：
+/// 后者是装饰动效的开关，墨水屏上归零；而游标停住就等于「这条进度卡死了」，
+/// 两者在屏幕上同形。周期若仍被压成 0（自定义策略），回调拿到 null，
 /// 画笔退回静态中位 —— 「该不该动」由策略层判断，组件不自己认屏幕。
 ///
 /// 相位通过 `CustomPainter(repaint:)` 直达画布，走的是重绘而不是每帧重建。
@@ -636,7 +638,7 @@ class _IndeterminateCycleState extends State<_IndeterminateCycle>
   }
 
   void _sync() {
-    final Duration scaled = OhosTheme.of(context).policy.scaleMotion(_cycle);
+    final Duration scaled = OhosTheme.of(context).policy.statusMotion(_cycle);
     if (!widget.enabled || scaled == Duration.zero) {
       if (_controller.isAnimating) {
         _controller.stop();

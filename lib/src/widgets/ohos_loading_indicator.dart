@@ -102,15 +102,17 @@ class _OhosLoadingIndicatorState extends State<OhosLoadingIndicator>
   /// 按「该不该转」启停控制器。
   ///
   /// 两件事决定不转：[OhosLoadingIndicator.enableLoading] 为 false，或者
-  /// 策略把动效压成了零时长（墨水屏）。
+  /// 策略把**状态动效**压成了零时长。
   ///
-  /// 第二件事看着像多余的保护，其实不是：墨水屏上每帧都是一次真实刷新，
-  /// 一个 2 秒的循环动画会让整块屏持续闪烁。停掉之后组件仍然画出**静止的
-  /// 彗星弧**，读者看到的是「一个加载符号」，而不是一块空白。
+  /// 第二件事用的是 [OhosVisualPolicy.statusMotion] 而不是 `scaleMotion`：
+  /// 墨水屏把装饰动效全关了，但加载符号属于「不动就等于没在加载」的那类 ——
+  /// 静止的彗星弧只有一个位置，读者分不清它是在转还是转完了。停掉之后的
+  /// 兜底仍然保留（自定义策略可以继续压成零），那时画的是**静止的彗星弧**，
+  /// 读者看到的至少是「一个加载符号」，而不是一块空白。
   void _syncAnimation() {
     final bool allowed =
         widget.enableLoading &&
-        OhosTheme.of(context).policy.scaleMotion(widget.duration) !=
+        OhosTheme.of(context).policy.statusMotion(widget.duration) !=
             Duration.zero;
     if (allowed && !_controller.isAnimating) {
       _controller.repeat();
@@ -131,7 +133,8 @@ class _OhosLoadingIndicatorState extends State<OhosLoadingIndicator>
     // 官方 API 11 起的默认色 `#ff666666` = 60% 黑，对应色板的次级文字色
     // （`0x99000000` 叠白正好是 `#666666`）。不硬写死色值：换主题时跟着走。
     final Color active = widget.color ?? theme.textSecondaryColor;
-    final Duration scaled = theme.policy.scaleMotion(widget.duration);
+    // 与 _syncAnimation 同一条判据：加载是状态动效，墨水屏也要转
+    final Duration scaled = theme.policy.statusMotion(widget.duration);
     final bool animating = widget.enableLoading && scaled != Duration.zero;
     return SizedBox(
       width: widget.size,

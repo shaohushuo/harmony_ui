@@ -610,6 +610,18 @@ void main() {
   // 墨水屏：凡是靠「浅色填充」表达状态的组件，填充一律换成留白 + 1px 实线。
   // 依据是 16 级灰阶下 20% 以内的黑落在第 0–3 级，等于没有。
   group('墨水屏灰阶填充', () {
+    test('墨屏只关装饰动效，状态动效照常走', () {
+      const InkVisualPolicy ink = InkVisualPolicy();
+      const ColorVisualPolicy color = ColorVisualPolicy();
+      const Duration base = Duration(milliseconds: 2000);
+      // 装饰动效归零：展开 / 收起、抽屉滑动、数字滚动、放大镜跟随
+      expect(ink.scaleMotion(base), Duration.zero);
+      // 状态动效不归零：游标停住与「进度卡死」同形，加载符号静止也读不出在转
+      expect(ink.statusMotion(base), base);
+      // 彩屏两者本来就是一件事
+      expect(color.statusMotion(base), base);
+    });
+
     testWidgets('ink 勾选框：未选中描边与禁用勾都用实色', (WidgetTester tester) async {
       final OhosThemeData ink = OhosThemeData.ink();
       await tester.pumpWidget(
@@ -13789,7 +13801,7 @@ void main() {
       expect(second - first, closeTo(math.pi / 2, 0.05));
     });
 
-    testWidgets('墨屏：不确定态不转，停在静态中位', (WidgetTester tester) async {
+    testWidgets('墨屏：不确定态照常扫动，不停在中位', (WidgetTester tester) async {
       await tester.pumpWidget(
         OhosTheme(
           data: OhosThemeData.ink(),
@@ -13815,9 +13827,9 @@ void main() {
       final double first = cursorLeft();
       await tester.pump(const Duration(milliseconds: 800));
 
-      // 策略把动画时长压成 0：相位为 null，落在 35% 的静态中位
-      expect(cursorLeft(), first, reason: '墨水屏上不许有帧动画');
-      expect(first, closeTo(200 * 0.35, 0.01));
+      // 状态动效走 statusMotion、不走 scaleMotion：游标一旦停下，屏幕上它与
+      // 「进度卡死」完全同形，这是墨水屏上唯一必须保留的动效
+      expect(cursorLeft(), isNot(first), reason: '墨水屏上进度游标也要走');
     });
   });
 
@@ -13921,7 +13933,7 @@ void main() {
       expect(after, isNot(moreOrLessEquals(before)));
     });
 
-    testWidgets('墨屏上停转，但弧还在', (WidgetTester tester) async {
+    testWidgets('墨屏上照常转，不停成一个静态符号', (WidgetTester tester) async {
       await tester.pumpWidget(
         OhosTheme(
           data: OhosThemeData.ink(),
@@ -13939,8 +13951,9 @@ void main() {
         tester,
         OhosLoadingIndicator,
       ).whereType<_ArcDraw>().first.start;
-      // 每帧一次真实全屏刷新在墨水屏上是灾难，所以整段动画被压成零时长
-      expect(after, moreOrLessEquals(before));
+      // 加载是状态动效：静止的弧只有一个位置，读者分不清是在转还是转完了，
+      // 所以它不吃 scaleMotion 的归零
+      expect(after, isNot(moreOrLessEquals(before)), reason: '墨水屏上加载符号也要转');
       expect(_replay(tester, OhosLoadingIndicator), isNotEmpty);
     });
 
