@@ -8912,6 +8912,56 @@ void main() {
           const Color(0xFFFFFFFF));
     });
 
+    testWidgets('墨屏选中块：内缩成栏内药丸，不越出栏体', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 360,
+                  height: 400,
+                  child: OhosFloatingTabBar(
+                    items: threeItems(),
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Finder byDecoration(Color color) => find.byWidgetPredicate(
+        (Widget w) =>
+            w is DecoratedBox &&
+            (w.decoration as BoxDecoration?)?.color == color,
+      );
+      // 栏体（实底那一层）与选中块（反白那一层）各自按底色认
+      final Rect bar = tester.getRect(byDecoration(ink.policy.quantize(ink.popupColor)));
+      final Rect selected = tester.getRect(byDecoration(ink.highlightColor));
+
+      // 56 高的栏、四周各内缩 4 → 选中块 48；早先是满高 56 的方块，
+      // 两端会直接顶到栏的圆弧外面
+      expect(selected.height, moreOrLessEquals(48));
+      final BoxDecoration deco =
+          tester.widget<DecoratedBox>(byDecoration(ink.highlightColor)).decoration
+              as BoxDecoration;
+      expect(
+        (deco.borderRadius! as BorderRadius).topLeft.x,
+        moreOrLessEquals(24),
+        reason: '圆角取同曲率（半高圆），选中块与栏才是一家人',
+      );
+      // 四边都落在栏体之内
+      expect(selected.left, greaterThanOrEqualTo(bar.left - 0.01));
+      expect(selected.top, greaterThanOrEqualTo(bar.top - 0.01));
+      expect(selected.right, lessThanOrEqualTo(bar.right + 0.01));
+      expect(selected.bottom, lessThanOrEqualTo(bar.bottom + 0.01));
+    });
+
     // 量**栏体**，不是整个组件，也不是第一个 `SizedBox`。
     //
     // 两层都会坑：外层 `SizedBox(360, 400)` 是宿主撑满的；组件内部第一个

@@ -355,7 +355,13 @@ class OhosFloatingTabBar extends StatelessWidget {
             width: ohosStrokeWidth(context, theme.outlineWidth),
           ),
         ),
-        child: row,
+        // 栏体内裁一刀：`DecoratedBox` 的圆角只裁背景、不裁子级，选中项那块
+        // 实底只要敢碰到边缘就会画到栏的圆弧外面去。裁在背景之内，描边不受
+        // 影响（它画在盒子的边上，被裁的是 row）。
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(style.radius),
+          child: row,
+        ),
       );
     }
 
@@ -471,11 +477,23 @@ class OhosFloatingTabBar extends StatelessWidget {
 
     if (inverse) {
       // 反白：实底 + 纸色文字，跨温度跨刷新都不漂。
+      //
+      // 形状必须跟着栏走。早先写死 12 的圆角、垂直方向不留白：56 高的方块
+      // 塞进 28 半径的胶囊栏，四个角是直角，两端更是直接顶到栏的圆弧外面
+      // —— 选中的那一块看起来溢出了栏体。改成四周各内缩 4vp、圆角取同曲率
+      // （内缩后正好是半高圆），选中项就是栏里的一颗黑药丸。
+      const double inset = 4;
       tapTarget = DecoratedBox(
         decoration: BoxDecoration(
           color: theme.highlightColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(
+            (style.radius - inset).clamp(0.0, double.infinity),
+          ),
         ),
+        child: tapTarget,
+      );
+      return Padding(
+        padding: const EdgeInsets.all(inset),
         child: tapTarget,
       );
     }
