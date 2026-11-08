@@ -1,5 +1,8 @@
 # harmony_ui
 
+> **在线预览**：全部组件提供 Web 版画廊，无需安装即可在浏览器中查看实际效果：
+> <https://shaohushuo.github.io/harmony_ui/>
+
 <p align="center">
   <img src="doc/screenshots/gallery_home.png" alt="harmony_ui gallery 主页" width="230"/>
   <img src="doc/screenshots/gallery_navigation.png" alt="导航类" width="230"/>
