@@ -6586,6 +6586,40 @@ void main() {
       expect(right.dx, greaterThan(left.dx));
     });
 
+    testWidgets('角标描边只在墨屏出现，数字色跟着底色反白', (WidgetTester tester) async {
+      Future<void> pumpWith(OhosThemeData theme) async {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: theme,
+            child: MaterialApp(
+              home: OhosScaffold(body: Center(child: OhosBadge(count: 8))),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      // 彩屏：靠底色分层，不加描边 —— 本体仍是官方的 16。
+      await pumpWith(OhosThemeData.light());
+      expect(tester.getSize(find.byType(OhosBadge)).height, 16);
+
+      // 白纸墨屏：多一圈 1vp 纸色描边（16 + 两侧各 1），数字仍反白。
+      // 这一圈是角标压在黑色图标上时唯一的分离手段。
+      await pumpWith(OhosThemeData.ink());
+      expect(tester.getSize(find.byType(OhosBadge)).height, 18);
+      expect(
+        tester.widget<Text>(find.text('8')).style!.color,
+        const Color(0xFFFFFFFF),
+      );
+
+      // 深色墨屏：`dangerColor` 已反成白，字必须跟着转黑，否则白底白字整颗消失。
+      await pumpWith(OhosThemeData.ink(brightness: Brightness.dark));
+      expect(
+        tester.widget<Text>(find.text('8')).style!.color,
+        const Color(0xFF000000),
+      );
+    });
+
     testWidgets('value 走字符串形态；空串退化为圆点（官方口径）', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
@@ -8817,6 +8851,177 @@ void main() {
       OhosFloatingTabItem(icon: Icon(Icons.search), label: '搜索'),
       OhosFloatingTabItem(icon: Icon(Icons.person_outline), label: '我的'),
     ];
+
+    // 选中项的药丸是**背景层**，内容区仍占满整条高度。早先靠 `Padding(all: 4)`
+    // 收窄内容区：`Icon(24) + 间距 2 + 单行标签` 在 textScale ≳ 1.5 时撑破
+    // 56−8=48，而未选中项还是 56 —— 于是只有选中项溢出，偏偏大字号正是墨水屏
+    // 阅读器的常用档。
+    testWidgets('墨屏 1.5x 字号：选中项不溢出，且与非选中项同高', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (BuildContext context, Widget? child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.5)),
+            child: child!,
+          ),
+          home: OhosTheme(
+            data: OhosThemeData.ink(),
+            child: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 360,
+                  height: 400,
+                  child: OhosFloatingTabBar(
+                    items: threeItems(),
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 溢出会以 RenderFlex overflowed 异常的形式出现。
+      expect(tester.takeException(), isNull);
+
+      final Finder taps = find.descendant(
+        of: find.byType(OhosFloatingTabBar),
+        matching: find.byType(InkWell),
+      );
+      final Set<double> heights = <double>{};
+      for (int i = 0; i < taps.evaluate().length; i++) {
+        heights.add(tester.getSize(taps.at(i)).height);
+      }
+      // 选中项与其它项同样占满整条，不再矮一圈。
+      expect(heights, <double>{56});
+    });
+
+    // 角标压在**选中的那一项**上：墨屏里选中项本身是反白实底，而角标底色
+    // 也是 dangerColor，同色叠同色 —— 没有描边就只剩一个浮着的数字。
+    Future<void> pumpBadge(WidgetTester tester, OhosThemeData theme) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: theme,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 360,
+                  height: 400,
+                  child: OhosFloatingTabBar(
+                    items: const <OhosFloatingTabItem>[
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.home_outlined),
+                        label: '首页',
+                        badge: '2',
+                      ),
+                      OhosFloatingTabItem(
+                        icon: Icon(Icons.search),
+                        label: '搜索',
+                      ),
+                    ],
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    /// 角标本体外那一圈 1vp 的纸色描边；彩屏不加，所以找不到。
+    Finder haloOf(OhosThemeData theme) => find.ancestor(
+      of: find.text('2'),
+      matching: find.byWidgetPredicate(
+        (Widget w) =>
+            w is Container &&
+            w.padding == const EdgeInsets.all(1) &&
+            (w.decoration as BoxDecoration?)?.color == theme.backgroundColor,
+      ),
+    );
+
+    testWidgets('角标：墨屏加纸色描边，字色跟着底色亮度', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await pumpBadge(tester, ink);
+      // 白纸墨屏的 dangerColor 是纯黑 → 白字；本体 14 不变，描边画在外侧
+      expect(tester.widget<Text>(find.text('2')).style!.color,
+          const Color(0xFFFFFFFF));
+      expect(haloOf(ink), findsOneWidget);
+
+      final OhosThemeData inkDark = OhosThemeData.ink(brightness: Brightness.dark);
+      await pumpBadge(tester, inkDark);
+      // 深色墨屏的 dangerColor 已反成纸白 → 字必须转黑，否则白底白字整颗消失
+      expect(tester.widget<Text>(find.text('2')).style!.color,
+          const Color(0xFF000000));
+      expect(haloOf(inkDark), findsOneWidget);
+    });
+
+    testWidgets('角标：彩屏不加描边', (WidgetTester tester) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await pumpBadge(tester, light);
+      // 彩屏靠底色分层就分得开，多一圈线反而偏离官方
+      expect(haloOf(light), findsNothing);
+      expect(tester.widget<Text>(find.text('2')).style!.color,
+          const Color(0xFFFFFFFF));
+    });
+
+    testWidgets('墨屏选中块：内缩成栏内药丸，不越出栏体', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 360,
+                  height: 400,
+                  child: OhosFloatingTabBar(
+                    items: threeItems(),
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Finder byDecoration(Color color) => find.byWidgetPredicate(
+        (Widget w) =>
+            w is DecoratedBox &&
+            (w.decoration as BoxDecoration?)?.color == color,
+      );
+      // 栏体（实底那一层）与选中块（反白那一层）各自按底色认
+      final Rect bar = tester.getRect(byDecoration(ink.policy.quantize(ink.popupColor)));
+      final Rect selected = tester.getRect(byDecoration(ink.highlightColor));
+
+      // 56 高的栏、四周各内缩 4 → 选中块 48；早先是满高 56 的方块，
+      // 两端会直接顶到栏的圆弧外面
+      expect(selected.height, moreOrLessEquals(48));
+      final BoxDecoration deco =
+          tester.widget<DecoratedBox>(byDecoration(ink.highlightColor)).decoration
+              as BoxDecoration;
+      expect(
+        (deco.borderRadius! as BorderRadius).topLeft.x,
+        moreOrLessEquals(24),
+        reason: '圆角取同曲率（半高圆），选中块与栏才是一家人',
+      );
+      // 四边都落在栏体之内
+      expect(selected.left, greaterThanOrEqualTo(bar.left - 0.01));
+      expect(selected.top, greaterThanOrEqualTo(bar.top - 0.01));
+      expect(selected.right, lessThanOrEqualTo(bar.right + 0.01));
+      expect(selected.bottom, lessThanOrEqualTo(bar.bottom + 0.01));
+    });
 
     // 量**栏体**，不是整个组件，也不是第一个 `SizedBox`。
     //

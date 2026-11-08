@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_badge.dart';
 import 'ohos_light_material.dart';
 import 'ohos_tabs_width.dart';
 
@@ -354,7 +355,13 @@ class OhosFloatingTabBar extends StatelessWidget {
             width: ohosStrokeWidth(context, theme.outlineWidth),
           ),
         ),
-        child: row,
+        // 栏体内裁一刀：`DecoratedBox` 的圆角只裁背景、不裁子级，选中项那块
+        // 实底只要敢碰到边缘就会画到栏的圆弧外面去。裁在背景之内，描边不受
+        // 影响（它画在盒子的边上，被裁的是 row）。
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(style.radius),
+          child: row,
+        ),
       );
     }
 
@@ -470,12 +477,33 @@ class OhosFloatingTabBar extends StatelessWidget {
 
     if (inverse) {
       // 反白：实底 + 纸色文字，跨温度跨刷新都不漂。
-      tapTarget = DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.highlightColor,
-          borderRadius: BorderRadius.circular(12),
+      //
+      // 形状必须跟着栏走。早先写死 12 的圆角、垂直方向不留白：56 高的方块
+      // 塞进 28 半径的胶囊栏，四个角是直角，两端更是直接顶到栏的圆弧外面
+      // —— 选中的那一块看起来溢出了栏体。改成四周各内缩 4vp、圆角取同曲率
+      // （内缩后正好是半高圆），选中项就是栏里的一颗黑药丸。
+      //
+      // 关键是这层内缩**只能画在背景上**，不能靠 `Padding` 收窄内容区：
+      // 内容区一收窄，`Icon(24) + 间距 2 + 单行标签` 在 `textScale ≳ 1.5` 时
+      // 就撑破 48，而未选中项仍占满 56 —— 于是只有选中项溢出，偏偏大字号正是
+      // 墨水屏阅读器的常用档。药丸退到 Stack 的背景层，内容继续用满高度。
+      const double inset = 4;
+      final Widget pill = Positioned.fill(
+        child: Padding(
+          padding: const EdgeInsets.all(inset),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.highlightColor,
+              borderRadius: BorderRadius.circular(
+                (style.radius - inset).clamp(0.0, double.infinity),
+              ),
+            ),
+          ),
         ),
-        child: tapTarget,
+      );
+      return Stack(
+        fit: StackFit.passthrough,
+        children: <Widget>[pill, tapTarget],
       );
     }
     return Padding(
@@ -485,30 +513,43 @@ class OhosFloatingTabBar extends StatelessWidget {
   }
 }
 
+/// 页签上的角标（14vp / 字号 9）。
+///
+/// 与 [OhosBadge] 是两份实现 —— 那个是 16vp 的圆、挂在图标的角上，这里要更小
+/// 才能塞进栏内的一项。尺寸分开，**墨屏规则共用**（[ohosBadgeHalo] /
+/// [ohosBadgeForeground]）：这一份压在**选中的页签**上，而墨屏里选中项本身
+/// 就是反白实底，角标底色又同为 `dangerColor`，不描边就是一块同色的疙瘩；
+/// 深色墨屏则反过来，底色与字都写死白时整颗消失。
 class _Badge extends StatelessWidget {
   const _Badge({required this.text, required this.color});
 
   final String text;
+
+  /// 角标底色（`theme.dangerColor`）。
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      constraints: const BoxConstraints(minWidth: 14),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFFFFFFFF),
-          fontSize: 9,
-          height: 1.2,
+    return ohosBadgeHalo(
+      OhosTheme.of(context),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        constraints: const BoxConstraints(minWidth: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: ohosBadgeForeground(color),
+            fontSize: 9,
+            height: 1.2,
+          ),
         ),
       ),
+      7,
     );
   }
 }
