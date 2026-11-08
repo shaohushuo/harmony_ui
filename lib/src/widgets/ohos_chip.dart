@@ -109,6 +109,12 @@ class OhosChip extends StatelessWidget {
   /// 激活态背景色（官方 `activatedBackgroundColor`，默认
   /// `ohos_id_color_emphasize`）。
   ///
+  /// 默认值的依据：官方文档 `ohos-arkui-advanced-Chip.md` 的
+  /// `ChipOptions.activatedBackgroundColor` 表格（API 12 起）写的就是
+  /// `$r('sys.color.ohos_id_color_emphasize')`；源码 `chip.ets:389` 走的是
+  /// `sys.color.chip_container_activated_color` —— 与文档不同源，但同属高亮
+  /// 容器色，此处按文档口径记默认值，不追 hex。
+  ///
   /// 与 [selectedColor] 是同一条规格的两个入口：那个是 0.5 起的本库参数名，
   /// 这个对齐官方文档。两者都给时 [activatedBackgroundColor] 优先。
   final Color? activatedBackgroundColor;
@@ -119,6 +125,16 @@ class OhosChip extends StatelessWidget {
 
   /// 激活态文字色（官方 `LabelOptions.activatedFontColor`，默认
   /// `ohos_id_color_text_primary_contrary`）。
+  ///
+  /// 默认值的依据：官方文档 `ohos-arkui-advanced-Chip.md`（`ChipOptions.label`
+  /// 表格，API 12 起）明写 `activatedFontColor` 默认
+  /// `$r('sys.color.ohos_id_color_text_primary_contrary')`；源码 `chip.ets:328`
+  /// 的 theme 走 `sys.color.chip_activated_fontcolor`，语义同为「高亮容器上的
+  /// 反色前景」。**不要**改成 `ohos_id_color_text_primary` —— 那是非激活态的
+  /// `fontColor`，配强调色底会掉到 ~1.1:1。
+  ///
+  /// 文档另提醒：调用方把 [activatedBackgroundColor] 换成浅色时必须同步给
+  /// 本参数，否则对比度不足 —— 那是调用方配置问题，不是默认值问题。
   ///
   /// 注意它与图标色的默认值**不同源**：图标非激活是
   /// `ohos_id_color_secondary`、激活是 `ohos_id_color_text_primary_contrary`；
