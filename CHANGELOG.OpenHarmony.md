@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+> 对应 `pubspec.yaml` 0.6.0 → **0.6.1**（2026-11-08）：墨水屏 / 深色主题整改轮，AtomGit !13–!20。无破坏性变更；`OhosVisualPolicy.statusMotion` 是带默认实现的普通方法，自定义策略子类不受影响。用例 750 → 776。
+
+### Features
+
+- `OhosVisualPolicy.statusMotion(Duration)`：把「承载状态的动效」（进度游标、加载指示）从 `scaleMotion` 里拆出来。分界不是动画长短，而是**归零之后还剩什么信息** —— 装饰性过渡归零只是少一段动画，游标归零则与「进度卡死」同形。默认转发 `scaleMotion`，彩屏与既有自定义策略行为不变；`InkVisualPolicy` 覆写成原样返回，只放行这一类。代价是墨水屏上持续的局部逐帧刷新，更慢的屏可能有残影，自定义策略覆写成 `Duration.zero` 即可退回静态符号（!15）
+- `lib/src/theme/ohos_contrast.dart`：`ohosContrastRatio` / `ohosOnFillReadable` / `ohosReadableContrast`。半透明底先 `Color.alphaBlend` 合成到实际背景再算 WCAG 对比度 —— `computeLuminance()` 不看 alpha，不合成会把 15% 黑算成纯黑（!13 / !14 / !17 共用）
+
+### Bugfix（墨屏 / 深色主题对比度整改）
+
+- 修复「反白前景写死白色 / 官方深色」这一类复发：深色墨屏的 `highlightColor` 就是纸白、白纸墨屏的是纯黑，白底白字 / 黑底黑字会让整块内容消失。统一改成按**合成后的实际底色**判对比度，反白色一律取 `theme.onHighlightColor`（!13 / !14 / !17 / !19，Issue #7 / #8 / #11）
+- 修复 `OhosProgressIndicator.capsule` 墨屏 1.3:1 的数字整段消失：叠两层字（轨道官方色 + 填充反白色），用与填充同源的 `ClipPath` 裁开，跨边界的两半字形都完整；第二层排除语义、`fill <= 0` 不叠层（!14）
+- 修复 `OhosAlphabetIndexer` 墨屏选中字母黑底黑字：实底改配 `onHighlightColor`，选中底改为等径正圆（`dot = min(slot, 条宽)`）（!13）
+- 修复 `OhosChip` 墨屏选中「透明底 + 反白字」：改走 `selectionMark.inverse` 实底反白；底色透明时字色退回正文色。彩屏仍是浅底 + 品牌色（!17）
+- 修复 `OhosBadge` / 页签角标白纸墨屏与黑色图标连成一片、深色墨屏白底白字：墨屏加 1vp 纸色描边，数字色按底色亮度取黑白，两处实现共用 `ohosBadgeHalo` / `ohosBadgeForeground`；墨屏选中药丸退到背景层内缩 4vp，内容区仍占满 56vp，`textScale 1.5` 不再溢出（!16，Issue #10）
+- 修复 `OhosButton` 的 `filled` 字色与 loading 转圈写死白：改取 `theme.onHighlightColor`（转圈 0.7 alpha），彩屏外观不变（!19）
+- 修复 `OhosNavigationBar` 悬浮分支漏传 `borderRadius`：材质内部各层按直角算、只靠外层 clip 硬裁；顶部亮线改为按圆角内缩、渐变按实际线段取（!18）
+- 示例：底部页签演示底板补 `clipBehavior: Clip.antiAlias`；工具栏演示卡片换成上直角 / 下圆角，四种主题轮廓一致（!18 / !20）
+- 遗留：`ohos_checkbox_group.dart:233` 的对勾仍写死 `Colors.white`，深色墨屏有同款风险，建议单开 issue
+
 ### Bugfix
 
 - 破坏性变更（源码兼容）：`OhosListTile.divider` 由 `bool`（默认 `true`）改为 `bool?`（默认 `null`）。`null` 表示跟随所在的 `OhosList` —— 列表接管分隔线，行边界恰好一条、末行不画；显式传 `true` / `false` 的行为与以前一致（原来 `false` 会被列表的 scope 静默忽略）。改类型是为了修掉「列表内每行各画一条、行边界变成双线」，同时保留逐行关掉分隔线的能力

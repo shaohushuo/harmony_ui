@@ -137,9 +137,7 @@ class OhosButton extends StatelessWidget {
         // 不能写死 `Colors.white`：深色墨水屏的 `highlightColor` 是纸白，
         // 白底再压白字就整颗字消失。反白色由主题给 —— 浅色/深色彩屏是白色，
         // 白纸墨屏是纸白，深色墨屏是纸黑。
-        foreground = dimmed
-            ? theme.textTertiaryColor
-            : theme.onHighlightColor;
+        foreground = dimmed ? theme.textTertiaryColor : theme.onHighlightColor;
         border = dimmed && background.a == 0
             ? policy.line(theme.textTertiaryColor, 1)
             : Colors.transparent;

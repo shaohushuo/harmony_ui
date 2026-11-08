@@ -429,14 +429,15 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     //
     // 早先用 `solidFill`（`quantize` 有没有改色）当判据，调用方传实心底时
     // `quantize` 原样返回 ⇒ 判成「浅底」⇒ 蓝底压蓝字。
-    final Color selectedText = widget.selectedColor ??
+    final Color selectedText =
+        widget.selectedColor ??
         (selectedFill.a < 1
             ? active
             : (ohosOnFillReadable(
-                theme.onHighlightColor,
-                selectedFill,
-                backdrop: theme.backgroundColor,
-              )
+                    theme.onHighlightColor,
+                    selectedFill,
+                    backdrop: theme.backgroundColor,
+                  )
                   ? theme.onHighlightColor
                   : active));
     return _IndexerPaint(
