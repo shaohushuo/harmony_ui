@@ -1,3 +1,25 @@
+## 0.6.1
+
+Release date: 2026-11-08
+
+> 0.6.0 之后的**墨水屏 / 深色主题整改轮**，来自社区 8 个 PR（AtomGit !13–!20，关联 Issue #7–#11）。共同根因是「反白前景写死成白色 / 官方深色」，而深色墨水屏的 `highlightColor` 本身就是纸白、白纸墨屏的又是纯黑 —— 于是白底白字、黑底黑字，整块内容消失。本版把判据统一为**合成后的实际底色对比度**，反白色一律取 `theme.onHighlightColor`，不再按「是不是墨屏」分支。用例 750 → **776**；8 个 PR 依次合并零冲突，合并态 `flutter analyze` 干净、全量 776 条通过。
+>
+> **兼容性**：没有破坏性变更。`OhosVisualPolicy` 新增的 `statusMotion` 是**带默认实现的普通方法**（默认转发 `scaleMotion`），外部自定义策略子类无需改动 —— 延续 0.6.0「策略层不新增抽象成员」的承诺。
+>
+> **行为变更（需留意）**：墨水屏下不确定态进度游标与加载彗星从「停在静态中位」改为**照常按 2000ms 周期运动**。静止的游标与「进度卡死」在 16 级灰阶上完全同形，没有别的线索能表达「还在动」。代价是持续的局部逐帧刷新：更慢的电子墨水屏可能有残影，自定义策略把 `statusMotion` 覆写成 `Duration.zero` 即可退回静态符号（此时建议用文字或状态图标承载「在加载」）。
+
+- 新增：`OhosVisualPolicy.statusMotion(Duration)` —— 与 `scaleMotion` 的分界不是「动画长短」，而是**归零之后还剩什么信息**：装饰性过渡归零只是少一段动画，进度游标归零则丢掉「还在加载」这件事。`InkVisualPolicy` 只放行这一类；`_IndeterminateCycle._sync`、`OhosLoadingIndicator._syncAnimation` 与它的渲染分支改走该入口（!15）
+- 新增：`ohosContrastRatio` / `ohosOnFillReadable` / `ohosReadableContrast`（`lib/src/theme/ohos_contrast.dart`）—— 半透明底先 `Color.alphaBlend` 合成到实际背景再算亮度：`computeLuminance()` 不看 alpha，不合成会把 15% 黑算成纯黑，进而误判成「白字压白底」（!13 / !14 / !17 共用同一份工具）
+- 修复：`OhosProgressIndicator.capsule` 墨屏文字压在纯黑填充上只剩 1.3:1 —— 改**叠两层字**：轨道层保留官方 `capsuleTextColor`，填充层取 `onHighlightColor`，用与填充同源的 `ClipPath`（`ohosCapsuleProgressPath`，圆头不是直边）裁开，文字跨在 52% 边界上时两半都完整；第二层 `ExcludeSemantics` 防读屏双读，`fill <= 0` 不叠层。阈值取 2 而非 WCAG 3，因为官方彩屏蓝底本身只有 2.8:1（!14，Issue #8）
+- 修复：`OhosAlphabetIndexer` 墨屏选中字母黑底黑字糊成一块 —— 实底分支改取 `onHighlightColor`；选中底改成 `SizedBox(dot, dot)` 的**等径正圆**，`dot = min(slot, 条宽)`，宽窄字母的圆不再一大一小。半透明底一律用品牌色，避免深色档「选中/未选中」只剩一圈淡 tint（!13，Issue #7）
+- 修复：`OhosChip` 墨屏选中变成「透明底 + 反白字」—— 选中态改走 `policy.selectionMark` 的 `inverse` 约定（实底 + `onHighlightColor` 文字），与 tabs / toolbar 一致；底色最终透明时字色退回正文色。彩屏仍是原来的浅底 + 品牌色（!17，Issue #11）
+- 修复：`OhosBadge` 白纸墨屏里与黑色图标连成一片、深色墨屏白底白字 —— 墨屏给本体裹一圈 1vp 纸色描边（`outlineWidth`），数字色按底色亮度取黑白；`OhosFloatingTabBar` 的页签角标复用同一组 `ohosBadgeHalo` / `ohosBadgeForeground`。顺带把墨屏选中药丸从写死 12 圆角、顶到栏外的方块改成**背景层**内缩 4vp 的胶囊，内容区仍占满 56vp，`textScale 1.5` 时不再溢出（!16，Issue #10）
+- 修复：`OhosButton` 的 `filled` 变体与 loading 转圈在深色墨屏下写死 `Colors.white` / `Colors.white70` —— 改取 `theme.onHighlightColor`（转圈带 0.7 alpha），浅色/深色彩屏外观不变（!19）
+- 修复：`OhosNavigationBar` 悬浮分支构造 `OhosLightMaterial` 时漏传 `borderRadius`，内部模糊背板 / 漫射层 / 边缘高光全按直角算，只靠外层 clip 硬裁；顶部亮线原先写死 `(12, 1) → (width − 12, 1)`，现在按圆角半径内缩、渐变按实际线段取，胶囊两端不再被硬切。库里其余 6 处 `OhosLightMaterial` 调用本来就传了半径（!18）
+- 示例：底部页签演示底板补 `clipBehavior: Clip.antiAlias`（平铺栏本身是方角，官方口径贴窗口底边不带圆角）；工具栏演示卡片换 `_FlushTopCard` —— 上直角、下圆角，彩屏与两种墨屏轮廓统一，说明文字补内边距免得首字被圆角切掉（!18 / !20）
+- 测试：8 个 PR 共新增 26 条用例，覆盖两层字色与裁切边界、语义去重、半透明填充不误判反白、三档主题角标字色、`textScale 1.5` 不溢出、材质圆角传递、深色墨屏 filled 字色等；两条「墨屏不许有帧动画」的旧断言随 !15 一并转为「墨屏也要走」
+- 遗留（本版未动）：`ohos_checkbox_group.dart:233` 的对勾仍写死 `Colors.white`，若选中底同样取 `highlightColor`，深色墨屏会遇到同款白底白勾 —— 建议单开 issue 跟进
+
 ## 0.6.0
 
 Release date: 2026-11-04
