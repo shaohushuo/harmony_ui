@@ -10296,6 +10296,87 @@ void main() {
       );
     }
 
+    testWidgets('墨屏：选中字母反白，不糊成黑块（issue #7）', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosAlphabetIndexer(
+                  indexer: letters,
+                  size: const Size(24, 160),
+                  selectedIndex: 2,
+                  onSelected: (String _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 灰阶屏留不住 10% 叠色 ⇒ 底块换成实色（墨屏 = 纯黑）。此时字必须反白，
+      // 否则实底 + `highlightColor`（墨屏同为纯黑）会糊成一个黑疙瘩。
+      expect(paintedColor(tester, 'B'), ink.onHighlightColor);
+      expect(paintedColor(tester, 'B'), isNot(ink.highlightColor));
+      // 未选中项不受影响
+      expect(paintedColor(tester, 'A'), ink.textSecondaryColor);
+    });
+
+    testWidgets('选中圆标等径：窄字母 I 与宽字母 W 的底圆一样大', (WidgetTester tester) async {
+      Widget host(int selected) => wrap(
+        OhosAlphabetIndexer(
+          indexer: const <String>['I', 'W'],
+          size: const Size(24, 64),
+          selectedIndex: selected,
+          onSelected: (String _) {},
+        ),
+      );
+
+      Size dotSize() => tester.getSize(
+        find.descendant(
+          of: find.byType(OhosAlphabetIndexer),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+
+      await tester.pumpWidget(host(0));
+      await tester.pump();
+      final Size narrow = dotSize();
+
+      await tester.pumpWidget(host(1));
+      await tester.pump();
+      final Size wide = dotSize();
+
+      // 等径：底圆不跟字形宽窄走，否则滚动换组时那点亮色会忽胖忽瘦。
+      expect(wide.width, narrow.width);
+      expect(wide.height, narrow.height);
+      // 直径 = 一格高，但被条宽 24 收住（64vp 高 / 2 个字母 ⇒ slot 32）。
+      expect(narrow.width, 24);
+      expect(narrow.height, 24);
+    });
+
+    testWidgets('彩屏：选中字母仍是品牌色，没被反白顺手改掉', (WidgetTester tester) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 2,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 彩屏 `quantize` 原样返回 ⇒ 走 10% 叠色分支，字仍用 highlightColor。
+      expect(paintedColor(tester, 'B'), light.highlightColor);
+      expect(paintedColor(tester, 'A'), light.textSecondaryColor);
+    });
+
     testWidgets('点当前高亮的字母也会回调（不再「点不动」）', (WidgetTester tester) async {
       final List<String> picked = <String>[];
       await tester.pumpWidget(host(picked.add));
