@@ -144,18 +144,13 @@ class OhosChip extends StatelessWidget {
     final OhosChipMetrics metrics = OhosChipMetrics.of(size);
     final bool enabled = onPressed != null;
     final OhosVisualPolicy policy = theme.policy;
-    // 文字色与图标色**分开**：官方 `LabelOptions.fontColor` 默认
-    // `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认
-    // `chip_usually_icon_color`（≈ `ohos_id_color_secondary`）。老实现把两者
-    // 绑在同一个 `fg` 上，文字常态因此偏淡一档。
-    final Color iconFg = selected
-        ? theme.onHighlightColor
-        : theme.textSecondaryColor;
-    final Color labelFg = selected
-        ? (activatedLabelColor ?? theme.onHighlightColor)
-        : (labelColor ?? theme.textPrimaryColor);
-    // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，下面统一改成
-    // 「留白 + 描边」，靠线的深浅而不是色的浓淡表意。
+    // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，这时改走
+    // 「反白实底」—— 与 tabs / toolbar 同一条 `selectionMark` 约定。
+    //
+    // 早先这里只把底判成透明、字色却仍是 `onHighlightColor`：白纸上白字压白纸、
+    // 深色纸上是纸色字压纸底，选中的 chip 整颗字消失，只剩一圈稍深的描边。
+    final OhosSelectionMark mark = policy.selectionMark;
+    final bool inverse = selected && mark == OhosSelectionMark.inverse;
     final Color idleFill =
         backgroundColor ?? theme.compBackgroundGrayColor ?? theme.cardColor;
     final Color selectedFill =
@@ -165,8 +160,26 @@ class OhosChip extends StatelessWidget {
               theme.highlightColor.withValues(alpha: 0.10));
     // 激活底色的优先级：官方参数名 → 本库旧参数名 → 主题回落。
     final Color bg = selected
-        ? (activatedBackgroundColor ?? selectedColor ?? selectedFill)
+        ? (activatedBackgroundColor ??
+              selectedColor ??
+              (inverse ? theme.highlightColor : selectedFill))
         : idleFill;
+    // 底色最终是透明时（自定义主题把选中底也判没了），反白字会跟着消失 ——
+    // 这时退回正文色，宁可少一层表达，也不能让字看不见。
+    final bool transparentFill = bg.a == 0;
+    // 文字色与图标色**分开**：官方 `LabelOptions.fontColor` 默认
+    // `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认
+    // `chip_usually_icon_color`（≈ `ohos_id_color_secondary`）。老实现把两者
+    // 绑在同一个 `fg` 上，文字常态因此偏淡一档。
+    final Color iconFg = !selected
+        ? theme.textSecondaryColor
+        : (transparentFill ? theme.highlightColor : theme.onHighlightColor);
+    final Color labelFg = !selected
+        ? (labelColor ?? theme.textPrimaryColor)
+        : (activatedLabelColor ??
+              (transparentFill
+                  ? theme.textPrimaryColor
+                  : theme.onHighlightColor));
     // 描边：选中用品牌色，未选中用提示色；墨屏上两者都由策略换成实色
     final Color borderColor = selected
         ? policy.line(theme.highlightColor, 0.20)
