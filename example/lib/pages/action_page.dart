@@ -84,7 +84,7 @@ class ActionPage extends StatelessWidget {
           description:
               '图标 + 文字，整条 57（56 + 1px 分割线）。'
               '激活态要 activeIndex 与 ACTIVATE 同时满足；超过 5 项自动收进「更多」。',
-          child: DemoCard(padding: EdgeInsets.zero, child: _ToolbarDemo()),
+          child: _FlushTopCard(child: _ToolbarDemo()),
         ),
         const DemoSection(
           title: '核心操作栏 OhosActionBar',
@@ -397,7 +397,12 @@ class _ToolbarDemoState extends State<_ToolbarDemo> {
           ],
         ),
         const SizedBox(height: 8),
-        _Hint('上：4 项，正好留出 24 侧边距；下：7 项，前 4 + 「更多」'),
+        // 卡片下两角是圆角、又要裁剪：贴着左下角排的说明文字首字会被圆角
+        // 弧段切掉，给它留出内边距。
+        const Padding(
+          padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: _Hint('上：4 项，正好留出 24 侧边距；下：7 项，前 4 + 「更多」'),
+        ),
       ],
     );
   }
@@ -439,6 +444,49 @@ class _Hint extends StatelessWidget {
           color: theme.textSecondaryColor,
         ),
       ),
+    );
+  }
+}
+
+/// 演示用的「上贴边」卡片：上两角直角、下两角圆角。
+///
+/// [OhosCard] 只有一种圆角，而工具栏是通栏贴边的组件。放进全圆角卡片里，
+/// 两种屏的轮廓会不一致：
+///
+/// - 彩屏：卡片不裁剪（`clipBehavior: Clip.none`），工具栏那块不透明底色把
+///   卡片的上两角直接盖掉，看着是直角；
+/// - 墨水屏：卡片改用它自己的 1px 描边表达边界，且必须裁剪
+///   （`clipBehavior: Clip.antiAlias`），于是上下四角都是圆的。
+///
+/// 按通栏贴顶的真实轮廓画成「上直角、下圆角」，四种主题就同一套轮廓了。
+/// 墨水屏的描边必须跟着同一套圆角画，否则又会出现「矩形框吃掉圆角」。
+class _FlushTopCard extends StatelessWidget {
+  const _FlushTopCard({required this.child});
+
+  final Widget child;
+
+  static const BorderRadius _radius = BorderRadius.vertical(
+    bottom: Radius.circular(OhosGeometry.radiusLarge),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final OhosVisualPolicy policy = theme.policy;
+    return Container(
+      // 下两角要圆，子节点就得裁进去；上两角是直角，裁了也看不出。
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: _radius),
+      foregroundDecoration: policy.outlineWidth == null
+          ? null
+          : BoxDecoration(
+              borderRadius: _radius,
+              border: Border.all(
+                color: theme.dividerColor,
+                width: ohosStrokeWidth(context, policy.outlineWidth!),
+              ),
+            ),
+      child: child,
     );
   }
 }
