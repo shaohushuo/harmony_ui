@@ -238,6 +238,14 @@ class _OhosTextClockState extends State<OhosTextClock> {
   /// 计时器只在「该走」的时候存在：控制器说 stop、或本轮帧不可见（[TickerMode]
   /// 为 false）都直接不建。这与官方「组件不可见时时间变动停止」是同一条规则。
   void _syncTicker() {
+    // 这里只能用旧 API，是**双 SDK** 逼出来的，不是懒得改：
+    // Flutter 3.47 把 `TickerMode.of` 与 `getNotifier` 都弃用了，替代品
+    // `valuesOf(context).enabled` 要求 3.36+；而本库还要能构建 HarmonyOS 分支
+    // （`oh-3.35.7-release`），那里**没有** `valuesOf`（已核对该版本的
+    // `ticker_provider.dart`，只有 `of` 与 `getNotifier`）。换成新 API 会让
+    // ohos 构建直接编译失败，两害相权取「保留旧 API + 忽略提示」。
+    // 等最低支持版本抬到 3.36 之后，这里改成 `valuesOf(context).enabled` 即可。
+    // ignore: deprecated_member_use
     final bool visible = TickerMode.of(context);
     final bool started = widget.controller?.started ?? true;
     final bool shouldRun = visible && started;
