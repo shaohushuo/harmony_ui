@@ -13765,18 +13765,19 @@ void main() {
     testWidgets('胶囊文字：进度很低时反白层被裁在填充区内', (WidgetTester tester) async {
       await pumpInkCapsule(tester, 0.2);
       // 20% 的填充盖不到居中的文字，白色那层被裁到左侧 40px，视觉上仍是
-      // 白纸轨道 + 官方深色字
-      final ClipRect clip = tester.widget<ClipRect>(
+      // 白纸轨道 + 官方深色字。裁切用的是与填充同源的 `ClipPath`（圆头右端），
+      // 不是按 `fill × width` 切直边。
+      final ClipPath clip = tester.widget<ClipPath>(
         find.ancestor(
           of: find.descendant(
             of: find.byType(OhosProgressIndicator),
             matching: find.text('20%'),
           ).last,
-          matching: find.byType(ClipRect),
+          matching: find.byType(ClipPath),
         ),
       );
       expect(
-        clip.clipper!.getClip(const Size(200, 40)).right,
+        clip.clipper!.getClip(const Size(200, 40)).getBounds().right,
         moreOrLessEquals(40),
       );
     });
@@ -13851,6 +13852,17 @@ void main() {
         ),
         findsNothing,
       );
+    });
+
+    testWidgets('胶囊文字：两层字像素对齐，反白层只是同位置的拷贝', (
+      WidgetTester tester,
+    ) async {
+      await pumpInkCapsule(tester, 0.7);
+      final Finder labels = find.text('70%');
+      expect(labels, findsNWidgets(2));
+      // 轨道层与反白层必须落在同一处：任何偏移都会让填充边界上的笔画出现
+      // 错位重影（一半深、一半白，两边都不完整）。
+      expect(tester.getRect(labels.at(0)), tester.getRect(labels.at(1)));
     });
 
     testWidgets('value 为 null：线性/环形给不确定态，月相不画进度', (WidgetTester tester) async {

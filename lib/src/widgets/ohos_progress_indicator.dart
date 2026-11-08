@@ -531,6 +531,8 @@ class OhosProgressIndicator extends StatelessWidget {
     final String? label = _capsuleLabel;
     final double strokeWidth = ohosProgressStrokeWidth(context);
     final double fill = value ?? 0;
+    // 填充与裁切必须用同一个圆角：填充是「圆头胶囊」，右端是半径 r 的弧。
+    final double radius = capsuleBorderRadius ?? height / 2;
     // 两段字色：轨道上照官方的深色，填充上在同色时才换成反白色
     // （见 _capsuleOnFillColor）。
     const Color onTrack = OhosProgressMetrics.capsuleTextColor;
@@ -552,7 +554,7 @@ class OhosProgressIndicator extends StatelessWidget {
                     value: fill,
                     color: active,
                     track: track,
-                    borderRadius: capsuleBorderRadius ?? height / 2,
+                    borderRadius: radius,
                     borderColor:
                         borderColor ?? OhosProgressMetrics.capsuleBorderColor,
                     strokeWidth: strokeWidth,
@@ -571,8 +573,14 @@ class OhosProgressIndicator extends StatelessWidget {
                   // 「70%」连读两次（同 `ohos_list_item_card` / `ohos_magnifier`
                   // 的处理）。语义只保留上面轨道层那一份。
                   child: ExcludeSemantics(
-                    child: ClipRect(
-                      clipper: _CapsuleFillClipper(fill * width),
+                    child: ClipPath(
+                      // 裁切路径与填充路径同源：填充右端是圆头，用直线
+                      // (`fill × width`) 裁会在弧内的三角区留下反白笔画 ——
+                      // 那块其实是轨道，高进度 + 宽标签时肉眼可见。
+                      clipper: _CapsuleFillClipper(
+                        fill: fill,
+                        borderRadius: radius,
+                      ),
                       child: Center(
                         child: _capsuleLabelWidget(theme, label, onFill),
                       ),
@@ -1194,16 +1202,28 @@ class _CapsulePainter extends CustomPainter {
 ///
 /// 用来叠第二层反白文字：填充区里的字用反白色、轨道区里的字保持官方深色，
 /// 文字跨在边界上时两半都还在。
-class _CapsuleFillClipper extends CustomClipper<Rect> {
-  const _CapsuleFillClipper(this.right);
+/// 把反白字裁到**填充区**上，形状与 [_CapsulePainter] 画的填充完全一致。
+///
+/// 早先用 `Rect.fromLTRB(0, 0, fill * width, height)` 直线裁切：填充是圆头
+/// 胶囊，右端那段是半径 `r` 的弧，直线会在弧内的三角区留下反白笔画 ——
+/// 那块其实是轨道。进度接近 100%、标签又宽时，能看到反白字冒出填充之外。
+class _CapsuleFillClipper extends CustomClipper<Path> {
+  const _CapsuleFillClipper({required this.fill, required this.borderRadius});
 
-  /// 填充右边界（相对胶囊左端的像素宽度）。
-  final double right;
+  /// 已完成比例（0–1），与画笔同一个值。
+  final double fill;
+
+  /// 与画笔同一个圆角，`ohosCapsuleProgressPath` 内部会夹到 `h / 2`。
+  final double borderRadius;
 
   @override
-  Rect getClip(Size size) => Rect.fromLTRB(0, 0, right, size.height);
+  Path getClip(Size size) => ohosCapsuleProgressPath(
+    size: size,
+    value: fill,
+    borderRadius: borderRadius,
+  );
 
   @override
   bool shouldReclip(_CapsuleFillClipper oldClipper) =>
-      oldClipper.right != right;
+      oldClipper.fill != fill || oldClipper.borderRadius != borderRadius;
 }
