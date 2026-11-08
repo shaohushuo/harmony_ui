@@ -794,6 +794,10 @@ class _NavigationBarDemoState extends State<_NavigationBarDemo> {
         color: theme.compBackgroundGrayColor ?? OhosColors.compBackgroundGray,
         borderRadius: BorderRadius.circular(16),
       ),
+      // 平铺式栏自己是直角的（官方口径：它贴着窗口底边，不带圆角），放进
+      // 这块圆角底板里必须由底板裁剪，否则栏的下边两角会把底板的圆角切成
+      // 直角 —— 浅色下栏与底板几乎同色看不出来，深色下立刻显形。
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 4),
         child: OhosNavigationBar(

@@ -3779,6 +3779,31 @@ void main() {
       expect(index, 1);
     });
 
+    testWidgets('悬浮栏把胶囊半径交给材质，模糊背板与顶部亮线才跟着圆角', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosNavigationBar(
+            type: OhosNavigationBarType.float,
+            lightMaterial: true,
+            currentIndex: 0,
+            onDestinationSelected: (_) {},
+            destinations: const <OhosNavigationDestination>[
+              OhosNavigationDestination(icon: Icon(Icons.home), label: '首页'),
+              OhosNavigationDestination(icon: Icon(Icons.person), label: '我的'),
+            ],
+          ),
+        ),
+      );
+      // 漏传的话材质内部按 BorderRadius.zero 画，只剩外层 Container 的
+      // clip 兜底：糊成直角矩形，边缘高光在圆角处被硬切。
+      final OhosLightMaterial material = tester.widget<OhosLightMaterial>(
+        find.byType(OhosLightMaterial),
+      );
+      expect(material.borderRadius, BorderRadius.circular(28));
+    });
+
     testWidgets('平铺栏标签默认钳到 1.15x，maxTextScaleFactor: null 时跟随系统', (
       WidgetTester tester,
     ) async {

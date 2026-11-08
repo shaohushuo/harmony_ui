@@ -276,6 +276,10 @@ class _OhosNavigationBarState extends State<OhosNavigationBar>
                     : Alignment.center;
                 final Widget surface = OhosLightMaterial(
                   level: widget.lightLevel,
+                  // 胶囊半径必须交给材质：内部模糊背板、漫射层、边缘高光与
+                  // 顶部亮线都按 `borderRadius` 算形状，漏传就退化成直角矩形，
+                  // 只剩外层 Container 的 clip 兜着 —— 高光会在圆角处被硬切。
+                  borderRadius: BorderRadius.circular(_effectiveHeight / 2),
                   gradientFade: OhosLightFade.bottom,
                   gradientExtent: 24,
                   glowAlignment: glowAlignment,

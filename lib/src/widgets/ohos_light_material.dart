@@ -654,15 +654,30 @@ class _OhosGlowMaterialPainter extends CustomPainter {
       ).createShader(rect);
     canvas.drawRRect(rrect.deflate(.6), edgePaint);
 
-    final Paint topLine = Paint()
-      ..shader = LinearGradient(
-        colors: <Color>[
-          Colors.transparent,
-          palette.edgeHighlight.withValues(alpha: .7),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, 1));
-    canvas.drawLine(const Offset(12, 1), Offset(size.width - 12, 1), topLine);
+    // Top-edge accent. On a capsule the ends are arcs, so the line may only
+    // span the flat segment — drawing it towards the bounds would leave it
+    // running into the curve, where the parent clip cuts it off and the
+    // highlight looks pasted on instead of following the shape.
+    final double topInset = math.max(rrect.tlRadiusX, rrect.trRadiusX);
+    final double lineLeft = rrect.left + math.max(topInset, 12);
+    final double lineRight = rrect.right - math.max(topInset, 12);
+    if (lineRight > lineLeft) {
+      final Rect lineRect = Rect.fromLTWH(
+        lineLeft,
+        0,
+        lineRight - lineLeft,
+        1,
+      );
+      final Paint topLine = Paint()
+        ..shader = LinearGradient(
+          colors: <Color>[
+            Colors.transparent,
+            palette.edgeHighlight.withValues(alpha: .7),
+            Colors.transparent,
+          ],
+        ).createShader(lineRect);
+      canvas.drawLine(Offset(lineLeft, 1), Offset(lineRight, 1), topLine);
+    }
   }
 
   @override
