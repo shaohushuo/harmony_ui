@@ -243,7 +243,11 @@ class OhosSelect<T> extends StatelessWidget {
                       : BorderSide.none,
                 ),
                 items: <PopupMenuEntry<T>>[
-                  for (int i = 0; i < options.length; i++) ...<PopupMenuEntry<T>>[
+                  for (
+                    int i = 0;
+                    i < options.length;
+                    i++
+                  ) ...<PopupMenuEntry<T>>[
                     PopupMenuItem<T>(
                       value: options[i].value,
                       height: OhosSelectMetrics.optionMinHeight,
@@ -261,7 +265,8 @@ class OhosSelect<T> extends StatelessWidget {
                         // 勾必须与字色同源：墨屏上「白勾 + 白字」都压不住，
                         // 「黑勾 + 黑字」才一致；写死品牌色会让勾在墨屏上消失。
                         showCheck:
-                            options[i].value == value && showDefaultSelectedIcon,
+                            options[i].value == value &&
+                            showDefaultSelectedIcon,
                       ),
                     ),
                     // 分割线插在两项之间，最后一项后面不画 —— 与官方 `divider`

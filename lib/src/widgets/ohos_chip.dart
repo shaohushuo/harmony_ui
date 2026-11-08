@@ -156,8 +156,8 @@ class OhosChip extends StatelessWidget {
         : (labelColor ?? theme.textPrimaryColor);
     // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，下面统一改成
     // 「留白 + 描边」，靠线的深浅而不是色的浓淡表意。
-    final Color idleFill = backgroundColor ?? theme.compBackgroundGrayColor ??
-        theme.cardColor;
+    final Color idleFill =
+        backgroundColor ?? theme.compBackgroundGrayColor ?? theme.cardColor;
     final Color selectedFill =
         policy.tint(theme.highlightColor, 0.10) == Colors.transparent
         ? Colors.transparent

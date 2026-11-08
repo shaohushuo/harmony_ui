@@ -153,13 +153,11 @@ class OhosBadge extends StatelessWidget {
     if (child == null) {
       return label!;
     }
-    final Widget? positioned = label == null
-        ? null
-        : _positioned(label);
-    return Stack(clipBehavior: Clip.none, children: <Widget>[
-      child!,
-      if (positioned != null) positioned,
-    ]);
+    final Widget? positioned = label == null ? null : _positioned(label);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[child!, if (positioned != null) positioned],
+    );
   }
 
   Widget? _buildLabel(OhosThemeData theme, Color badgeColor) {
@@ -234,10 +232,7 @@ class OhosBadge extends StatelessWidget {
         color: badgeColor,
         borderRadius: BorderRadius.circular(borderRadius),
         border: borderWidth > 0
-            ? Border.all(
-                color: borderColor ?? badgeColor,
-                width: borderWidth,
-              )
+            ? Border.all(color: borderColor ?? badgeColor, width: borderWidth)
             : null,
       ),
       child: child,

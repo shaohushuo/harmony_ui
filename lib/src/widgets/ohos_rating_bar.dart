@@ -119,7 +119,9 @@ class OhosRatingBar extends StatelessWidget {
     final int steps = (clamped / step).round();
     final double snapped = steps * step;
     // 只保留 6 位小数：足够吃掉二进制浮点误差，又不会把 0.1 这类步长弄丢。
-    return double.parse(snapped.toStringAsFixed(6)).clamp(0.0, count.toDouble());
+    return double.parse(
+      snapped.toStringAsFixed(6),
+    ).clamp(0.0, count.toDouble());
   }
 
   /// 单颗星的填充比例，`0` 空、`1` 满、中间是半星。
@@ -157,12 +159,15 @@ class OhosRatingBar extends StatelessWidget {
     final OhosThemeData theme = OhosTheme.of(context);
     final double size =
         starSize ??
-        (indicator ? OhosRatingMetrics.indicatorStarSize : OhosRatingMetrics.starSize);
+        (indicator
+            ? OhosRatingMetrics.indicatorStarSize
+            : OhosRatingMetrics.starSize);
     final bool interactive = _interactive;
     final Color active = activeColor ?? theme.warningColor;
     final Color inactive = inactiveColor ?? theme.textTertiaryColor;
     final Widget emptyStar =
-        inactiveIcon ?? Icon(Icons.star_outline_rounded, size: size, color: inactive);
+        inactiveIcon ??
+        Icon(Icons.star_outline_rounded, size: size, color: inactive);
     final Widget fullStar =
         activeIcon ?? Icon(Icons.star_rounded, size: size, color: active);
     final double normalized = _normalize(value);
@@ -177,9 +182,7 @@ class OhosRatingBar extends StatelessWidget {
             fill: _fillFor(i, normalized),
             empty: emptyStar,
             full: fullStar,
-            onTapDown: interactive
-                ? (double dx) => _select(i, dx, size)
-                : null,
+            onTapDown: interactive ? (double dx) => _select(i, dx, size) : null,
             semanticLabel: '$i',
           ),
       ],

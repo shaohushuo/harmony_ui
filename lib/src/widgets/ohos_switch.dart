@@ -96,12 +96,8 @@ class OhosSwitchStyle {
       other.trackBorderRadius == trackBorderRadius;
 
   @override
-  int get hashCode => Object.hash(
-    pointRadius,
-    unselectedColor,
-    pointColor,
-    trackBorderRadius,
-  );
+  int get hashCode =>
+      Object.hash(pointRadius, unselectedColor, pointColor, trackBorderRadius);
 }
 
 /// A HarmonyOS switch, the counterpart of Flutter's [Switch] and
@@ -189,9 +185,7 @@ class _OhosSwitchState extends State<OhosSwitch> {
     // 滑块颜色：官方 `switchPointColor` 默认 `ohos_id_color_foreground_contrary`
     // （反白色）。本位参数 → style.pointColor → 主题的反白色 → 纯白兜底。
     final Color point =
-        widget.pointColor ??
-        widget.style.pointColor ??
-        theme.onHighlightColor;
+        widget.pointColor ?? widget.style.pointColor ?? theme.onHighlightColor;
     return Semantics(
       toggled: widget.value,
       enabled: enabled,

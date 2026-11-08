@@ -176,7 +176,10 @@ class _OhosPopupLayout extends SingleChildLayoutDelegate {
     // 水平：气泡中心对齐宿主中心，再夹进窗口（留 edgeMargin 余量）。
     double dx = anchor.dx + anchorSize.width / 2 - childSize.width / 2;
     final double margin = OhosPopupMetrics.edgeMargin;
-    dx = dx.clamp(margin, math.max(margin, size.width - childSize.width - margin));
+    dx = dx.clamp(
+      margin,
+      math.max(margin, size.width - childSize.width - margin),
+    );
     double dy;
     switch (placement) {
       case OhosPopupPlacement.bottom:
@@ -201,10 +204,7 @@ class _OhosPopupLayout extends SingleChildLayoutDelegate {
   /// `[20, 宽 − 20]`；宿主中心恰好投影到气泡上时箭头指向它。
   double arrowX(Size childSize) {
     final double center = anchor.dx + anchorSize.width / 2;
-    final double local = center - getPositionForChild(
-      Size.zero,
-      childSize,
-    ).dx;
+    final double local = center - getPositionForChild(Size.zero, childSize).dx;
     final double gap = OhosPopupMetrics.arrowEdgeGap;
     final double upper = math.max(gap, childSize.width - gap);
     return local.clamp(gap, upper);
@@ -276,13 +276,12 @@ class _OhosPopupBody extends StatelessWidget {
         // 这条提示挂在根 Overlay 上，没有 `Material` 祖先，
         // `MaterialApp` 的兜底 `DefaultTextStyle` 会带来黄色双下划线与
         // monospace 字体。`inherit: false` 断掉继承，字体族仍跟随主题。
-        style:
-            (theme.typography.bodySmall ?? const TextStyle(fontSize: 14))
-                .copyWith(
-                  color: theme.textPrimaryColor,
-                  decoration: TextDecoration.none,
-                  inherit: false,
-                ),
+        style: (theme.typography.bodySmall ?? const TextStyle(fontSize: 14))
+            .copyWith(
+              color: theme.textPrimaryColor,
+              decoration: TextDecoration.none,
+              inherit: false,
+            ),
       ),
     );
     if (!showArrow) {
@@ -348,16 +347,10 @@ class _OhosPopupBody extends StatelessWidget {
     final double center = anchor.dx + anchorSize.width / 2;
     double left = center - bubbleWidth / 2;
     final double margin = OhosPopupMetrics.edgeMargin;
-    left = left.clamp(
-      margin,
-      math.max(margin, screenW - bubbleWidth - margin),
-    );
+    left = left.clamp(margin, math.max(margin, screenW - bubbleWidth - margin));
     final double gap = math.max(
       OhosPopupMetrics.arrowEdgeGap + arrowWidth / 2,
-      math.min(
-        OhosPopupMetrics.arrowEdgeGap + arrowWidth / 2,
-        bubbleWidth / 2,
-      ),
+      math.min(OhosPopupMetrics.arrowEdgeGap + arrowWidth / 2, bubbleWidth / 2),
     );
     final double upper = math.max(gap, bubbleWidth - gap);
     return (center - left).clamp(gap, upper);

@@ -146,11 +146,7 @@ class _OhosToastOverlay extends StatelessWidget {
           child: IgnorePointer(
             // 浮层形态与页面内形态是**同一个组件**：两处的宽度上限、内边距、
             // 圆角都只有一份实现，不会各自漂移。
-            child: OhosToast(
-              message: message,
-              icon: icon,
-              maxWidth: maxWidth,
-            ),
+            child: OhosToast(message: message, icon: icon, maxWidth: maxWidth),
           ),
         ),
       ),
@@ -228,12 +224,7 @@ class _ToastSurface extends StatelessWidget {
 /// 与浮层形态共用 [OhosToastMetrics]：宽度上限、内边距、圆角都一致，区别只在
 /// 「谁来摆位置」。
 class OhosToast extends StatelessWidget {
-  const OhosToast({
-    super.key,
-    required this.message,
-    this.icon,
-    this.maxWidth,
-  });
+  const OhosToast({super.key, required this.message, this.icon, this.maxWidth});
 
   /// Message text.
   final String message;
@@ -251,9 +242,9 @@ class OhosToast extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxWidth: maxWidth ?? OhosToastMetrics.maxWidthFor(
-          MediaQuery.sizeOf(context),
-        ),
+        maxWidth:
+            maxWidth ??
+            OhosToastMetrics.maxWidthFor(MediaQuery.sizeOf(context)),
         minHeight: OhosToastMetrics.minHeight,
       ),
       child: _ToastSurface(
