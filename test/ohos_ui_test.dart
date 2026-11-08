@@ -458,7 +458,7 @@ void main() {
       WidgetTester tester,
     ) async {
       // loading 只是暂时不能点，不该连配色一起退成禁用态：那会让 filled 的
-      // 底变浅，而转圈颜色写死的是 white70 —— 真机上只剩一个空白药丸。
+      // 底变浅，而转圈颜色是写死的白 —— 真机上只剩一个空白药丸。
       final OhosThemeData ink = OhosThemeData.ink();
       await tester.pumpWidget(
         OhosTheme(
@@ -490,7 +490,43 @@ void main() {
           .widget<CircularProgressIndicator>(
             find.byType(CircularProgressIndicator),
           );
-      expect(spinner.color, Colors.white70);
+      // 转圈跟着主题的反白色走，不再写死 white70。
+      expect(spinner.color, ink.onHighlightColor.withValues(alpha: 0.7));
+    });
+
+    testWidgets('深色墨水屏：filled 是纸白底 + 纸黑字，不是白底白字', (
+      WidgetTester tester,
+    ) async {
+      // 深色墨屏的 `highlightColor` 就是纸白：写死 `Colors.white` 当字色会
+      // 变成白底白字，整颗按钮只剩一块空白药丸（真机 MatePad Mini 上就是这样）。
+      final OhosThemeData inkDark = OhosThemeData.ink(
+        brightness: Brightness.dark,
+      );
+      await tester.pumpWidget(
+        OhosTheme(
+          data: inkDark,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosButton(onPressed: () {}, child: const Text('确定')),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Material material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(OhosButton),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(material.color, inkDark.highlightColor);
+      expect(paintedTextStyle(tester, '确定').color, inkDark.onHighlightColor);
+      // 反白色必须是深色档的纸黑，不能再是白色。
+      expect(paintedTextStyle(tester, '确定').color, isNot(Colors.white));
     });
 
     testWidgets('窄容器里的长标签不溢出，标签默认单行省略', (WidgetTester tester) async {

@@ -134,7 +134,12 @@ class OhosButton extends StatelessWidget {
         //
         // 真机背景：NoteAir 变更抽屉在没有暂存文件时，「提交 (0)」按钮看不见。
         background = dimmed ? policy.tint(highlight, 0.20) : highlight;
-        foreground = dimmed ? theme.textTertiaryColor : Colors.white;
+        // 不能写死 `Colors.white`：深色墨水屏的 `highlightColor` 是纸白，
+        // 白底再压白字就整颗字消失。反白色由主题给 —— 浅色/深色彩屏是白色，
+        // 白纸墨屏是纸白，深色墨屏是纸黑。
+        foreground = dimmed
+            ? theme.textTertiaryColor
+            : theme.onHighlightColor;
         border = dimmed && background.a == 0
             ? policy.line(theme.textTertiaryColor, 1)
             : Colors.transparent;
@@ -203,8 +208,10 @@ class OhosButton extends StatelessWidget {
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
+              // 同一个坑：深色墨屏下 filled 的底是纸白，写死白色的转圈会跟着
+              // 消失（真机上「加载中」只剩一枚空药丸）。
               color: style == OhosButtonStyle.filled
-                  ? Colors.white70
+                  ? theme.onHighlightColor.withValues(alpha: 0.7)
                   : highlight,
             ),
           )
