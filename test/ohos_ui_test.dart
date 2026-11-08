@@ -10459,6 +10459,37 @@ void main() {
       expect(paintedColor(tester, 'A'), light.textSecondaryColor);
     });
 
+    testWidgets('深色档选中字母仍是品牌色：叠色底不参与反白判定', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData dark = OhosThemeData.dark();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: dark,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosAlphabetIndexer(
+                  indexer: letters,
+                  size: const Size(24, 160),
+                  selectedIndex: 2,
+                  onSelected: (String _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 10% 品牌色合成到近黑页面上几乎还是黑，白字对比度算出来 ~18:1 ——
+      // 只看对比度会把选中字母改成白色；而未选中字母本来就是浅白系
+      // `textSecondaryColor`，选中与未选中就只剩那圈很淡的 tint 圆来区分。
+      // 所以判据只在不透明底上生效，半透明叠色仍用品牌色。
+      expect(paintedColor(tester, 'B'), dark.highlightColor);
+      expect(paintedColor(tester, 'B'), isNot(dark.onHighlightColor));
+    });
+
     testWidgets('点当前高亮的字母也会回调（不再「点不动」）', (WidgetTester tester) async {
       final List<String> picked = <String>[];
       await tester.pumpWidget(host(picked.add));
