@@ -69,8 +69,10 @@ class OhosLoadingIndicator extends StatefulWidget {
   /// 里 `LOADING_ANIMATION_DURATION` 与 `TIME_2000` 都是 2000ms，虽然那两处
   /// 服务的是 `Progress` 的扫光，节奏一致并非巧合）。
   ///
-  /// 墨水屏上整段动画会被策略压成零时长 —— 需要调用方自己保证「转不转」不
-  /// 承载信息，见 `_showsMotion`。
+  /// 墨水屏关掉的是装饰动效（[OhosVisualPolicy.scaleMotion]）；这个转圈属于
+  /// 「状态动效」，走 [OhosVisualPolicy.statusMotion]，仍按此周期走 —— 静止的
+  /// 彗星弧表达不了「还在加载」。自定义策略可以把它压成零，那时画一帧静止弧，
+  /// 见 `_syncAnimation`。
   final Duration duration;
 
   @override

@@ -352,7 +352,9 @@ class OhosProgressIndicator extends StatelessWidget {
   /// ScaleRing / Capsule 收到 null 一律按 0 画，不凭空造一种官方没有的动效。
   ///
   /// 这两种的动画由组件自己驱动（2000ms 一轮，官方 `TIME_2000`），调用方不用
-  /// 另外接 `AnimationController`；墨水屏策略把动画时长压成 0 时自动停在静态中位。
+  /// 另外接 `AnimationController`。周期走的是 [OhosVisualPolicy.statusMotion]：
+  /// 墨水屏关掉的是装饰动效（`scaleMotion`），这一档放行 —— 静止的游标和
+  /// 「这条进度卡死了」在屏幕上同形。自定义策略仍可把它压成 0，那时停在静态中位。
   final double? value;
 
   /// 已完成部分的颜色。null 取主题品牌色。
@@ -731,8 +733,8 @@ class _LinearPainter extends CustomPainter {
 
   /// 不确定态的相位（0→1 循环），由 [_IndeterminateCycle] 提供。
   ///
-  /// null 表示「不该动」：墨水屏策略把动画时长压成 0 时就是这一档，
-  /// 此时画静态中位，与没有动画的版本一致。
+  /// null 表示「不该动」：策略把 [OhosVisualPolicy.statusMotion] 压成 0 时
+  /// 就是这一档（墨水屏预设不压，照常动），此时画静态中位，与没有动画的版本一致。
   final Animation<double>? phase;
 
   @override
@@ -754,7 +756,7 @@ class _LinearPainter extends CustomPainter {
       // 不确定态：一段 30% 的游标在轨道上扫过，官方 `Linear` 的这一档由
       // `StartLinearSweepingAnimation` 驱动，时长 2000ms、循环往复。
       // 相位由 [_IndeterminateCycle] 给：有了它就从左外侧扫入、右外侧扫出；
-      // 为 null（墨水屏等把时长压成 0 的场景）时停在静态中位。
+      // 为 null（策略把状态动效压成 0 的场景，墨水屏预设不属于此列）时停在静态中位。
       final double seg = size.width * 0.3;
       final double? p = phase?.value;
       final double left = p == null
