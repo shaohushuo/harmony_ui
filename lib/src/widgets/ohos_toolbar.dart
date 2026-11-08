@@ -286,7 +286,8 @@ class _ToolbarTile extends StatelessWidget {
                           fontSize: OhosToolbar._labelSize,
                           // 官方 `FontWeight.Medium`。`emphasis` 策略才靠加粗
                           // 补一条线索，其余情形字形不变。
-                          fontWeight: active && mark == OhosSelectionMark.emphasis
+                          fontWeight:
+                              active && mark == OhosSelectionMark.emphasis
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: fg,

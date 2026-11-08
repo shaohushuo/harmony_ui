@@ -16,7 +16,9 @@ class _SelectionPageState extends State<SelectionPage> {
   bool _checked = true;
   bool _switchOn = true;
   int _radio = 1;
-  int _rating = 3;
+  // double 而非 int：OhosRatingBar 的 value 改成 double 以支持官方默认的
+  // 半星步长（0.5），int 表达不出半星。
+  double _rating = 3;
   double _slider = 38;
   Color _color = const Color(0xFF0A59F7);
   String _grade = '专业版';
@@ -150,11 +152,11 @@ class _SelectionPageState extends State<SelectionPage> {
         ),
         DemoSection(
           title: '评分条 OhosRatingBar',
-          description: '半星支持，当前评分: $_rating',
+          description: '半星支持（步长 0.5），当前评分: $_rating',
           child: DemoCard(
             child: OhosRatingBar(
               value: _rating,
-              onChanged: (int v) => setState(() => _rating = v),
+              onChanged: (double v) => setState(() => _rating = v),
               count: 5,
               starSize: 32,
             ),
@@ -323,7 +325,10 @@ class _SegmentDemoState extends State<_SegmentDemo> {
           onSelected: (String v) => setState(() => _selected = v),
         ),
         const SizedBox(height: 16),
-        Text('tab 型（白背板、无图标）', style: OhosTheme.of(context).typography.bodySmall),
+        Text(
+          'tab 型（白背板、无图标）',
+          style: OhosTheme.of(context).typography.bodySmall,
+        ),
         const SizedBox(height: 8),
         OhosSegmentedButton<String>(
           type: OhosSegmentType.tab,
@@ -336,7 +341,10 @@ class _SegmentDemoState extends State<_SegmentDemo> {
           onSelected: (String v) => setState(() {}),
         ),
         const SizedBox(height: 16),
-        Text('capsule 多选（multiply）', style: OhosTheme.of(context).typography.bodySmall),
+        Text(
+          'capsule 多选（multiply）',
+          style: OhosTheme.of(context).typography.bodySmall,
+        ),
         const SizedBox(height: 8),
         OhosSegmentedButton<String>(
           multiply: true,
@@ -445,8 +453,16 @@ class _WheelDemoState extends State<_WheelDemo> {
             columns: <OhosPickerColumn>[
               OhosPickerColumn(
                 labels: const <String>[
-                  '北京', '上海', '广州', '深圳', '杭州',
-                  '成都', '武汉', '西安', '南京', '重庆',
+                  '北京',
+                  '上海',
+                  '广州',
+                  '深圳',
+                  '杭州',
+                  '成都',
+                  '武汉',
+                  '西安',
+                  '南京',
+                  '重庆',
                 ],
                 initialIndex: _index,
               ),
@@ -465,7 +481,10 @@ class _WheelDemoState extends State<_WheelDemo> {
           child: OhosWheelPicker(
             indicator: OhosPickerIndicator.divider,
             columns: <OhosPickerColumn>[
-              OhosPickerColumn(labels: <String>['标准', '高清', '超清', '原画'], flex: 2),
+              OhosPickerColumn(
+                labels: <String>['标准', '高清', '超清', '原画'],
+                flex: 2,
+              ),
               OhosPickerColumn(labels: <String>['30fps', '60fps']),
             ],
           ),

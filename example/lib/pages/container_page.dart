@@ -79,6 +79,31 @@ class ContainerPage extends StatelessWidget {
           ),
         ),
         DemoSection(
+          title: '滚动列表 OhosList.scrollable（lanes / sticky）',
+          description:
+              '对应官方 List 的滚动能力：固定高度 + CustomScrollView，支持 lanes 多列、'
+              'sticky 吸顶、onReachStart / onReachEnd / onScrollIndex。静态形态（上面两段）'
+              '保持 0.5 的观感不变。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            child: OhosList.scrollable(
+              height: 220,
+              sticky: OhosListStickyStyle.header,
+              lanes: const OhosFixedLanes(2, gutter: 8),
+              onReachEnd: () {},
+              header: OhosSubheader(title: '两列 · 组头吸顶'),
+              children: <Widget>[
+                for (int i = 0; i < 8; i++)
+                  OhosListTile(
+                    density: OhosListTileDensity.compact,
+                    title: Text('条目 ${i + 1}'),
+                    subtitle: Text('两列布局'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        DemoSection(
           title: '分组 OhosListGroup（style: card）',
           description:
               '对应 ArkUI 的 ListItemGroupStyle.CARD：左右外边距 12、四周内边距 4、'
@@ -163,7 +188,9 @@ class ContainerPage extends StatelessWidget {
                 onTap: () => showOhosToast(context, '进入 WLAN 设置'),
               ),
               OhosListItemCard(
-                prefix: const OhosListItemCardPrefix(child: Icon(OhosIcons.bluetooth)),
+                prefix: const OhosListItemCardPrefix(
+                  child: Icon(OhosIcons.bluetooth),
+                ),
                 title: '蓝牙',
                 suffix: const OhosListItemCardSuffix.text('已开启'),
                 onTap: () {},
@@ -187,13 +214,17 @@ class ContainerPage extends StatelessWidget {
                 suffix: const OhosListItemCardSuffix.select('75%'),
               ),
               OhosListItemCard(
-                prefix: const OhosListItemCardPrefix(child: Icon(OhosIcons.icloud)),
+                prefix: const OhosListItemCardPrefix(
+                  child: Icon(OhosIcons.icloud),
+                ),
                 title: '正在同步',
                 subtitle: '三区同时出现时后排让位',
                 suffix: const OhosListItemCardSuffix.loading(size: 20),
               ),
               OhosListItemCard(
-                prefix: const OhosListItemCardPrefix(child: Icon(OhosIcons.trash)),
+                prefix: const OhosListItemCardPrefix(
+                  child: Icon(OhosIcons.trash),
+                ),
                 title: '不可用的一行',
                 subtitle: '整块降到 40% 并挡住点击',
                 enabled: false,
@@ -411,7 +442,10 @@ class ContainerPage extends StatelessWidget {
                           spacing: 18,
                           runSpacing: 12,
                           children: <Widget>[
-                            _ShareIcon(icon: OhosIcons.message_fill, label: '信息'),
+                            _ShareIcon(
+                              icon: OhosIcons.message_fill,
+                              label: '信息',
+                            ),
                             _ShareIcon(
                               icon: OhosIcons.envelope_fill,
                               label: '邮件',

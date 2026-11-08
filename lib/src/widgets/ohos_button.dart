@@ -4,6 +4,21 @@ import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
+/// 按钮的官方几何，来自设计规范《按钮》的响应式布局规则。
+class OhosButtonMetrics {
+  const OhosButtonMetrics._();
+
+  /// 大屏上的最大宽度（设计规范：「大屏上按钮最大宽度为 **448vp**」）。
+  ///
+  /// 窗口化场景同一条：「容器宽 − 两侧 16vp，仍 ≤ 448」—— 也就是说 448 之外
+  /// 还要再夹一次容器宽。这里只钉上限，夹容器宽由布局自然完成（紧约束会覆盖
+  /// 它，见 [OhosButton.maxWidth] 的说明）。
+  static const double maxWidth = 448;
+
+  /// 窗口化场景下按钮与容器两侧的间距。
+  static const double sideMargin = 16;
+}
+
 /// Visual variants of [OhosButton], mirroring ArkUI's button shapes.
 enum OhosButtonShape {
   /// Fully rounded capsule (default).
@@ -54,6 +69,7 @@ class OhosButton extends StatelessWidget {
     this.loading = false,
     this.minSize = const Size(48, 40),
     this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+    this.maxWidth,
   });
 
   /// Called when the button is tapped. When null the button is disabled.
@@ -79,6 +95,20 @@ class OhosButton extends StatelessWidget {
 
   /// Padding inside the button.
   final EdgeInsetsGeometry padding;
+
+  /// 最大宽度。官方设计规范：「大屏上按钮最大 **448vp**」、窗口化场景「容器宽
+  /// − 两侧 16vp，仍 ≤ 448」。老实现完全没有上限 —— 大屏上一颗「提交」按钮
+  /// 会被撑到整行宽，看起来像一条横幅。
+  ///
+  /// **它是上限，不是必然值**，也压不过父级的紧约束。`SizedBox(width: 700)` /
+  /// `CrossAxisAlignment.stretch` / 铺满整行的 `Column` 会把 `minWidth` 与
+  /// `maxWidth` 同时钉成 700，这里写 448 一样渲染成 700 —— 那是布局模型的
+  /// 定义（子节点不得小于父级给的紧约束），换成 `Align(widthFactor: 1)` 也
+  /// 一样，它最后一步依然走 `constraints.constrain()`。要按钮铺满某块区域是
+  /// 调用方的布局选择，本组件只负责「不限宽时别无限拉伸」。
+  ///
+  /// 传 `double.infinity` 关闭上限。
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +192,8 @@ class OhosButton extends StatelessWidget {
     // highlightColor 和 textPrimaryColor 都是纯黑），读者分不出哪个能点。
     // 下划线不是装饰，是这块屏上唯一剩下的可供性线索 —— 交给策略判断，
     // 因为「要不要划线」取决于这块屏的其他线索够不够，不是取决于描边宽度。
-    final bool underline = style == OhosButtonStyle.text &&
+    final bool underline =
+        style == OhosButtonStyle.text &&
         !dimmed &&
         theme.policy.underlinesTextActions;
 
@@ -178,38 +209,35 @@ class OhosButton extends StatelessWidget {
             ),
           )
         : DefaultTextStyle.merge(
-            style:
-                (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
-                    .copyWith(
-                      color: foreground,
-                      // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
-                      // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
-                      // 放行下来。Material 3 的默认 DefaultTextStyle 恰好是
-                      // `TextDecoration.none`，所以彩屏看着没问题 —— 那是巧合，
-                      // 不是保证。可供性既然归按钮判断，就不该外泄给祖先。
-                      decoration: underline
-                          ? TextDecoration.underline
-                          : TextDecoration.none,
-                      // `decorationColor` 同理，**也必须两个分支都给值**。
-                      //
-                      // 这里曾经写成 `decorationColor: underline ? foreground : null`，
-                      // 于是三个字段只有这一个漏了：`decoration` 已经是 none，
-                      // 祖先把我们的橙黄 `decorationColor` 递了下来。flutter_test
-                      // 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`
-                      // （纯黄）—— 那是测试框架给「不该有下划线却有了」留的视觉
-                      // 警报色。结果：墨屏对话框的标题与正文各带一条**黄线**，
-                      // 而所有断言（都只查 `decoration`）全绿。
-                      //
-                      // 真机不显形，是因为 Material 3 的 `decorationColor` 是正文色，
-                      // 即使下划线被关掉也看不出来。**「彩屏看着没问题」在这里第二次
-                      // 掩盖了同一个缺陷**：前一次是 `decoration`（注释已记录），
-                      // 这一次是它的兄弟字段。所以不再走「靠祖先恰好对我有利」这条
-                      // 路，直接给中性值。
-                      decorationColor: underline ? foreground : Colors.transparent,
-                      decorationStyle: underline
-                          ? TextDecorationStyle.solid
-                          : null,
-                    ),
+            style: (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
+                .copyWith(
+                  color: foreground,
+                  // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
+                  // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
+                  // 放行下来。Material 3 的默认 DefaultTextStyle 恰好是
+                  // `TextDecoration.none`，所以彩屏看着没问题 —— 那是巧合，
+                  // 不是保证。可供性既然归按钮判断，就不该外泄给祖先。
+                  decoration: underline
+                      ? TextDecoration.underline
+                      : TextDecoration.none,
+                  // `decorationColor` 同理，**也必须两个分支都给值**。
+                  //
+                  // 这里曾经写成 `decorationColor: underline ? foreground : null`，
+                  // 于是三个字段只有这一个漏了：`decoration` 已经是 none，
+                  // 祖先把我们的橙黄 `decorationColor` 递了下来。flutter_test
+                  // 的默认 `DefaultTextStyle` 恰好带 `decorationColor = #FFFF00`
+                  // （纯黄）—— 那是测试框架给「不该有下划线却有了」留的视觉
+                  // 警报色。结果：墨屏对话框的标题与正文各带一条**黄线**，
+                  // 而所有断言（都只查 `decoration`）全绿。
+                  //
+                  // 真机不显形，是因为 Material 3 的 `decorationColor` 是正文色，
+                  // 即使下划线被关掉也看不出来。**「彩屏看着没问题」在这里第二次
+                  // 掩盖了同一个缺陷**：前一次是 `decoration`（注释已记录），
+                  // 这一次是它的兄弟字段。所以不再走「靠祖先恰好对我有利」这条
+                  // 路，直接给中性值。
+                  decorationColor: underline ? foreground : Colors.transparent,
+                  decorationStyle: underline ? TextDecorationStyle.solid : null,
+                ),
             // 按钮标签按惯例是单行：给 Text 默认省略号，配合上面的
             // Flexible 收缩，窄容器不会再报 overflow。
             maxLines: 1,
@@ -243,7 +271,10 @@ class OhosButton extends StatelessWidget {
       color: background,
       shape: shapeBorder,
       clipBehavior: Clip.antiAlias,
-      elevation: style == OhosButtonStyle.filled && !dimmed && theme.policy.allowsShadow
+      elevation:
+          style == OhosButtonStyle.filled &&
+              !dimmed &&
+              theme.policy.allowsShadow
           ? 1
           : 0,
       shadowColor: highlight.withValues(alpha: 0.25),
@@ -254,10 +285,20 @@ class OhosButton extends StatelessWidget {
             : Colors.white.withValues(
                 alpha: style == OhosButtonStyle.filled ? 0.25 : 0.20,
               ),
+        // `maxWidth` 是**上限**，不是必然值，也压不过父级的紧约束：
+        // `SizedBox(width: 700)` / `stretch` / 铺满整行的 `Column` 会把
+        // `minWidth` 和 `maxWidth` 同时钉到 700，这里写 448 一样是 700 ——
+        // 这不是这里的缺陷，是布局模型的定义（子节点不能小于父级给的紧约束）。
+        //
+        // 试过改成外层 `Align(widthFactor: 1)`：`RenderPositionedBox` 最后一步
+        // 是 `constraints.constrain(child.size * factor)`，紧约束下照样夹回
+        // 700。**没有 Widget 能在紧约束下变窄**，所以正确做法是：
+        // 上限只负责「宽内容别撑成横幅」，容器铺满由调用方自己传宽度。
         child: ConstrainedBox(
           constraints: BoxConstraints(
             minWidth: minSize.width,
             minHeight: minSize.height,
+            maxWidth: maxWidth ?? OhosButtonMetrics.maxWidth,
           ),
           child: Padding(padding: padding, child: content),
         ),

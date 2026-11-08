@@ -155,9 +155,10 @@ class _OhosSideMenuState extends State<OhosSideMenu> {
                   item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: (theme.typography.bodyMedium ??
-                          const TextStyle(fontSize: 15))
-                      .copyWith(color: fg, fontWeight: FontWeight.w500),
+                  style:
+                      (theme.typography.bodyMedium ??
+                              const TextStyle(fontSize: 15))
+                          .copyWith(color: fg, fontWeight: FontWeight.w500),
                 ),
               ),
               if (item.badgeCount != null) ...<Widget>[
@@ -222,9 +223,10 @@ class _OhosSideMenuState extends State<OhosSideMenu> {
                     sub.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: (theme.typography.bodyMedium ??
-                            const TextStyle(fontSize: 15))
-                        .copyWith(color: fg),
+                    style:
+                        (theme.typography.bodyMedium ??
+                                const TextStyle(fontSize: 15))
+                            .copyWith(color: fg),
                   ),
                 ),
                 if (sub.badgeCount != null) ...<Widget>[

@@ -173,15 +173,19 @@ void main() {
 
     test('字号字重不变，只有颜色翻', () {
       final OhosThemeData white = OhosThemeData.ink();
-      final OhosThemeData dark = OhosThemeData.ink(
-        brightness: Brightness.dark,
+      final OhosThemeData dark = OhosThemeData.ink(brightness: Brightness.dark);
+      expect(
+        dark.typography.bodyLarge?.fontSize,
+        white.typography.bodyLarge?.fontSize,
       );
-      expect(dark.typography.bodyLarge?.fontSize, white.typography.bodyLarge?.fontSize);
       expect(
         dark.typography.bodyLarge?.fontWeight,
         white.typography.bodyLarge?.fontWeight,
       );
-      expect(dark.typography.bodyLarge?.height, white.typography.bodyLarge?.height);
+      expect(
+        dark.typography.bodyLarge?.height,
+        white.typography.bodyLarge?.height,
+      );
     });
   });
 
@@ -203,9 +207,12 @@ void main() {
       ),
     );
 
-    testWidgets('整套组件能渲染，不因 brightness 与 policy 不同步而崩',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(probe(OhosThemeData.ink(brightness: Brightness.dark)));
+    testWidgets('整套组件能渲染，不因 brightness 与 policy 不同步而崩', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        probe(OhosThemeData.ink(brightness: Brightness.dark)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('主按钮'), findsOneWidget);
@@ -214,7 +221,9 @@ void main() {
     });
 
     testWidgets('页面底色真的是深色纸', (WidgetTester tester) async {
-      await tester.pumpWidget(probe(OhosThemeData.ink(brightness: Brightness.dark)));
+      await tester.pumpWidget(
+        probe(OhosThemeData.ink(brightness: Brightness.dark)),
+      );
       await tester.pumpAndSettle();
 
       final OhosThemeData applied = OhosTheme.of(
@@ -230,8 +239,7 @@ void main() {
       );
     });
 
-    testWidgets('光效整层不画 —— 灰阶屏上没有「光」这回事',
-        (WidgetTester tester) async {
+    testWidgets('光效整层不画 —— 灰阶屏上没有「光」这回事', (WidgetTester tester) async {
       final OhosThemeData theme = OhosThemeData.ink(
         brightness: Brightness.dark,
       );

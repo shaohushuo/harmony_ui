@@ -179,8 +179,7 @@ class OhosListTile extends StatelessWidget {
               child: content,
             ),
           ),
-        if (drawDivider)
-          OhosDivider(indent: dividerIndent, endIndent: 16),
+        if (drawDivider) OhosDivider(indent: dividerIndent, endIndent: 16),
       ],
     );
 

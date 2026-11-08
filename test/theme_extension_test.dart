@@ -73,10 +73,7 @@ Widget probe(OhosThemeData theme) => OhosTheme(
       body: Column(
         children: <Widget>[
           OhosButton(onPressed: () {}, child: const Text('主按钮')),
-          OhosButton(
-            onPressed: null,
-            child: const Text('禁用按钮'),
-          ),
+          OhosButton(onPressed: null, child: const Text('禁用按钮')),
           const OhosCard(child: Text('卡片')),
           OhosSwitch(value: true, onChanged: (_) {}),
           OhosSlider(value: 30, onChanged: (_) {}),
@@ -111,13 +108,20 @@ void main() {
 
       const OhosVisualPolicy policy = HighContrastPolicy();
       // 调用方要 12%，这块屏给 30%
-      expect(policy.tint(const Color(0xFF000000), 0.12).a, closeTo(0.30, 0.005));
+      expect(
+        policy.tint(const Color(0xFF000000), 0.12).a,
+        closeTo(0.30, 0.005),
+      );
       // 要 60% 就还是 60%，只抬地板不压天花板
-      expect(policy.tint(const Color(0xFF000000), 0.60).a, closeTo(0.60, 0.005));
+      expect(
+        policy.tint(const Color(0xFF000000), 0.60).a,
+        closeTo(0.60, 0.005),
+      );
     });
 
-    testWidgets('第四种主题能和已有三种一起被切换，不需要改 controller',
-        (WidgetTester tester) async {
+    testWidgets('第四种主题能和已有三种一起被切换，不需要改 controller', (
+      WidgetTester tester,
+    ) async {
       final OhosThemeController controller = OhosThemeController.custom(
         highContrastTheme(),
       );
@@ -144,8 +148,7 @@ void main() {
       expect(controller.themeData.policy, const HighContrastPolicy());
     });
 
-    testWidgets('自定义主题下切换按钮仍可用，不因没有档位而崩',
-        (WidgetTester tester) async {
+    testWidgets('自定义主题下切换按钮仍可用，不因没有档位而崩', (WidgetTester tester) async {
       final OhosThemeController controller = OhosThemeController.custom(
         highContrastTheme(),
       );
@@ -243,8 +246,11 @@ void main() {
       final Color onWhite = white.quantize(const Color(0x80000000));
       final Color onDark = dark.quantize(const Color(0x80000000));
 
-      expect(onDark.computeLuminance(), lessThan(onWhite.computeLuminance()),
-          reason: '深色纸上的同一层黑必须更黑');
+      expect(
+        onDark.computeLuminance(),
+        lessThan(onWhite.computeLuminance()),
+        reason: '深色纸上的同一层黑必须更黑',
+      );
       // 白纸上 50% 黑 ≈ #808080，深色纸上 ≈ #101010
       expect(onWhite.computeLuminance(), greaterThan(0.2));
       expect(onDark.computeLuminance(), lessThan(0.02));
@@ -313,7 +319,8 @@ void main() {
       expect(
         controller.isInk,
         isFalse,
-        reason: '若把这份墨屏主题自己当作「普通」侧，toggle 会切到墨屏上，'
+        reason:
+            '若把这份墨屏主题自己当作「普通」侧，toggle 会切到墨屏上，'
             '按钮看起来完全失灵',
       );
       expect(controller.themeData.monochrome, isFalse);
@@ -337,8 +344,7 @@ void main() {
       expect(controller.themeData.highlightColor, const Color(0xFF7B3FF2));
     });
 
-    testWidgets('自定义墨屏主题能驱动组件，走的是策略而非枚举',
-        (WidgetTester tester) async {
+    testWidgets('自定义墨屏主题能驱动组件，走的是策略而非枚举', (WidgetTester tester) async {
       final OhosThemeData theme = brandInk();
       await tester.pumpWidget(
         OhosTheme(
@@ -370,11 +376,7 @@ void main() {
     // 有效的自定义策略，不该因为库里多了一个能力声明就编译失败或行为突变。
     test('老的自定义策略不覆写 allowsGlow 时默认保留光效', () {
       const OhosVisualPolicy policy = HighContrastPolicy();
-      expect(
-        policy.allowsGlow,
-        isTrue,
-        reason: '基类给默认 true，外部已有策略无需改动',
-      );
+      expect(policy.allowsGlow, isTrue, reason: '基类给默认 true，外部已有策略无需改动');
     });
   });
 }

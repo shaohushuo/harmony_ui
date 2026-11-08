@@ -31,7 +31,10 @@ enum OhosSheetSize {
   /// 窗口高度的 60%（官方 `MEDIUM = 0`）。**CENTER / POPUP 下无效。**
   medium,
 
-  /// 几乎为窗口高度（官方 `LARGE = 1`）。**CENTER / POPUP 下无效。**
+  /// 几乎为窗口高度（官方 `LARGE = 1`）。
+  ///
+  /// **不是「窗口高」** —— 官方公式是「屏幕/窗口高度 − 信号栏 − 8vp」，见
+  /// [OhosSheetSpec.topGap]。**CENTER / POPUP 下无效。**
   large,
 
   /// 适应内容高度（官方 `FIT_CONTENT = 2`）。
@@ -99,6 +102,19 @@ abstract final class OhosSheetSpec {
 
   /// 操作区（底部按钮行）高度。**官方**：56vp（资源表 `sheet_operation_height = 56.0vp`）。
   static const double operationHeight = 56;
+
+  /// 面板顶边与**状态栏下缘**之间的留白。**官方**：8vp。
+  ///
+  /// 出处四处一致，**但资源表里没有对应令牌**：
+  /// 1. `bindsheet` 正文「Large：屏幕/窗口高度 − 信号栏 − 8」；
+  /// 2. 同文「Size-Regular 默认最大尺寸高度距离信号栏保持 8vp 间距」；
+  /// 3. 同文横屏段「高度距离屏幕顶部 8vp 安全间距」；
+  /// 4. 配图 `bindsheet_16`、`button_39`、`segmentbutton_10` 上标注的「8」。
+  ///
+  /// 唯一数值是 -8 的令牌 `sheet_title_area_margin = -8.0vp` **不是它** ——
+  /// 那是标题区自身的负边距（把标题往控制条方向拉），同名不同义。所以这里
+  /// 只能写成带出处的常量，`tool/token_lookup.py --value 8` 查不到。
+  static const double topGap = 8;
 
   /// 挡位切换的速度阈值。**官方**：1000 px/s。
   ///
@@ -172,11 +188,15 @@ abstract final class OhosSheetSpec {
   ///
   /// [viewportHeight] 是半模态所在窗口的高度（不是屏幕高）。
   /// [shortSide] 是窗口短边，用于 90% 上限 —— 横屏时它就是高度。
+  /// [statusBarHeight] 是状态栏高度。**必须传**：`LARGE` 挡的官方公式里
+  /// 「− 信号栏」就是减它，漏传会让面板盖住状态栏（默认 0 只是为了让
+  /// 不关心状态栏的纯计算调用方仍能编译）。
   static double? resolveDetent({
     required OhosSheetDetent detent,
     required OhosSheetType type,
     required double viewportHeight,
     required double shortSide,
+    double statusBarHeight = 0,
   }) {
     final double? raw = switch (detent.size) {
       OhosSheetSize.fitContent => null,
@@ -185,13 +205,45 @@ abstract final class OhosSheetSpec {
           when type == OhosSheetType.center || type == OhosSheetType.popup =>
         centeredFixedHeight,
       OhosSheetSize.medium => viewportHeight * 0.6,
-      OhosSheetSize.large => viewportHeight,
+      OhosSheetSize.large => maxPanelHeight(
+        type: type,
+        viewportHeight: viewportHeight,
+        statusBarHeight: statusBarHeight,
+      ),
       null => detent.value,
     };
     if (raw == null) {
       return null;
     }
-    return clampHeight(height: raw, type: type, viewportHeight: viewportHeight, shortSide: shortSide);
+    return clampHeight(
+      height: raw,
+      type: type,
+      viewportHeight: viewportHeight,
+      shortSide: shortSide,
+      statusBarHeight: statusBarHeight,
+    );
+  }
+
+  /// 该形态的面板**最大高度**（vp）。
+  ///
+  /// 分水岭是「面板要不要给状态栏让位」：
+  ///
+  /// - `SIDE` / `CONTENT_COVER` 恒全屏，**不让**（侧边抽屉与全屏弹窗都顶到窗口顶）；
+  /// - 其余三型都留出 `状态栏 + 8vp`。
+  ///
+  /// 写成「三型都减 8」会让全屏弹窗下面漏出 8vp 白边，写成「都不减」就是
+  /// 本轮修掉的缺陷。
+  static double maxPanelHeight({
+    required OhosSheetType type,
+    required double viewportHeight,
+    double statusBarHeight = 0,
+  }) {
+    if (type == OhosSheetType.side || type == OhosSheetType.contentCover) {
+      return viewportHeight;
+    }
+    final double reserved = statusBarHeight + topGap;
+    // 窗口本身还没有「状态栏 + 8vp」高时不能倒挂成负数。
+    return viewportHeight > reserved ? viewportHeight - reserved : 0.0;
   }
 
   /// CENTER / POPUP 的高度夹取：最小 320vp、最大窗口短边 90%。
@@ -201,11 +253,15 @@ abstract final class OhosSheetSpec {
   ///
   /// 注意第 ② 条只对 CENTER / POPUP 成立 —— `BOTTOM` 的高度上限是「距状态栏
   /// 8vp」这类**位置约束**，不是 90% 短边，套过来会把底部弹窗压矮。
+  ///
+  /// 两条上限取**小**：短边 90% 与「窗口高 − 状态栏 − 8vp」都要满足。竖屏下
+  /// 前者恒更小，横屏短屏时后者才会生效。
   static double clampHeight({
     required double height,
     required OhosSheetType type,
     required double viewportHeight,
     required double shortSide,
+    double statusBarHeight = 0,
   }) {
     if (type == OhosSheetType.contentCover) {
       return viewportHeight;
@@ -214,11 +270,18 @@ abstract final class OhosSheetSpec {
       // SIDE 高度恒全屏。
       return viewportHeight;
     }
+    final double ceiling = maxPanelHeight(
+      type: type,
+      viewportHeight: viewportHeight,
+      statusBarHeight: statusBarHeight,
+    );
     if (type == OhosSheetType.bottom) {
-      // BOTTOM 不套 320 / 90%，只夹到窗口高（至少不能超过它）。
-      return height.clamp(0.0, viewportHeight);
+      // BOTTOM 不套 320 / 90%，只夹到「窗口高 − 状态栏 − 8vp」。
+      return height.clamp(0.0, ceiling);
     }
-    final double maxHeight = shortSide * maxHeightRatio;
+    final double maxHeight = shortSide * maxHeightRatio < ceiling
+        ? shortSide * maxHeightRatio
+        : ceiling;
     // 窗口本身比 320 还矮时，上限会小于下限 —— 取上限，否则 clamp 抛断言。
     final double lower = minHeight > maxHeight ? maxHeight : minHeight;
     return height.clamp(lower, maxHeight);

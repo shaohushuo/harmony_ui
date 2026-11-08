@@ -25,8 +25,8 @@ class OhosBlank extends StatelessWidget {
         final bool bounded = constraints.maxHeight.isFinite;
         final double height = bounded
             ? constraints.maxHeight < minSize
-                ? minSize
-                : constraints.maxHeight
+                  ? minSize
+                  : constraints.maxHeight
             : minSize;
         return SizedBox(
           width: constraints.maxWidth.isFinite ? double.infinity : null,

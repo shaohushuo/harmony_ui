@@ -14,7 +14,7 @@ enum OhosChipSize {
 /// These numbers are **not** self-authored: they are the terminal values of the
 /// `sys.float` tokens that ArkUI's own `Chip` reads, resolved through
 /// `pattern.json -> float_sys.json -> float.json` (see
-/// `tool/fetch_sys_resources.sh` and `doc/source/README.md`).
+/// `tool/fetch_sys_resources.sh` and `doc/reference/source/README.md`).
 ///
 /// | token                        | normal | small |
 /// | ---------------------------- | ------ | ----- |

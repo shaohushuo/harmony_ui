@@ -25,10 +25,17 @@ class OhosChip extends StatelessWidget {
     this.icon,
     this.selectedIcon,
     this.suffixIcon,
+    this.suffixSelectedIcon,
     this.allowClose = false,
     this.onClose,
     this.selectedColor,
     this.size = OhosChipSize.normal,
+    this.backgroundColor,
+    this.activatedBackgroundColor,
+    this.labelColor,
+    this.activatedLabelColor,
+    this.labelFontSize,
+    this.labelFontFamily,
   });
 
   /// The chip label.
@@ -61,6 +68,13 @@ class OhosChip extends StatelessWidget {
   /// neither is present does `allowClose` decide.
   final Widget? suffixIcon;
 
+  /// 选中态的后缀图标（官方 `suffixSymbol.activated`）。
+  ///
+  /// 与 [selectedIcon] 同一条语义：官方的前后缀 symbol 都是 `normal` /
+  /// `activated` **两个图形**，不是同一图形换色。为 null 时回落到 [suffixIcon]
+  /// （回落理由见 [selectedIcon]）。
+  final Widget? suffixSelectedIcon;
+
   /// Whether the built-in close (×) button is shown.
   ///
   /// **Deliberately defaults to `false`, unlike ArkUI.** `chip.ets` resolves
@@ -86,22 +100,73 @@ class OhosChip extends StatelessWidget {
   /// Size class; resolves to [OhosChipMetrics.normal] / [OhosChipMetrics.small].
   final OhosChipSize size;
 
+  /// 常态背景色（官方 `backgroundColor`，默认
+  /// `ohos_id_color_button_normal`）。
+  ///
+  /// null 时走主题回落（`compBackgroundGrayColor` / `cardColor`）。
+  final Color? backgroundColor;
+
+  /// 激活态背景色（官方 `activatedBackgroundColor`，默认
+  /// `ohos_id_color_emphasize`）。
+  ///
+  /// 与 [selectedColor] 是同一条规格的两个入口：那个是 0.5 起的本库参数名，
+  /// 这个对齐官方文档。两者都给时 [activatedBackgroundColor] 优先。
+  final Color? activatedBackgroundColor;
+
+  /// 常态文字色（官方 `LabelOptions.fontColor`，默认
+  /// `ohos_id_color_text_primary`）。
+  final Color? labelColor;
+
+  /// 激活态文字色（官方 `LabelOptions.activatedFontColor`，默认
+  /// `ohos_id_color_text_primary_contrary`）。
+  ///
+  /// 注意它与图标色的默认值**不同源**：图标非激活是
+  /// `ohos_id_color_secondary`、激活是 `ohos_id_color_text_primary_contrary`；
+  /// 文字非激活是 `ohos_id_color_text_primary`。老实现把两者绑在同一个
+  /// [fg] 上，所以文字常态拿了图标的 secondary 色 —— 偏淡一档，这里分开。
+  final Color? activatedLabelColor;
+
+  /// 文字字号（官方 `LabelOptions.fontSize`，默认
+  /// `ohos_id_text_size_button2 = 14fp`）。
+  ///
+  /// null 时取 [OhosChipMetrics.fontSize]（两档都是 14）。
+  final double? labelFontSize;
+
+  /// 文字字体族（官方 `LabelOptions.fontFamily`，默认 `"HarmonyOS Sans"`）。
+  ///
+  /// null 时跟随 [OhosThemeData.typography] —— 本库不写死字体名，否则
+  /// 非 HarmonyOS 设备会因缺字体回退成系统默认，反而比主题口径更差。
+  final String? labelFontFamily;
+
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final OhosChipMetrics metrics = OhosChipMetrics.of(size);
     final bool enabled = onPressed != null;
     final OhosVisualPolicy policy = theme.policy;
-    final Color fg = selected ? theme.highlightColor : theme.textSecondaryColor;
+    // 文字色与图标色**分开**：官方 `LabelOptions.fontColor` 默认
+    // `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认
+    // `chip_usually_icon_color`（≈ `ohos_id_color_secondary`）。老实现把两者
+    // 绑在同一个 `fg` 上，文字常态因此偏淡一档。
+    final Color iconFg = selected
+        ? theme.onHighlightColor
+        : theme.textSecondaryColor;
+    final Color labelFg = selected
+        ? (activatedLabelColor ?? theme.onHighlightColor)
+        : (labelColor ?? theme.textPrimaryColor);
     // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，下面统一改成
     // 「留白 + 描边」，靠线的深浅而不是色的浓淡表意。
-    final Color idleFill = theme.compBackgroundGrayColor ?? theme.cardColor;
+    final Color idleFill =
+        backgroundColor ?? theme.compBackgroundGrayColor ?? theme.cardColor;
     final Color selectedFill =
         policy.tint(theme.highlightColor, 0.10) == Colors.transparent
         ? Colors.transparent
         : (theme.emphasizeTertiaryColor ??
               theme.highlightColor.withValues(alpha: 0.10));
-    final Color bg = selected ? (selectedColor ?? selectedFill) : idleFill;
+    // 激活底色的优先级：官方参数名 → 本库旧参数名 → 主题回落。
+    final Color bg = selected
+        ? (activatedBackgroundColor ?? selectedColor ?? selectedFill)
+        : idleFill;
     // 描边：选中用品牌色，未选中用提示色；墨屏上两者都由策略换成实色
     final Color borderColor = selected
         ? policy.line(theme.highlightColor, 0.20)
@@ -114,6 +179,15 @@ class OhosChip extends StatelessWidget {
     // 掉掉图标 —— 那不是「双态」，是缺陷。回落更接近 `activatedFillColor`
     // 的默认行为（不传就沿用常态表现）。
     final Widget? leading = selected ? (selectedIcon ?? icon) : icon;
+    // 后缀同样双态：官方 `suffixSymbol.normal` / `.activated` 是两个图形。
+    final Widget? trailing = selected
+        ? (suffixSelectedIcon ?? suffixIcon)
+        : suffixIcon;
+    // 官方字重：`chip_text_font_weight = 400`、`chip_activated_text_font_weight
+    // = 500`（资源表 float_sys.json 真值）。老实现两档都是 400，
+    // 「选中」只剩颜色一条线索 —— 墨屏上颜色失效后就看不出选中了。
+    final FontWeight weight = selected ? FontWeight.w500 : FontWeight.w400;
+    final double fontSize = labelFontSize ?? metrics.fontSize;
     return Material(
       color: bg,
       shape: RoundedRectangleBorder(
@@ -142,10 +216,7 @@ class OhosChip extends StatelessWidget {
                 // 占位，激活态优先取 selectedIcon。回落规则见上面的 [leading]。
                 if (leading != null) ...<Widget>[
                   IconTheme.merge(
-                    data: IconThemeData(
-                      color: fg,
-                      size: metrics.iconSize,
-                    ),
+                    data: IconThemeData(color: iconFg, size: metrics.iconSize),
                     child: leading,
                   ),
                   SizedBox(width: metrics.iconGap),
@@ -153,22 +224,31 @@ class OhosChip extends StatelessWidget {
                 DefaultTextStyle.merge(
                   style:
                       (theme.typography.labelMedium ??
-                              TextStyle(fontSize: metrics.fontSize))
-                          .copyWith(color: fg, fontSize: metrics.fontSize),
+                              TextStyle(fontSize: fontSize))
+                          .copyWith(
+                            color: labelFg,
+                            fontSize: fontSize,
+                            fontWeight: weight,
+                            // 两个分支都显式给 fontFamily：`merge` 只覆盖非
+                            // null 字段，写 null 等于把祖先的家族放行下来。
+                            fontFamily:
+                                labelFontFamily ?? theme.typography.fontFamily,
+                          ),
                   child: label,
                 ),
                 // 后缀优先级与 ArkUI 一致：自己给的后缀图标压过内置关闭按钮。
                 // `chip.ets` 的 `hasSuffix()` / `isNeedShowCloseIconMargin()`
                 // 就是这个次序，且两者共用同一个文字侧边距（6 / 4），所以
                 // 间距一律用 metrics.iconGap，不另取一个整数。
-                if (suffixIcon != null) ...<Widget>[
+                //
+                // 判据用 [trailing]（已按 selected 选好双态）而不是原字段：
+                // 只看 `suffixIcon != null` 会让「只给了 activated 后缀」的
+                // 芯片在选中态什么也不画 —— 那正好是「选中后掉了图标」。
+                if (trailing != null) ...<Widget>[
                   SizedBox(width: metrics.iconGap),
                   IconTheme.merge(
-                    data: IconThemeData(
-                      color: fg,
-                      size: metrics.iconSize,
-                    ),
-                    child: suffixIcon!,
+                    data: IconThemeData(color: iconFg, size: metrics.iconSize),
+                    child: trailing,
                   ),
                 ] else if (allowClose) ...<Widget>[
                   SizedBox(width: metrics.iconGap),
@@ -186,7 +266,7 @@ class OhosChip extends StatelessWidget {
                     onTap: enabled ? onClose : null,
                     child: IconTheme.merge(
                       data: IconThemeData(
-                        color: fg,
+                        color: iconFg,
                         size: metrics.iconSize,
                       ),
                       child: const Icon(Icons.close_rounded),

@@ -105,11 +105,11 @@ class OhosSelectionMenuItem {
 ///
 /// 2. **独立使用** —— 需要自己摆位置时用 [OhosSelectionToolbar.anchored]。
 ///
-/// 与前四项对不上的一点：Flutter 的 `TextSelectionToolbar` 在
-/// `Theme.of(context).platform == iOS / macOS` 时会换用 Cupertino 的实现，
-/// 那套装不了我们的容器。本组件固定用 `TextSelectionToolbar`，把
-/// `platform` 临时覆盖成 `ohos`，这样三端渲染一致 —— 库的语义就是
-/// HarmonyOS，不该在 iOS 上变成另一个样子。
+/// 本组件直接使用 Material 的 [TextSelectionToolbar]，并通过
+/// `toolbarBuilder` 把外层容器固定成 HarmonyOS 样式。这里刻意不经过
+/// [AdaptiveTextSelectionToolbar] 的平台分支，因此不需要覆盖
+/// `ThemeData.platform`：iOS、macOS、Web 以及 OHOS 都渲染同一种菜单，
+/// 同时避免引用 OHOS Flutter fork 独有的 `TargetPlatform.ohos`。
 class OhosSelectionToolbar extends StatelessWidget {
   const OhosSelectionToolbar._({
     required this.children,
@@ -185,7 +185,8 @@ class OhosSelectionToolbar extends StatelessWidget {
     required bool showPaste,
     required bool showSelectAll,
   }) {
-    final List<ContextMenuButtonItem> all = editableTextState.contextMenuButtonItems;
+    final List<ContextMenuButtonItem> all =
+        editableTextState.contextMenuButtonItems;
     ContextMenuButtonItem? pick(ContextMenuButtonType type) {
       for (final ContextMenuButtonItem item in all) {
         if (item.type == type) {
@@ -339,17 +340,13 @@ class OhosSelectionToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    return Theme(
-      // 见类注释：Cupertino 分支装不下我们的容器。
-      data: Theme.of(context).copyWith(platform: TargetPlatform.ohos),
-      child: TextSelectionToolbar(
-        anchorAbove: anchorAbove,
-        anchorBelow: anchorBelow,
-        // 只有一项时也走 `children` 分支的横向容器，形状与多项一致。
-        children: children,
-        toolbarBuilder: (BuildContext context, Widget child) =>
-            _OhosSelectionSurface(theme: theme, child: child),
-      ),
+    return TextSelectionToolbar(
+      anchorAbove: anchorAbove,
+      anchorBelow: anchorBelow,
+      // 只有一项时也走 `children` 分支的横向容器，形状与多项一致。
+      children: children,
+      toolbarBuilder: (BuildContext context, Widget child) =>
+          _OhosSelectionSurface(theme: theme, child: child),
     );
   }
 }
@@ -383,7 +380,11 @@ class _OhosSelectionSurface extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(_radius),
         border: Border.fromBorderSide(
-          ohosBorderSide(context, theme.outlineColor, width: theme.outlineWidth),
+          ohosBorderSide(
+            context,
+            theme.outlineColor,
+            width: theme.outlineWidth,
+          ),
         ),
       ),
       child: theme.policy.allowsBlur
@@ -405,11 +406,7 @@ class _OhosSelectionSurface extends StatelessWidget {
 
 /// 单个 40×40 的动作按钮（图标 24，居中）。
 class _IconActionButton extends StatefulWidget {
-  const _IconActionButton({
-    required this.label,
-    this.icon,
-    this.onTap,
-  });
+  const _IconActionButton({required this.label, this.icon, this.onTap});
 
   /// 无障碍名称，也用作 `Semantics` 的 label。
   final String label;
@@ -433,12 +430,10 @@ class _IconActionButtonState extends State<_IconActionButton> {
     // `InkWell` 会直接抛 "No Material widget found"。这里按策略自己画按压
     // 底色 —— 彩屏给一档浅色叠底，灰阶屏上 `tint` 返回透明，于是整块不画
     // （20% 的灰块既读不出「按下」也刷新慢，那正是策略要挡的东西）。
-    final Color pressed = theme.policy.tint(
-      theme.textPrimaryColor,
-      0.06,
-    );
-    final Color? fill =
-        _pressed && pressed != const Color(0x00000000) ? pressed : null;
+    final Color pressed = theme.policy.tint(theme.textPrimaryColor, 0.06);
+    final Color? fill = _pressed && pressed != const Color(0x00000000)
+        ? pressed
+        : null;
     return Semantics(
       button: true,
       enabled: enabled,

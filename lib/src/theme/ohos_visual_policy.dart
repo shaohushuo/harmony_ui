@@ -296,8 +296,7 @@ class InkVisualPolicy extends OhosVisualPolicy {
   /// 依据面板特性：16 级灰里第 15 与第 0 级的反差最稳，中间档反而容易因为
   /// 抖动/温度漂移糊成一片。
   @override
-  Color litFill(Color base) =>
-      paper.computeLuminance() > 0.5
+  Color litFill(Color base) => paper.computeLuminance() > 0.5
       ? const Color(0xFF000000)
       : const Color(0xFFFFFFFF);
 

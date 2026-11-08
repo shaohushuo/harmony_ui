@@ -85,8 +85,11 @@ void main() {
     });
 
     test('品牌高亮色在页面底上读得出', () {
-      expectAALarge('highlight on background', dark.highlightColor,
-          dark.backgroundColor);
+      expectAALarge(
+        'highlight on background',
+        dark.highlightColor,
+        dark.backgroundColor,
+      );
     });
   });
 
@@ -99,7 +102,8 @@ void main() {
       expect(
         _luminance(fill),
         lessThan(0.25),
-        reason: 'compBackgroundGrayColor 亮度 ${_luminance(fill).toStringAsFixed(3)} '
+        reason:
+            'compBackgroundGrayColor 亮度 ${_luminance(fill).toStringAsFixed(3)} '
             '偏高，深色档的填充控件会变成浅色块',
       );
     });
@@ -145,9 +149,7 @@ void _widgetChecks() {
       ),
     );
 
-    final TextField field = tester.widget<TextField>(
-      find.byType(TextField),
-    );
+    final TextField field = tester.widget<TextField>(find.byType(TextField));
     final Color fill = field.decoration!.fillColor!;
     expect(
       _luminance(fill),
@@ -169,15 +171,18 @@ void _widgetChecks() {
     );
 
     final Material material = tester.widget<Material>(
-      find.descendant(
-        of: find.byType(OhosChip),
-        matching: find.byType(Material),
-      ).first,
+      find
+          .descendant(
+            of: find.byType(OhosChip),
+            matching: find.byType(Material),
+          )
+          .first,
     );
     expect(
       _luminance(material.color!),
       lessThan(0.25),
-      reason: '深色档未选中 chip 的底色亮度 ${_luminance(material.color!).toStringAsFixed(3)} 偏高',
+      reason:
+          '深色档未选中 chip 的底色亮度 ${_luminance(material.color!).toStringAsFixed(3)} 偏高',
     );
   });
 }

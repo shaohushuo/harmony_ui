@@ -162,8 +162,7 @@ class _InputPageState extends State<InputPage> {
         ),
         DemoSection(
           title: '搜索框 OhosSearchBar',
-          description:
-              '胶囊搜索框，实时回显输入。当前: "$_query"；聚焦后右侧出现「取消」。',
+          description: '胶囊搜索框，实时回显输入。当前: "$_query"；聚焦后右侧出现「取消」。',
           child: OhosSearchBar(
             hintText: '搜索应用、设置、文件',
             onChanged: (String q) => setState(() => _query = q),

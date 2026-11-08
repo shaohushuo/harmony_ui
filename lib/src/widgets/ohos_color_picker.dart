@@ -95,8 +95,9 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
     widget.onChanged(color);
   }
 
-  bool get _isFavorite =>
-      _favorites.any((Color c) => c.toARGB32() == widget.selectedColor.toARGB32());
+  bool get _isFavorite => _favorites.any(
+    (Color c) => c.toARGB32() == widget.selectedColor.toARGB32(),
+  );
 
   void _toggleFavorite() {
     final int target = widget.selectedColor.toARGB32();
@@ -187,15 +188,13 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    border: color.toARGB32() ==
-                            widget.selectedColor.toARGB32()
+                    border: color.toARGB32() == widget.selectedColor.toARGB32()
                         ? Border.all(color: theme.textPrimaryColor, width: 2)
                         : Border.fromBorderSide(
                             ohosSwatchOutline(context, theme, color),
                           ),
                   ),
-                  child: color.toARGB32() ==
-                          widget.selectedColor.toARGB32()
+                  child: color.toARGB32() == widget.selectedColor.toARGB32()
                       ? Icon(
                           Icons.check_rounded,
                           size: 14,
@@ -296,15 +295,13 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    border: color.toARGB32() ==
-                            widget.selectedColor.toARGB32()
+                    border: color.toARGB32() == widget.selectedColor.toARGB32()
                         ? Border.all(color: theme.textPrimaryColor, width: 3)
                         : Border.fromBorderSide(
                             ohosSwatchOutline(context, theme, color),
                           ),
                   ),
-                  child: color.toARGB32() ==
-                          widget.selectedColor.toARGB32()
+                  child: color.toARGB32() == widget.selectedColor.toARGB32()
                       ? Icon(
                           Icons.check_rounded,
                           size: 18,
@@ -322,11 +319,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
   Widget _spectrumMode() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _hueBar(),
-        const SizedBox(height: 12),
-        _svBox(),
-      ],
+      children: <Widget>[_hueBar(), const SizedBox(height: 12), _svBox()],
     );
   }
 
@@ -354,7 +347,6 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
     );
   }
 
-
   Widget _svBox() {
     final OhosThemeData theme = OhosTheme.of(context);
     return LayoutBuilder(
@@ -380,10 +372,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                       gradient: LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: const <Color>[
-                          Colors.white,
-                          Colors.transparent,
-                        ],
+                        colors: const <Color>[Colors.white, Colors.transparent],
                       ),
                     ),
                   ),
@@ -431,10 +420,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
   /// 能看见（墨屏没有阴影可借用，纯黑发丝线就是唯一的分层手段）。
   Widget _svIndicator(OhosThemeData theme) {
     return Align(
-      alignment: Alignment(
-        _hsv.saturation * 2 - 1,
-        1 - _hsv.value * 2,
-      ),
+      alignment: Alignment(_hsv.saturation * 2 - 1, 1 - _hsv.value * 2),
       child: Container(
         key: const Key('ohos-color-picker-sv-indicator'),
         width: 20,
@@ -650,7 +636,8 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
     if (widget.colors.length <= targetPerRow) {
       return widget.itemSize;
     }
-    final double idealPerRow = (maxWidth + spacing) / (widget.itemSize + spacing);
+    final double idealPerRow =
+        (maxWidth + spacing) / (widget.itemSize + spacing);
     if (idealPerRow >= targetPerRow) {
       return widget.itemSize;
     }

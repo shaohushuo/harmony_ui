@@ -1,0 +1,80 @@
+{
+  "_note": "由 tool/make_manifest.py 生成，不要手改。上游原文不入库，本文件是「有没有抓全」的唯一可 diff 记录。重抓后跑 `./tool/upstream.sh manifest` 刷新。",
+  "referenceFetchedAt": "2026-11-07T12:19:37Z",
+  "generatedAt": "2026-11-08T02:18:23Z",
+  "layers": {
+    "api": {
+      "title": "开发参考文档",
+      "path": "doc/reference/api",
+      "files": 56,
+      "bytes": 3252317,
+      "upstream": [
+        "https://raw.gitcode.com/openharmony/docs/raw/master/zh-cn/application-dev/reference/apis-arkui/arkui-ts",
+        "https://developer.huawei.com/consumer/cn/doc/doccenter-references/api"
+      ],
+      "answers": "一个控件有几个形态、每个形态的属性与默认值、官方示例代码",
+      "fetchedBy": "tool/fetch_reference.sh",
+      "examples": 442,
+      "newestFile": "2026-11-07T12:19:37Z"
+    },
+    "design": {
+      "title": "设计规范与配图",
+      "path": "doc/reference/design",
+      "files": 42,
+      "bytes": 459588,
+      "upstream": [
+        "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design"
+      ],
+      "answers": "控件该怎么用、布局与间距的视觉规则；**具体数值常只写在配图里**",
+      "fetchedBy": "tool/fetch_ux_images.sh",
+      "images": 608,
+      "imageBytes": 188765018,
+      "imagePath": "doc/reference/design/img",
+      "newestFile": "2026-11-07T12:37:32Z"
+    },
+    "source": {
+      "title": "组件实现源码",
+      "path": "doc/reference/source",
+      "files": 29,
+      "bytes": 1490185,
+      "upstream": [
+        "https://raw.gitcode.com/openharmony/arkui_ace_engine/raw/master/advanced_ui_component/<组件>/source"
+      ],
+      "answers": "源码里硬编码的几何常量（注意：上游已大量改成只写令牌名）",
+      "fetchedBy": "tool/fetch_source.sh",
+      "newestFile": "2026-11-04T02:00:43Z"
+    },
+    "resources": {
+      "title": "系统资源令牌表",
+      "path": "doc/reference/resources",
+      "files": 3,
+      "bytes": 566427,
+      "upstream": [
+        "https://raw.gitcode.com/openharmony/global_system_resources/raw/master/systemres/main/resources/base/element"
+      ],
+      "answers": "`$r('sys.float.*')` 这类令牌的真实数值",
+      "fetchedBy": "tool/fetch_sys_resources.sh",
+      "newestFile": "2026-11-04T02:00:45Z"
+    }
+  },
+  "derived": {
+    "doc/ux-images.index.json": {
+      "exists": true,
+      "desc": "图 → 设计文档原文上下文（由 fetch_ux_images.sh 生成）",
+      "bytes": 152365,
+      "docs": 42,
+      "images": 608
+    },
+    "doc/ux-images.scan.json": {
+      "exists": true,
+      "desc": "每张图的元数据与标注判定（由 scan_ux_images.py 生成）",
+      "bytes": 329665,
+      "entries": 608
+    },
+    "doc/UX-SPEC-FROM-IMAGES.md": {
+      "exists": true,
+      "desc": "从配图抽出的数值汇总（由 make_spec_summary.py 生成）",
+      "bytes": 18579
+    }
+  }
+}

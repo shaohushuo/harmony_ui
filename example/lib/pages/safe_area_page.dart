@@ -71,9 +71,7 @@ class _SafeAreaPageState extends State<SafeAreaPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Expanded(
-                    child: _Pane(label: '直接放内容', wrapInSafeArea: false),
-                  ),
+                  Expanded(child: _Pane(label: '直接放内容', wrapInSafeArea: false)),
                   SizedBox(width: 10),
                   Expanded(
                     child: _Pane(label: '再套 SafeArea', wrapInSafeArea: true),
@@ -90,9 +88,9 @@ class _SafeAreaPageState extends State<SafeAreaPage> {
       // 注在 `OhosScaffold` **外面**：容器才会把它当成系统安全区，四条边各让
       // 一次；注在 body 里就测不到「容器让过、子树该看到 0」这件事了。
       page = MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          padding: const EdgeInsets.only(top: 24, bottom: 16),
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(padding: const EdgeInsets.only(top: 24, bottom: 16)),
         child: page,
       );
     }

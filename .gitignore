@@ -9,6 +9,10 @@ pubspec.lock
 # macOS
 .DS_Store
 
+# fvm 本地版本目录：里面是绝对路径软链（指向本机 ~/fvm/versions/...），
+# 入库会在别人机器上变成断链。版本约束看 .gitignore 同级的 .fvmrc。
+.fvm/
+
 # IDE
 .idea/
 *.iml
@@ -28,12 +32,17 @@ example/ohos/local.properties
 # 提交 MR 时临时写的描述稿，粘到网页表单即可，不属于仓库内容
 .mr-description.md
 
-# 上游参考文档快照（用 tool/fetch_reference.sh 重抓，不入库）
-doc/reference/*.md
-!doc/reference/README.md
+# 上游资料知识库（doc/reference/）：四层全由 tool/upstream.sh 重抓，一律不入库。
+# 入库的只有三份「说明性文件」：README.md、sources.json、manifest.json ——
+# 提交的是「从哪抓、抓了多少、什么时候抓的」，不提交上游原文本身。
+# 注意：git 不支持行尾注释，下面的注释块里不要写模式。
+# 首次整理时实测：api 56 份/3.1MB、design 42+608 张图/180MB、source 29 份/1.4MB、
+# resources 3 份/553KB。数字会随上游漂移，以 `./tool/upstream.sh status` 为准。
+doc/reference/api/
+doc/reference/design/
+doc/reference/source/*.ets
+doc/reference/resources/
 
-# 上游组件实现源码快照（用 tool/fetch_source.sh 重抓，不入库）
-doc/source/*.ets
-# 系统资源明文表快照（用 tool/fetch_sys_resources.sh 重抓，不入库）
-doc/source/systemres/
-!doc/source/README.md
+# 派生文件反过来 —— 它们**要入库**，所以这里没有对应条目：doc/ux-images.index.json、
+# doc/ux-images.scan.json、doc/UX-IMAGES-INDEX.md、doc/UX-SPEC-FROM-IMAGES.md、
+# doc/ux-specs/。这些是「配图里有什么」的唯一可核对记录，重抓后必须一起提交。

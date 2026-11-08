@@ -1,0 +1,72 @@
+name: Deploy web demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "example/**"
+      - "lib/**"
+      - "pubspec.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build web demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.35.7"
+          cache: true
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install example dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Build web demo
+        working-directory: example
+        run: |
+          # 项目站点通常位于 /<repo>/，自定义域名下 configure-pages 会返回空 base path。
+          # 统一补成以 / 结尾，避免 fork 后写死仓库名导致所有资源 404。
+          base_href="${{ steps.pages.outputs.base_path }}"
+          base_href="${base_href%/}/"
+          flutter build web \
+            --release \
+            --no-source-maps \
+            --no-tree-shake-icons \
+            --base-href "$base_href"
+          cp build/web/index.html build/web/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: example/build/web
+
+  deploy:
+    name: Deploy web demo
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

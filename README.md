@@ -40,6 +40,7 @@
 </p>
 
 [![GitHub CI](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml/badge.svg)](https://github.com/shaohushuo/harmony_ui/actions/workflows/ci.yml)
+[![在线演示](https://img.shields.io/badge/在线演示-GitHub%20Pages-0A59F7)](https://shaohushuo.github.io/harmony_ui/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库：`shaohushuo/harmony_ui`，包名 `harmony_ui`）。
@@ -438,7 +439,7 @@ controller.toggle();   // 与墨水屏互切；切回来仍是 high_contrast
 
 ## 控件覆盖（对应官方「控件概览」42 控件）
 
-> **这张表按「官方形态」逐项勾选，不是只写类名。** 只写类名会掩盖一个事实：一个组件类对应官方几个形态、做了几个，从类名上完全看不出来 —— 例如 `showOhosBottomSheet` 一个函数覆盖官方 `bindSheet` 的 5 种 `SheetType`，而 `OhosGauge` 一个类覆盖数据可视化的 17 个形态项。完整形态清单与逐项状态见 [`doc/CONTROL-MATRIX.md`](doc/CONTROL-MATRIX.md)（当前 **256 行 / 完整 204**）。
+> **这张表按「官方形态」逐项勾选，不是只写类名。** 只写类名会掩盖一个事实：一个组件类对应官方几个形态、做了几个，从类名上完全看不出来 —— 例如 `showOhosBottomSheet` 一个函数覆盖官方 `bindSheet` 的 5 种 `SheetType`，而 `OhosGauge` 一个类覆盖数据可视化的 17 个形态项。完整形态清单与逐项状态见 [`doc/CONTROL-MATRIX.md`](doc/CONTROL-MATRIX.md)（当前 **284 行 / 完整 223**）。
 >
 > 标记：`✓` 已实现且有用例；`◐` 部分实现（备注写缺口）；`—` 平台差异无需实现。
 
@@ -1109,6 +1110,24 @@ OhosProgressIndicator.scaleRing(value: 0.6);                // 刻度环（靠�
 const OhosLoadingIndicator();                               // 加载动效（彗星拖尾）
 
 OhosQrCode(data: 'https://github.com/shaohushuo/harmony_ui'); // 二维码
+```
+
+## 在线演示（Web / GitHub Pages）
+
+完整组件画廊已编译为 Web 应用：
+
+- 演示站：<https://shaohushuo.github.io/harmony_ui/>
+- 部署说明：[doc/DEMO-DEPLOYMENT.md](./doc/DEMO-DEPLOYMENT.md)
+
+演示站由 GitHub Actions 使用官方 Flutter stable 构建 `example/`，不需要 OHOS SDK，
+也不会把 `build/web` 提交到源码分支。推送 `main` 后自动发布；fork 和自定义域名
+通过 `actions/configure-pages` 自动推导 `base href`。
+
+本地构建：
+
+```bash
+cd example
+flutter build web --release --no-tree-shake-icons --base-href /harmony_ui/
 ```
 
 ## 在 HarmonyOS 模拟器上运行 Demo

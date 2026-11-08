@@ -131,7 +131,7 @@ class OhosCheckboxGroup extends StatelessWidget {
     this.onChanged,
     this.activeColor,
     this.size = 24,
-    this.round = false,
+    this.round = true,
   }) : _status = null;
 
   /// 直接给三态，跳过由数量推算。
@@ -144,7 +144,7 @@ class OhosCheckboxGroup extends StatelessWidget {
     this.onChanged,
     this.activeColor,
     this.size = 24,
-    this.round = false,
+    this.round = true,
   }) : _status = status,
        selectedCount = 0,
        total = 0;
@@ -168,10 +168,10 @@ class OhosCheckboxGroup extends StatelessWidget {
 
   /// 是否画成圆形（`CheckBoxShape.CIRCLE`）而不是圆角方形。
   ///
-  /// 官方的默认值是 **CIRCLE**（`checkboxShape` 默认 `CheckBoxShape.CIRCLE`），
-  /// 但本库的 [OhosCheckbox] 是圆角方形（对应 `ROUNDED_SQUARE`）。这里默认
-  /// `false` 与自家成员保持一致 —— 一个圆角方形的列表里混一个圆形主勾选框
-  /// 是最容易犯的错，因为官方文档的默认值恰好是另一档。
+  /// 官方默认值是 **CIRCLE**（`checkboxShape` 默认 `CheckBoxShape.CIRCLE`），
+  /// 0.6 起本库默认跟随官方改成 `true` —— 与 [OhosCheckbox] 的默认外形保持
+  /// 一致。一个圆角方形的列表里混一个圆形主勾选框是最容易犯的错，反过来也一样；
+  /// 两边默认值同源才不会有这个问题。要老观感显式传 `round: false`。
   final bool round;
 
   final OhosSelectStatus? _status;
@@ -267,9 +267,7 @@ class OhosCheckboxGroupController extends ChangeNotifier {
     required List<String> allNames,
     Set<String>? selected,
   }) : _allNames = List<String>.unmodifiable(allNames),
-       _selected = <String>{...?selected}.intersection(
-         allNames.toSet(),
-       );
+       _selected = <String>{...?selected}.intersection(allNames.toSet());
 
   final List<String> _allNames;
   Set<String> _selected;
@@ -368,7 +366,8 @@ class OhosCheckboxGroupController extends ChangeNotifier {
 }
 
 /// 把 [OhosCheckboxGroupController] 提供给子树。
-class OhosCheckboxGroupScope extends InheritedNotifier<OhosCheckboxGroupController> {
+class OhosCheckboxGroupScope
+    extends InheritedNotifier<OhosCheckboxGroupController> {
   const OhosCheckboxGroupScope({
     super.key,
     required OhosCheckboxGroupController controller,
@@ -403,7 +402,7 @@ class OhosCheckboxGroupHeader extends StatelessWidget {
     this.enabled = true,
     this.activeColor,
     this.size = 24,
-    this.round = false,
+    this.round = true,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   });
 

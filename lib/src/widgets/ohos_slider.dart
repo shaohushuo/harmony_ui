@@ -119,8 +119,7 @@ class _OhosSliderState extends State<OhosSlider> {
   bool _isInteger(double v) => v == v.roundToDouble();
 
   /// 当前形态的轨道粗细。
-  double get _trackThickness =>
-      widget.style == OhosSliderStyle.inset ? 20 : 4;
+  double get _trackThickness => widget.style == OhosSliderStyle.inset ? 20 : 4;
 
   /// 当前形态的滑块直径。`none` 没有滑块，但命中区仍要 40。
   double get _thumbDiameter => switch (widget.style) {
@@ -208,10 +207,7 @@ class _OhosSliderState extends State<OhosSlider> {
               ),
         overlayShape: RoundSliderOverlayShape(overlayRadius: _hotRegion / 2),
         tickMarkShape: _effectiveStepSize > 0 && widget.showSteps
-            ? _OhosTickMarkShape(
-                diameter: _effectiveStepSize,
-                color: tickColor,
-              )
+            ? _OhosTickMarkShape(diameter: _effectiveStepSize, color: tickColor)
             : SliderTickMarkShape.noTickMark,
         // Material 自己还会画一个 value indicator（`divisions` + `label`
         // 时默认 onlyForDiscrete）：灰阶屏下它是白底、没有描边，贴在白页面
@@ -286,17 +282,19 @@ class _OhosSliderState extends State<OhosSlider> {
             if (widget.prefix != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: SizedBox(height: _hotRegion, child: Center(
-                  child: widget.prefix,
-                )),
+                child: SizedBox(
+                  height: _hotRegion,
+                  child: Center(child: widget.prefix),
+                ),
               ),
             Expanded(child: slider),
             if (widget.suffix != null)
               Padding(
                 padding: const EdgeInsets.only(left: 8),
-                child: SizedBox(height: _hotRegion, child: Center(
-                  child: widget.suffix,
-                )),
+                child: SizedBox(
+                  height: _hotRegion,
+                  child: Center(child: widget.suffix),
+                ),
               ),
           ],
         ),
@@ -370,11 +368,7 @@ class _OhosTickMarkShape extends SliderTickMarkShape {
     required Offset thumbCenter,
     required bool isEnabled,
   }) {
-    context.canvas.drawCircle(
-      center,
-      diameter / 2,
-      Paint()..color = color,
-    );
+    context.canvas.drawCircle(center, diameter / 2, Paint()..color = color);
   }
 }
 

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# 抓取 ArkUI 组件的**实现源码**到 doc/source/。
+# 抓取 ArkUI 组件的**实现源码**到 doc/reference/source/。
 #
 # 第三条链路，与 tool/fetch_reference.sh 的链路 1/2 不同：
 #
@@ -38,7 +38,7 @@ cd "$(dirname "$0")/.."
 
 RAW="https://raw.gitcode.com/openharmony/arkui_ace_engine/raw/master/advanced_ui_component"
 API="https://api.gitcode.com/api/v5/repos/openharmony/arkui_ace_engine/contents"
-OUT=doc/source
+OUT=doc/reference/source
 mkdir -p "$OUT"
 
 # 与官方「控件概览」相关的进阶组件（对应 advanced_ui_component 下的目录名）。

@@ -55,7 +55,8 @@ void main() {
       expect(
         _luminance(fill),
         lessThan(0.25),
-        reason: '深色档 compBackgroundGrayColor 亮度 '
+        reason:
+            '深色档 compBackgroundGrayColor 亮度 '
             '${_luminance(fill).toStringAsFixed(3)} 偏高',
       );
     });
@@ -70,7 +71,8 @@ void main() {
         expect(
           ratio,
           greaterThanOrEqualTo(4.5),
-          reason: '深色档${e.key}落在填充面上对比度 '
+          reason:
+              '深色档${e.key}落在填充面上对比度 '
               '${ratio.toStringAsFixed(2)}:1',
         );
       }
@@ -81,24 +83,23 @@ void main() {
       // 不扫彩色令牌 —— 深色档的品牌色 / 交互色本来就该提亮，
       // 按「深色必须更暗」一刀切会把正确设计判成错误。
       final OhosThemeData light = OhosThemeData.light();
-      final Map<String, (Color, Color)> surfaces =
-          <String, (Color, Color)>{
-            'backgroundColor': (light.backgroundColor, dark.backgroundColor),
-            'cardColor': (light.cardColor, dark.cardColor),
-            'popupColor': (light.popupColor, dark.popupColor),
-            'compBackgroundPrimaryColor': (
-              light.compBackgroundPrimaryColor!,
-              dark.compBackgroundPrimaryColor!,
-            ),
-            'compBackgroundGrayColor': (
-              light.compBackgroundGrayColor!,
-              dark.compBackgroundGrayColor!,
-            ),
-            'backgroundTertiaryColor': (
-              light.backgroundTertiaryColor!,
-              dark.backgroundTertiaryColor!,
-            ),
-          };
+      final Map<String, (Color, Color)> surfaces = <String, (Color, Color)>{
+        'backgroundColor': (light.backgroundColor, dark.backgroundColor),
+        'cardColor': (light.cardColor, dark.cardColor),
+        'popupColor': (light.popupColor, dark.popupColor),
+        'compBackgroundPrimaryColor': (
+          light.compBackgroundPrimaryColor!,
+          dark.compBackgroundPrimaryColor!,
+        ),
+        'compBackgroundGrayColor': (
+          light.compBackgroundGrayColor!,
+          dark.compBackgroundGrayColor!,
+        ),
+        'backgroundTertiaryColor': (
+          light.backgroundTertiaryColor!,
+          dark.backgroundTertiaryColor!,
+        ),
+      };
 
       for (final MapEntry<String, (Color, Color)> e in surfaces.entries) {
         final double l = _luminance(e.value.$1);
@@ -106,13 +107,15 @@ void main() {
         expect(
           d,
           lessThan(l),
-          reason: '${e.key} 深色档亮度 ${d.toStringAsFixed(3)} '
+          reason:
+              '${e.key} 深色档亮度 ${d.toStringAsFixed(3)} '
               '不低于浅色档 ${l.toStringAsFixed(3)}，深色模式里会冒出一块浅色面',
         );
         expect(
           (l - d).abs(),
           greaterThan(0.05),
-          reason: '${e.key} 深浅两档亮度只差 ${(l - d).abs().toStringAsFixed(3)}，'
+          reason:
+              '${e.key} 深浅两档亮度只差 ${(l - d).abs().toStringAsFixed(3)}，'
               '近似同值 —— 很可能是深色档直接抄了浅色档的令牌',
         );
       }
@@ -206,9 +209,7 @@ void main() {
       }
     });
 
-    testWidgets('墨屏档：未选中芯片的描边颜色与 OhosChip 一致', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('墨屏档：未选中芯片的描边颜色与 OhosChip 一致', (WidgetTester tester) async {
       final OhosThemeData ink = OhosThemeData.ink();
       await tester.pumpWidget(
         _themed(
@@ -282,10 +283,7 @@ void main() {
       await tester.pumpWidget(
         _themed(
           OhosThemeData.ink(),
-          const SizedBox(
-            width: 360,
-            child: OhosSearchBar(hintText: '搜索组件名'),
-          ),
+          const SizedBox(width: 360, child: OhosSearchBar(hintText: '搜索组件名')),
           materialTheme: hostTheme(),
         ),
       );
@@ -312,10 +310,7 @@ void main() {
       await tester.pumpWidget(
         _themed(
           OhosThemeData.ink(),
-          const SizedBox(
-            width: 360,
-            child: OhosSearchBar(hintText: '搜索组件名'),
-          ),
+          const SizedBox(width: 360, child: OhosSearchBar(hintText: '搜索组件名')),
           materialTheme: hostTheme(),
         ),
       );
@@ -329,16 +324,11 @@ void main() {
       expect(field.decoration!.filled, isFalse);
     });
 
-    testWidgets('组件自己的 decoration 能扛住宿主主题的合并', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('组件自己的 decoration 能扛住宿主主题的合并', (WidgetTester tester) async {
       await tester.pumpWidget(
         _themed(
           OhosThemeData.ink(),
-          const SizedBox(
-            width: 360,
-            child: OhosSearchBar(hintText: '搜索组件名'),
-          ),
+          const SizedBox(width: 360, child: OhosSearchBar(hintText: '搜索组件名')),
           materialTheme: hostTheme(),
         ),
       );
@@ -369,11 +359,7 @@ void main() {
         isNot(isA<OutlineInputBorder>()),
         reason: '聚焦时同理',
       );
-      expect(
-        merged.filled,
-        isFalse,
-        reason: '宿主主题的 filled: true 漏进了胶囊',
-      );
+      expect(merged.filled, isFalse, reason: '宿主主题的 filled: true 漏进了胶囊');
     });
   });
 }

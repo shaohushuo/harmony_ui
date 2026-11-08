@@ -114,7 +114,7 @@ class OhosInputCounterOptions {
 ///
 /// **与 `OhosListItemCardMetrics` 相反，这一组几乎每个值都能沿
 /// `$float:` 链走到具体的 vp/fp** —— 因为 `TextInput` 是开源组件，
-/// `doc/source/systemres/pattern.json` 里的 `ohos_textfield_pattern`
+/// `doc/reference/resources/pattern.json` 里的 `ohos_textfield_pattern`
 /// 有 115 个属性、且都有对应资源。**「令牌有值」不等于「令牌生效」**，
 /// 所以下面标了适用形态的那几条，来源是组件真正读它的那条路径
 /// （`textfield_height` / `textfield_content_height` / `textfield_border_radius`
@@ -644,7 +644,8 @@ class _OhosTextFieldState extends State<OhosTextField> {
             // `ohos_id_password_style_height`），比普通形态的 40 高 8。只在下
             // 划线以外的形态上补，因为下划线形态本来就是 48（12+24+12），
             // 再叠一层约束就等于没变、但会让「谁定的高度」变模糊。
-            constraints: widget._obscured && effective != OhosTextFieldVariant.underline
+            constraints:
+                widget._obscured && effective != OhosTextFieldVariant.underline
                 ? const BoxConstraints(
                     minHeight: OhosTextFieldMetrics.passwordHeight,
                   )
@@ -689,7 +690,8 @@ class _OhosTextFieldState extends State<OhosTextField> {
   Widget _buildCounter(OhosThemeData theme) {
     final int max = widget.maxLength!;
     final bool over = _length > max;
-    final bool warn = over && widget.counterOptions.highlightsOnOverflow(_length, max);
+    final bool warn =
+        over && widget.counterOptions.highlightsOnOverflow(_length, max);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Align(
@@ -821,7 +823,10 @@ class _OhosTextFieldState extends State<OhosTextField> {
       // 内联形态的边界是「强调色细线」而不是「看不见的填充」——
       // 它要看起来像一个可以点进去的文本，而不是一块底板。
       enabledBorder: inline
-          ? border(theme.usesOutlines ? theme.dividerColor : theme.textTertiaryColor, 1)
+          ? border(
+              theme.usesOutlines ? theme.dividerColor : theme.textTertiaryColor,
+              1,
+            )
           : useFill
           ? border(Colors.transparent, 0)
           : border(hairline),

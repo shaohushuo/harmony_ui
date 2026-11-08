@@ -119,13 +119,13 @@ class OhosLightEffectTuning {
 
   @override
   int get hashCode => Object.hash(
-        blurScale,
-        surfaceScale,
-        glowScale,
-        shadowScale,
-        specularScale,
-        scatterScale,
-      );
+    blurScale,
+    surfaceScale,
+    glowScale,
+    shadowScale,
+    specularScale,
+    scatterScale,
+  );
 }
 
 /// Color recipe used by [OhosLightMaterial].
@@ -167,11 +167,11 @@ class OhosLightPalette {
 
   @override
   int get hashCode => Object.hash(
-        surfaceTint,
-        edgeHighlight,
-        edgeShadow,
-        Object.hashAll(glowColors),
-      );
+    surfaceTint,
+    edgeHighlight,
+    edgeShadow,
+    Object.hashAll(glowColors),
+  );
 }
 
 /// Per-level material parameters for [OhosLightMaterialLevel].
@@ -197,52 +197,52 @@ class _OhosLightLevelSpec {
 
 const Map<OhosLightMaterialLevel, _OhosLightLevelSpec> _kLevelSpecs =
     <OhosLightMaterialLevel, _OhosLightLevelSpec>{
-  OhosLightMaterialLevel.ultraThin: _OhosLightLevelSpec(
-    blurSigma: OhosGeometry.lightBlurUltraThin,
-    fillOpacity: 0.55,
-    glowOpacity: 0.12,
-    shadowOpacity: 0.10,
-    specularOpacity: 0.30,
-    scatterOpacity: 0.05,
-    shadowBlur: 12,
-  ),
-  OhosLightMaterialLevel.thin: _OhosLightLevelSpec(
-    blurSigma: OhosGeometry.lightBlurThin,
-    fillOpacity: 0.45,
-    glowOpacity: 0.18,
-    shadowOpacity: 0.13,
-    specularOpacity: 0.36,
-    scatterOpacity: 0.08,
-    shadowBlur: 16,
-  ),
-  OhosLightMaterialLevel.regular: _OhosLightLevelSpec(
-    blurSigma: OhosGeometry.lightBlurRegular,
-    fillOpacity: 0.38,
-    glowOpacity: 0.22,
-    shadowOpacity: 0.16,
-    specularOpacity: 0.42,
-    scatterOpacity: 0.10,
-    shadowBlur: 20,
-  ),
-  OhosLightMaterialLevel.thick: _OhosLightLevelSpec(
-    blurSigma: OhosGeometry.lightBlurThick,
-    fillOpacity: 0.32,
-    glowOpacity: 0.26,
-    shadowOpacity: 0.20,
-    specularOpacity: 0.48,
-    scatterOpacity: 0.14,
-    shadowBlur: 24,
-  ),
-  OhosLightMaterialLevel.ultraThick: _OhosLightLevelSpec(
-    blurSigma: OhosGeometry.lightBlurUltraThick,
-    fillOpacity: 0.26,
-    glowOpacity: 0.30,
-    shadowOpacity: 0.24,
-    specularOpacity: 0.55,
-    scatterOpacity: 0.18,
-    shadowBlur: 28,
-  ),
-};
+      OhosLightMaterialLevel.ultraThin: _OhosLightLevelSpec(
+        blurSigma: OhosGeometry.lightBlurUltraThin,
+        fillOpacity: 0.55,
+        glowOpacity: 0.12,
+        shadowOpacity: 0.10,
+        specularOpacity: 0.30,
+        scatterOpacity: 0.05,
+        shadowBlur: 12,
+      ),
+      OhosLightMaterialLevel.thin: _OhosLightLevelSpec(
+        blurSigma: OhosGeometry.lightBlurThin,
+        fillOpacity: 0.45,
+        glowOpacity: 0.18,
+        shadowOpacity: 0.13,
+        specularOpacity: 0.36,
+        scatterOpacity: 0.08,
+        shadowBlur: 16,
+      ),
+      OhosLightMaterialLevel.regular: _OhosLightLevelSpec(
+        blurSigma: OhosGeometry.lightBlurRegular,
+        fillOpacity: 0.38,
+        glowOpacity: 0.22,
+        shadowOpacity: 0.16,
+        specularOpacity: 0.42,
+        scatterOpacity: 0.10,
+        shadowBlur: 20,
+      ),
+      OhosLightMaterialLevel.thick: _OhosLightLevelSpec(
+        blurSigma: OhosGeometry.lightBlurThick,
+        fillOpacity: 0.32,
+        glowOpacity: 0.26,
+        shadowOpacity: 0.20,
+        specularOpacity: 0.48,
+        scatterOpacity: 0.14,
+        shadowBlur: 24,
+      ),
+      OhosLightMaterialLevel.ultraThick: _OhosLightLevelSpec(
+        blurSigma: OhosGeometry.lightBlurUltraThick,
+        fillOpacity: 0.26,
+        glowOpacity: 0.30,
+        shadowOpacity: 0.24,
+        specularOpacity: 0.55,
+        scatterOpacity: 0.18,
+        shadowBlur: 28,
+      ),
+    };
 
 /// The HarmonyOS immersive-light surface (沉浸光感材质).
 ///
@@ -329,18 +329,19 @@ class OhosLightMaterial extends StatelessWidget {
     final _OhosLightLevelSpec spec = _kLevelSpecs[level]!;
     final OhosLightEffectTuning tuning = effectTuning;
     final Color tint =
-        palette.surfaceTint ??
-        (theme.isDark ? Colors.black : Colors.white);
+        palette.surfaceTint ?? (theme.isDark ? Colors.black : Colors.white);
     final double fillOpacity =
         (tintOpacity ?? spec.fillOpacity * tuning.surfaceScale).clamp(0.0, 1.0);
-    final double glowOpacity =
-        (spec.glowOpacity * tuning.glowScale).clamp(0.0, 1.0);
-    final double shadowOpacity =
-        (spec.shadowOpacity * tuning.shadowScale).clamp(0.0, 1.0);
-    final double specularOpacity =
-        (spec.specularOpacity * tuning.specularScale).clamp(0.0, 1.0);
-    final double scatterIntensity =
-        (spec.scatterOpacity * tuning.scatterScale).clamp(0.0, 2.0);
+    final double glowOpacity = (spec.glowOpacity * tuning.glowScale).clamp(
+      0.0,
+      1.0,
+    );
+    final double shadowOpacity = (spec.shadowOpacity * tuning.shadowScale)
+        .clamp(0.0, 1.0);
+    final double specularOpacity = (spec.specularOpacity * tuning.specularScale)
+        .clamp(0.0, 1.0);
+    final double scatterIntensity = (spec.scatterOpacity * tuning.scatterScale)
+        .clamp(0.0, 2.0);
     final double blurSigma = spec.blurSigma * tuning.blurScale;
     final BorderRadius border = borderRadius ?? BorderRadius.zero;
 
@@ -407,10 +408,7 @@ class OhosLightMaterial extends StatelessWidget {
                 glowAlignment: glowAlignment,
                 animationValue: animationValue,
               ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: child,
-              ),
+              child: Material(type: MaterialType.transparency, child: child),
             ),
           ],
         ),
@@ -581,7 +579,10 @@ class _OhosGlowMaterialPainter extends CustomPainter {
         : palette.glowColors;
 
     // Translucent base fill.
-    canvas.drawRRect(rrect, Paint()..color = tint.withValues(alpha: fillOpacity));
+    canvas.drawRRect(
+      rrect,
+      Paint()..color = tint.withValues(alpha: fillOpacity),
+    );
 
     // Light pools (光池): soft colored glows blended behind the surface.
     final Offset center = glowAlignment.alongSize(size);
@@ -593,8 +594,10 @@ class _OhosGlowMaterialPainter extends CustomPainter {
         math.sin(phase) * size.height * .12,
       );
       final double radius = largest * (.55 + i * .08);
-      final Rect glowRect =
-          Rect.fromCircle(center: center + offset, radius: radius);
+      final Rect glowRect = Rect.fromCircle(
+        center: center + offset,
+        radius: radius,
+      );
       final Paint paint = Paint()
         ..shader = RadialGradient(
           colors: <Color>[
@@ -623,8 +626,12 @@ class _OhosGlowMaterialPainter extends CustomPainter {
         ..shader = RadialGradient(
           colors: <Color>[
             Colors.white.withValues(alpha: specularOpacity.clamp(0.0, 1.0)),
-            Colors.white.withValues(alpha: (specularOpacity * .55).clamp(0.0, 1.0)),
-            Colors.white.withValues(alpha: (specularOpacity * .2).clamp(0.0, 1.0)),
+            Colors.white.withValues(
+              alpha: (specularOpacity * .55).clamp(0.0, 1.0),
+            ),
+            Colors.white.withValues(
+              alpha: (specularOpacity * .2).clamp(0.0, 1.0),
+            ),
             Colors.transparent,
           ],
         ).createShader(specularRect)
@@ -655,11 +662,7 @@ class _OhosGlowMaterialPainter extends CustomPainter {
           Colors.transparent,
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, 1));
-    canvas.drawLine(
-      const Offset(12, 1),
-      Offset(size.width - 12, 1),
-      topLine,
-    );
+    canvas.drawLine(const Offset(12, 1), Offset(size.width - 12, 1), topLine);
   }
 
   @override

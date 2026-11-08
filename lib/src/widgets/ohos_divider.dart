@@ -2,6 +2,32 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
 
+/// 分隔线的官方规格，来自参考文档 `ts-basic-components-divider.md` 的属性表。
+class OhosDividerMetrics {
+  const OhosDividerMetrics._();
+
+  /// 厚度默认值：**1px（物理像素）**，不是 1vp。
+  ///
+  /// 文档原文「默认值：1px」，且注释里明确「如果设备硬件存在 1 像素取整后
+  /// 分割线不显示问题，建议使用 2 像素」—— 说明这个单位就是设备像素。
+  ///
+  /// 老实现写 `thickness = 0.5`（vp）。在 3.5 密度屏上 0.5vp = 1.75px，比官方
+  /// 粗；在 2 密度屏上 0.5vp = 1px 恰好对；在 1 密度屏上 0.5px 会被栅格化掉
+  /// 一半 —— 同一个数值在三档密度上给出三种不同的线。按设备像素定义才与官方
+  /// 一致。
+  static const double thicknessPx = 1;
+
+  /// 官方默认颜色 `#33182431`（20% 的深蓝黑）。
+  ///
+  /// 本库默认**不**用它，而是走 `theme.dividerColor`（10% 黑）：分隔线在这里
+  /// 不是装饰而是结构层，深色主题与墨水屏都必须由 `OhosThemeData` 统一换值，
+  /// 写死会让墨屏上留一条「半透明蓝」压在白底上（≤20% 黑落在第 0–3 级灰，
+  /// 与白底不可分）。
+  ///
+  /// 需要严格对齐官方外观时显式传 `color: OhosDividerMetrics.color`。
+  static const Color color = Color(0x33182431);
+}
+
 /// A hairline divider used to separate list items, the counterpart of
 /// Flutter's [Divider].
 ///
@@ -10,42 +36,77 @@ import '../theme/ohos_theme.dart';
 /// list text are the caller's job — `OhosListTile` passes `indent: 16` (or 56
 /// behind a leading icon) plus `endIndent: 16` itself, so the line stops before
 /// both edges instead of running through them.
+///
+/// 与官方对齐的三处，另有竖线形态：
+///
+/// * 厚度按**设备像素**算（官方默认 1px），见 [OhosDividerMetrics.thicknessPx]；
+/// * 支持竖线（官方 `vertical`，默认 `false`）；
+/// * [thickness] 可空 —— 不传就是官方的 1px，而不是某个 vp 字面量。
 class OhosDivider extends StatelessWidget {
   const OhosDivider({
     super.key,
-    this.thickness = 0.5,
+    this.thickness,
     this.color,
     this.indent = 0,
     this.endIndent = 0,
     this.height = 1,
+    this.vertical = false,
   });
 
-  /// The line thickness.
-  final double thickness;
+  /// 线宽（逻辑像素）。null 时按官方的 **1 个设备像素**（不是 1vp）。
+  ///
+  /// 传 ≤0 或非有限值会被夹回设备像素宽度 —— 官方「非法值：按默认值处理」。
+  final double? thickness;
 
   /// Line color; defaults to the theme divider color.
   final Color? color;
 
   /// Leading padding before the line.
+  ///
+  /// 横线时是左侧缩进；竖线时是顶部缩进。
   final double indent;
 
   /// Trailing padding after the line.
   final double endIndent;
 
-  /// Total logical height occupied.
+  /// 横线时占用总高度；竖线时占用总长度。
   final double height;
+
+  /// 竖线形态（官方 `vertical`，默认 `false`）。
+  ///
+  /// 官方口径：「使用水平分割线时 strokeWidth 控制高度；使用垂直分割线时
+  /// strokeWidth 控制宽度」。也就是说竖线不用单独给宽，[thickness] 就是它的
+  /// 宽度；[height] 反过来成为它的长度。
+  final bool vertical;
 
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    // 官方 1px → 1 个设备像素 → 逻辑宽度 1/dpr。不要写成 1vp：1vp 在 3.5 密度
+    // 下是 3.5px，一条发丝线会变成一条粗边。
+    final double px = 1 / (MediaQuery.maybeDevicePixelRatioOf(context) ?? 1);
+    final double raw = thickness ?? px;
+    final double line = raw.isFinite && raw > 0 ? raw : px;
+    final Color lineColor = color ?? theme.dividerColor;
+    if (vertical) {
+      return Padding(
+        padding: EdgeInsets.only(top: indent, bottom: endIndent),
+        child: SizedBox(
+          width: line,
+          height: height,
+          child: ColoredBox(color: lineColor),
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(left: indent, right: endIndent),
       child: SizedBox(
         height: height,
         child: Center(
-          child: Container(
-            height: thickness,
-            color: color ?? theme.dividerColor,
+          child: SizedBox(
+            height: line,
+            width: double.infinity,
+            child: ColoredBox(color: lineColor),
           ),
         ),
       ),

@@ -232,8 +232,9 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     PreferredSizeWidget? bottom,
     bool primary = true,
   }) {
-    final double inset =
-        primary ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0 : 0.0;
+    final double inset = primary
+        ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0
+        : 0.0;
     return height + (bottom?.preferredSize.height ?? 0) + inset;
   }
 
@@ -256,8 +257,9 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
         : backgroundColor ?? theme.backgroundColor;
     // 状态栏内边距：只把**内容**往下压，背景色仍铺到屏幕最顶端（沉浸式）。
     // `maybePaddingOf` 而不是 `paddingOf`：脱离 MediaQuery 使用时不至于抛异常。
-    final double topInset =
-        primary ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0 : 0.0;
+    final double topInset = primary
+        ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0
+        : 0.0;
     final bool centered = titleAlignment == OhosAppBarTitleAlignment.center;
     final Widget titleSlot = DefaultTextStyle.merge(
       style: theme.typography.titleMedium ?? const TextStyle(fontSize: 17),
@@ -378,10 +380,7 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
           // 外层给的高度只能用 `constraints.maxHeight`（`OhosLightMaterial`
           // 就是 `isFinite ? maxHeight : 0`，无界时整层光感直接缩成 0）。
           // 这里按 `preferredSize` 把它还回去，控件内部看到的还是确定高度。
-          SizedBox(
-            height: preferredSize.height,
-            child: result,
-          ),
+          SizedBox(height: preferredSize.height, child: result),
         ],
       );
     }
@@ -398,7 +397,6 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     return result;
   }
 }
-
 
 /// Applies the scroll-driven dynamic blur (动态模糊) to an [OhosAppBar].
 class _ScrollEffectBar extends StatelessWidget {
@@ -419,8 +417,10 @@ class _ScrollEffectBar extends StatelessWidget {
   double get _progress {
     final double offset = controller.hasClients ? controller.offset : 0;
     final double span =
-        (effect.blurEffectiveEndOffset - effect.blurEffectiveStartOffset)
-            .clamp(0.1, 1e9);
+        (effect.blurEffectiveEndOffset - effect.blurEffectiveStartOffset).clamp(
+          0.1,
+          1e9,
+        );
     return ((offset - effect.blurEffectiveStartOffset) / span).clamp(0.0, 1.0);
   }
 
@@ -463,8 +463,8 @@ class _ScrollEffectBar extends StatelessWidget {
             );
           case OhosAppBarScrollEffectType.commonBlur:
           case OhosAppBarScrollEffectType.gradientBlur:
-            final double eased = effect.effect ==
-                    OhosAppBarScrollEffectType.gradientBlur
+            final double eased =
+                effect.effect == OhosAppBarScrollEffectType.gradientBlur
                 ? Curves.easeOut.transform(t)
                 : t;
             final double sigma = effect.blurSigma * eased;
@@ -473,18 +473,13 @@ class _ScrollEffectBar extends StatelessWidget {
                 fit: StackFit.expand,
                 children: <Widget>[
                   BackdropFilter(
-                    filter: ui.ImageFilter.blur(
-                      sigmaX: sigma,
-                      sigmaY: sigma,
-                    ),
+                    filter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
                     child: const SizedBox.expand(),
                   ),
                   child!,
                   // Frosted tint over the blurred backdrop.
                   ColoredBox(
-                    color: Colors.white.withValues(
-                      alpha: 0.20 + 0.30 * eased,
-                    ),
+                    color: Colors.white.withValues(alpha: 0.20 + 0.30 * eased),
                   ),
                 ],
               ),
