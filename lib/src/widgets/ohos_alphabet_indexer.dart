@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_contrast.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_magnifier.dart';
 
@@ -101,10 +102,12 @@ class OhosAlphabetIndexer extends StatefulWidget {
 
   /// Preferred size of the strip.
   ///
-  /// The width is used as-is; the height is an upper bound — when the parent
-  /// hands down a smaller height (a draggable panel, `Expanded`, …), the strip
-  /// shrinks to it and the letters scale down with it. When the height is
-  /// unbounded, [Size.height] is used.
+  /// Both axes are **upper bounds**: when the parent hands down a smaller
+  /// width or height (a draggable panel, `Expanded`, a narrow rail, …), the
+  /// strip is clamped to it (`constraints.constrainWidth/Height`) and the
+  /// letters scale down with the height. The selected dot is derived from the
+  /// clamped size, so it stays a circle instead of being squeezed into an
+  /// ellipse. When an axis is unbounded, [Size] supplies that axis.
   final Size size;
 
   /// Index of the highlighted letter, or null to let the strip keep it
@@ -162,8 +165,10 @@ class OhosAlphabetIndexer extends StatefulWidget {
   /// 提示弹窗的对齐档（官方 `alignStyle`，默认 `IndexerAlign.END`）。
   ///
   /// 这一档官方只用来摆**提示弹窗**的位置，与索引条自身在屏幕的左右无关。
-  /// 本库把它用在两处：气泡/放大镜的落点方向，以及选中底色的圆角朝向
-  /// （贴着屏幕边缘那一侧的角不圆）。
+  ///
+  /// **当前尚未生效**：气泡（[showPopupBubble]）还没有实现，放大镜也不看这
+  /// 一档；选中底色在 0.6 起改成等径正圆，不再有「贴着屏幕边缘那一侧的角不
+  /// 圆」这回事。留作接口对齐，实现气泡时按它决定落点方向。
   final OhosIndexerAlign alignStyle;
 
   /// 是否显示官方的「提示弹窗气泡」（官方 `usingPopup`，默认 `false`）。
@@ -377,16 +382,10 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     }
   }
 
-  Widget _letter(
-    OhosThemeData theme,
-    TextStyle base,
-    int index,
-    double fontSize,
-    double slot,
-  ) {
-    // 只读内部状态：受控值已经在 initState / didUpdateWidget 里回写过了，
-    // 所以"外部定位"与"手指拖动"共用一条绘制路径。
-    final bool on = index == _current;
+  /// 一次构建里不会变的三组颜色：常态字色、选中字色、选中底色。
+  ///
+  /// 抽出来是因为它们跟字母无关 —— 早先每画一格都重算一遍。
+  _IndexerPaint _resolvePaint(OhosThemeData theme) {
     // 默认取主题色而不是官方那对固定值（`0x99182431` / `0xFF007DFF`）：
     // 本库的组件颜色统一由 `OhosThemeData` 负责，深色与墨屏都靠它换值。
     // 写死官方蓝的话，墨屏上这条蓝既不会被 `quantize` 成灰阶，也没法跟
@@ -405,10 +404,59 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     final Color highlightBackground =
         widget.selectedBackgroundColor ??
         theme.highlightColor.withValues(alpha: 0.1);
-    final Color selectedFill =
-        theme.policy.quantize(highlightBackground) == highlightBackground
-        ? highlightBackground
-        : theme.policy.line(theme.textPrimaryColor, 1);
+    // 这块屏能不能原样表达那层 10% 叠色？彩屏能（`quantize` 原样返回），灰阶屏
+    // 不能（必须先合成到纸面再取灰，必然不等）。不能时改用实色底把选区托住。
+    //
+    // 但**实底必须配反白字**：墨屏预设里 `highlightColor` 与 `textPrimaryColor`
+    // 都是 `inkForeground`（纯黑），实底 + 同色字会糊成一团黑块，连是哪个字母
+    // 都看不出来（issue #7）。反白色不自己拼，用主题的 `onHighlightColor` ——
+    // 白纸墨屏是 `inkBackground`，深色墨屏是 `inkBackgroundDark`。
+    final bool solidFill =
+        theme.policy.quantize(highlightBackground) != highlightBackground;
+    final Color selectedFill = solidFill
+        ? theme.policy.line(theme.textPrimaryColor, 1)
+        : highlightBackground;
+    // 字色判据：
+    //
+    // - 调用方显式给了 `selectedColor` 就听它的（反白只是默认值）；
+    // - **半透明底（含透明）一律用品牌色**。彩屏 light/dark 的选中底都是 10%
+    //   叠色；深色档把 10% 蓝合成到近黑页面上，亮度只剩 0.00x，白字对比度算
+    //   出来接近 18:1 ⇒ 判据会把选中字母改成白色。而未选中字母本来就是浅白系
+    //   `textSecondaryColor`，于是一列字母里「选中/未选中」只剩那圈很淡的 tint
+    //   圆来区分，文字色不再提供区分度 —— 这不是本组件想要的。
+    // - **不透明底**才判「反白读不读得清」：墨屏实底（黑）→ 反白；调用方显式
+    //   传的实心品牌底 → 反白；传浅色实心底 → 退回品牌色。
+    //
+    // 早先用 `solidFill`（`quantize` 有没有改色）当判据，调用方传实心底时
+    // `quantize` 原样返回 ⇒ 判成「浅底」⇒ 蓝底压蓝字。
+    final Color selectedText = widget.selectedColor ??
+        (selectedFill.a < 1
+            ? active
+            : (ohosOnFillReadable(
+                theme.onHighlightColor,
+                selectedFill,
+                backdrop: theme.backgroundColor,
+              )
+                  ? theme.onHighlightColor
+                  : active));
+    return _IndexerPaint(
+      idle: idle,
+      selectedText: selectedText,
+      selectedFill: selectedFill,
+    );
+  }
+
+  Widget _letter(
+    OhosThemeData theme,
+    TextStyle base,
+    int index,
+    double fontSize,
+    double dot,
+    _IndexerPaint paint,
+  ) {
+    // 只读内部状态：受控值已经在 initState / didUpdateWidget 里回写过了，
+    // 所以"外部定位"与"手指拖动"共用一条绘制路径。
+    final bool on = index == _current;
     // 字号不作隐式动画：容器高度是立即变的，字号若走 200ms 过渡，拖动期间
     // 每一帧都偏大，字母会互相压住（0.3.0 里直接 `RenderFlex overflowed`）。
     final Widget content = DefaultTextStyle(
@@ -423,7 +471,7 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
         fontFamily: base.fontFamily ?? theme.typography.fontFamily,
         fontSize: fontSize,
         height: 1,
-        color: on ? active : idle,
+        color: on ? paint.selectedText : paint.idle,
         fontWeight: on ? FontWeight.w600 : FontWeight.w400,
       ),
       child: Text(widget.indexer[index]),
@@ -431,17 +479,24 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     if (!on) {
       return content;
     }
-    // 选中项的圆角底。右下角那个 `Radius` 不圆 —— 索引条贴在屏幕右沿时，
-    // 圆角会切进窗口边界之外，看起来像被裁掉一块。
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: selectedFill,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(slot / 2),
-          bottomLeft: Radius.circular(slot / 2),
+    // 选中底色：**等径正圆**，直径由 `dot` 给定、圆心就是格子中心。
+    //
+    // 早先只圆左侧、右侧留直角，高度还跟着字形收缩，结果底块的重心偏左偏上，
+    // 跟字母对不上圆心（看着像贴在字母左上角的一块墨）。改成正方形 + 半径
+    // 取直径一半就是正圆；直径不再跟着字宽走，宽窄字母的圆一样大，滚动时
+    // 那点亮色不会忽胖忽瘦。
+    return Center(
+      child: SizedBox(
+        width: dot,
+        height: dot,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: paint.selectedFill,
+            borderRadius: BorderRadius.all(Radius.circular(dot / 2)),
+          ),
+          child: Center(child: content),
         ),
       ),
-      child: Center(widthFactor: 1, heightFactor: 1, child: content),
     );
   }
 
@@ -456,6 +511,8 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     final OhosThemeData theme = OhosTheme.of(context);
     final TextStyle base = DefaultTextStyle.of(context).style;
     final int count = widget.indexer.length;
+    // 颜色与字母无关：一次构建算一次，别在每格里重算。
+    final _IndexerPaint paint = _resolvePaint(theme);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         // 条高：以 size.height 为基准，父级约束优先 —— 可拖分隔条的面板会把可用
@@ -466,8 +523,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
         // minHeight，这正是「scroll 里再套 ConstrainedBox(minHeight)」的场景，
         // 那时 hasBoundedHeight 为 false，绕过约束就会退回 size.height 而错位。
         final double height = constraints.constrainHeight(widget.size.height);
+        // 宽度同理：`size.width` 是**期望**，父级更窄时实际只有 maxWidth。
+        // 几何一律按夹过之后的实际值算，否则「按 size.width 算出来的圆」会被
+        // 父级压成竖椭圆，与上面 height 的口径也对不上。
+        final double width = constraints.constrainWidth(widget.size.width);
         if (count == 0 || height <= 0) {
-          return SizedBox(width: widget.size.width, height: 0);
+          return SizedBox(width: width, height: 0);
         }
         // 唯一来源：布局、字号、命中都用这个 slot，不再有第二套几何。
         //
@@ -489,8 +550,12 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
         final double scaled = MediaQuery.textScalerOf(context).scale(12);
         final double textScale = scaled <= 0 ? 1 : scaled / 12;
         final double fontSize = (slot / textScale * 0.95).clamp(1, 12);
+        // 选中圆标的直径：与格子同高；条本身比格子窄时（5 个字母、160vp 高的
+        // 条，slot 会到 32vp）收到条宽，免得圆被左右裁掉。这里取夹过约束的
+        // `width`，不是期望的 `size.width`。
+        final double dot = math.min(slot, width);
         return SizedBox(
-          width: widget.size.width,
+          width: width,
           height: height,
           child: GestureDetector(
             // opaque：整条（含字形两侧的留白与字间空隙）都参与命中。默认的
@@ -515,7 +580,7 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
                   SizedBox(
                     height: slot,
                     child: Center(
-                      child: _letter(theme, base, i, fontSize, slot),
+                      child: _letter(theme, base, i, fontSize, dot, paint),
                     ),
                   ),
               ],
@@ -525,4 +590,25 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
       },
     );
   }
+}
+
+/// 索引条一次构建里不会变的三组颜色。
+///
+/// 抽出来是因为它们跟具体字母无关 —— 早先每画一格都重算一遍（含一次
+/// `policy.quantize` 与一次对比度计算）。
+class _IndexerPaint {
+  const _IndexerPaint({
+    required this.idle,
+    required this.selectedText,
+    required this.selectedFill,
+  });
+
+  /// 常态字色。
+  final Color idle;
+
+  /// 选中字色。
+  final Color selectedText;
+
+  /// 选中底色。
+  final Color selectedFill;
 }

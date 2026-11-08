@@ -10296,6 +10296,200 @@ void main() {
       );
     }
 
+    testWidgets('墨屏：选中字母反白，不糊成黑块（issue #7）', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosAlphabetIndexer(
+                  indexer: letters,
+                  size: const Size(24, 160),
+                  selectedIndex: 2,
+                  onSelected: (String _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 灰阶屏留不住 10% 叠色 ⇒ 底块换成实色（墨屏 = 纯黑）。此时字必须反白，
+      // 否则实底 + `highlightColor`（墨屏同为纯黑）会糊成一个黑疙瘩。
+      expect(paintedColor(tester, 'B'), ink.onHighlightColor);
+      expect(paintedColor(tester, 'B'), isNot(ink.highlightColor));
+      // 未选中项不受影响
+      expect(paintedColor(tester, 'A'), ink.textSecondaryColor);
+    });
+
+    testWidgets('墨屏：显式 selectedColor 优先，不被反白默认值吞掉', (WidgetTester tester) async {
+      final OhosThemeData ink = OhosThemeData.ink();
+      // 宿主自己挑的可读色：反白只是**默认值**，不是强制覆盖。
+      const Color custom = Color(0xFF808080);
+      await tester.pumpWidget(
+        OhosTheme(
+          data: ink,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosAlphabetIndexer(
+                  indexer: letters,
+                  size: const Size(24, 160),
+                  selectedIndex: 2,
+                  selectedColor: custom,
+                  onSelected: (String _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 实底分支仍走 `selectedColor`：量化型主题不该静默改掉调用方的配色。
+      expect(paintedColor(tester, 'B'), custom);
+      expect(paintedColor(tester, 'B'), isNot(ink.onHighlightColor));
+    });
+
+    testWidgets('调用方传实心底时按实际底色反白，不被判成「浅底」', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 2,
+            selectedBackgroundColor: light.highlightColor,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // `quantize` 对这块实心品牌蓝原样返回 ⇒ 旧判据把它当「10% 浅底」、
+      // 退回品牌色字，结果蓝底压蓝字。判据必须看底实际亮不亮。
+      expect(paintedColor(tester, 'B'), light.onHighlightColor);
+    });
+
+    testWidgets('选中圆标等径：窄字母 I 与宽字母 W 的底圆一样大', (WidgetTester tester) async {
+      Widget host(int selected) => wrap(
+        OhosAlphabetIndexer(
+          indexer: const <String>['I', 'W'],
+          size: const Size(24, 64),
+          selectedIndex: selected,
+          onSelected: (String _) {},
+        ),
+      );
+
+      Size dotSize() => tester.getSize(
+        find.descendant(
+          of: find.byType(OhosAlphabetIndexer),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+
+      await tester.pumpWidget(host(0));
+      await tester.pump();
+      final Size narrow = dotSize();
+
+      await tester.pumpWidget(host(1));
+      await tester.pump();
+      final Size wide = dotSize();
+
+      // 等径：底圆不跟字形宽窄走，否则滚动换组时那点亮色会忽胖忽瘦。
+      expect(wide.width, narrow.width);
+      expect(wide.height, narrow.height);
+      // 直径 = 一格高，但被条宽 24 收住（64vp 高 / 2 个字母 ⇒ slot 32）。
+      expect(narrow.width, 24);
+      expect(narrow.height, 24);
+    });
+
+    testWidgets('父级比 size.width 窄时，圆标按实际宽度收住，不变竖椭圆', (
+      WidgetTester tester,
+    ) async {
+      // size.width 只是期望：外面套一层 16vp 宽的盒子，实际只有 16。
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 16,
+            child: OhosAlphabetIndexer(
+              indexer: const <String>['I', 'W'],
+              size: const Size(24, 64),
+              selectedIndex: 0,
+              onSelected: (String _) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final Size dot = tester.getSize(
+        find.descendant(
+          of: find.byType(OhosAlphabetIndexer),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      // 按 size.width(24) 算会得到一个 24x24 的圆，塞进 16 宽的条里变竖椭圆。
+      expect(dot.width, 16);
+      expect(dot.height, 16);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('彩屏：选中字母仍是品牌色，没被反白顺手改掉', (WidgetTester tester) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 2,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 彩屏 `quantize` 原样返回 ⇒ 走 10% 叠色分支，字仍用 highlightColor。
+      expect(paintedColor(tester, 'B'), light.highlightColor);
+      expect(paintedColor(tester, 'A'), light.textSecondaryColor);
+    });
+
+    testWidgets('深色档选中字母仍是品牌色：叠色底不参与反白判定', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData dark = OhosThemeData.dark();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: dark,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: OhosAlphabetIndexer(
+                  indexer: letters,
+                  size: const Size(24, 160),
+                  selectedIndex: 2,
+                  onSelected: (String _) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 10% 品牌色合成到近黑页面上几乎还是黑，白字对比度算出来 ~18:1 ——
+      // 只看对比度会把选中字母改成白色；而未选中字母本来就是浅白系
+      // `textSecondaryColor`，选中与未选中就只剩那圈很淡的 tint 圆来区分。
+      // 所以判据只在不透明底上生效，半透明叠色仍用品牌色。
+      expect(paintedColor(tester, 'B'), dark.highlightColor);
+      expect(paintedColor(tester, 'B'), isNot(dark.onHighlightColor));
+    });
+
     testWidgets('点当前高亮的字母也会回调（不再「点不动」）', (WidgetTester tester) async {
       final List<String> picked = <String>[];
       await tester.pumpWidget(host(picked.add));
