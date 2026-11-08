@@ -350,6 +350,9 @@ class OhosProgressIndicator extends StatelessWidget {
   /// [OhosProgressIndicatorVariant.ring] 有不确定态动画 —— 官方的不确定态是
   /// `ProgressStatus.LOADING`，而它只挂在 `RingStyleOptions` 上。Eclipse /
   /// ScaleRing / Capsule 收到 null 一律按 0 画，不凭空造一种官方没有的动效。
+  ///
+  /// 这两种的动画由组件自己驱动（2000ms 一轮，官方 `TIME_2000`），调用方不用
+  /// 另外接 `AnimationController`；墨水屏策略把动画时长压成 0 时自动停在静态中位。
   final double? value;
 
   /// 已完成部分的颜色。null 取主题品牌色。
@@ -430,13 +433,17 @@ class OhosProgressIndicator extends StatelessWidget {
             // 圆角取轨道粗细的一半：`ohos_id_corner_radius_progress_bar` 在
             // 4vp 轨道下正好同值，写成一半是为了粗轨道不变成方角。
             borderRadius: BorderRadius.circular(height / 2),
-            child: CustomPaint(
-              painter: _LinearPainter(
-                value: value,
-                color: active,
-                track: track,
-                indeterminate: value == null,
-                policy: theme.policy,
+            child: _IndeterminateCycle(
+              enabled: value == null,
+              builder: (Animation<double>? phase) => CustomPaint(
+                painter: _LinearPainter(
+                  value: value,
+                  color: active,
+                  track: track,
+                  indeterminate: value == null,
+                  policy: theme.policy,
+                  phase: phase,
+                ),
               ),
             ),
           ),
@@ -459,15 +466,19 @@ class OhosProgressIndicator extends StatelessWidget {
     return SizedBox(
       width: diameter,
       height: diameter,
-      child: CustomPaint(
-        painter: _RingPainter(
-          value: value,
-          color: active,
-          track: track,
-          thickness: effective,
-          shadow: wantShadow,
-          policy: theme.policy,
-          indeterminate: value == null,
+      child: _IndeterminateCycle(
+        enabled: value == null,
+        builder: (Animation<double>? phase) => CustomPaint(
+          painter: _RingPainter(
+            value: value,
+            color: active,
+            track: track,
+            thickness: effective,
+            shadow: wantShadow,
+            policy: theme.policy,
+            indeterminate: value == null,
+            phase: phase,
+          ),
         ),
       ),
     );
@@ -585,6 +596,77 @@ class OhosProgressIndicator extends StatelessWidget {
   }
 }
 
+/// 给不确定态提供相位：时间轴由本库自己接管。
+///
+/// 官方的不确定态（Linear 的 `StartLinearSweepingAnimation`、Ring 的
+/// `ProgressStatus.LOADING`）都是 2000ms 一轮、循环往复。周期先过一遍
+/// [OhosVisualPolicy.scaleMotion]：墨水屏策略把它压成 0，这时回调拿到 null，
+/// 画笔退回静态中位 —— 「该不该动」由策略层判断，组件不自己认屏幕。
+///
+/// 相位通过 `CustomPainter(repaint:)` 直达画布，走的是重绘而不是每帧重建。
+class _IndeterminateCycle extends StatefulWidget {
+  const _IndeterminateCycle({required this.enabled, required this.builder});
+
+  /// 只有不确定态（`value == null`）才需要转。
+  final bool enabled;
+
+  /// 参数为相位；null 表示「别动，画静态中位」。
+  final Widget Function(Animation<double>? phase) builder;
+
+  @override
+  State<_IndeterminateCycle> createState() => _IndeterminateCycleState();
+}
+
+class _IndeterminateCycleState extends State<_IndeterminateCycle>
+    with SingleTickerProviderStateMixin {
+  /// 官方 `TIME_2000`：一轮 2000ms。
+  static const Duration _cycle = Duration(milliseconds: 2000);
+
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: _cycle,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_IndeterminateCycle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    final Duration scaled = OhosTheme.of(context).policy.scaleMotion(_cycle);
+    if (!widget.enabled || scaled == Duration.zero) {
+      if (_controller.isAnimating) {
+        _controller.stop();
+      }
+      return;
+    }
+    // 时长变了才替换，避免每次依赖变化都重置相位
+    if (_controller.duration != scaled) {
+      _controller.duration = scaled;
+    }
+    if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      widget.builder(_controller.isAnimating ? _controller : null);
+}
+
 /// 进度条描边的实际线宽，取整到整数设备像素。
 ///
 /// 1vp 的内描边在 1.5 倍屏上会被栅格化成两行灰，本就细，糊掉就完全看不见。
@@ -640,13 +722,20 @@ class _LinearPainter extends CustomPainter {
     required this.track,
     required this.indeterminate,
     required this.policy,
-  });
+    this.phase,
+  }) : super(repaint: phase);
 
   final double? value;
   final Color color;
   final _TrackStyle track;
   final bool indeterminate;
   final OhosVisualPolicy policy;
+
+  /// 不确定态的相位（0→1 循环），由 [_IndeterminateCycle] 提供。
+  ///
+  /// null 表示「不该动」：墨水屏策略把动画时长压成 0 时就是这一档，
+  /// 此时画静态中位，与没有动画的版本一致。
+  final Animation<double>? phase;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -664,13 +753,17 @@ class _LinearPainter extends CustomPainter {
       canvas.drawRect(rect, Paint()..color = track.color);
     }
     if (indeterminate) {
-      // 不确定态：一段固定长度的游标。官方 `Linear` 的这一档由
-      // `StartLinearSweepingAnimation` 驱动，时长 2000ms、循环往复 ——
-      // 本库不接管时间轴（动画应由调用方的 `AnimationController` 驱动），
-      // 只画静态中位，另由 `OhosLoadingIndicator` 承担「转起来」这件事。
+      // 不确定态：一段 30% 的游标在轨道上扫过，官方 `Linear` 的这一档由
+      // `StartLinearSweepingAnimation` 驱动，时长 2000ms、循环往复。
+      // 相位由 [_IndeterminateCycle] 给：有了它就从左外侧扫入、右外侧扫出；
+      // 为 null（墨水屏等把时长压成 0 的场景）时停在静态中位。
       final double seg = size.width * 0.3;
+      final double? p = phase?.value;
+      final double left = p == null
+          ? size.width * 0.35
+          : (size.width + seg) * p - seg;
       canvas.drawRect(
-        Rect.fromLTWH(size.width * 0.35, 0, seg, size.height),
+        Rect.fromLTWH(left, 0, seg, size.height),
         Paint()..color = color,
       );
       return;
@@ -690,7 +783,8 @@ class _LinearPainter extends CustomPainter {
       old.value != value ||
       old.color != color ||
       old.indeterminate != indeterminate ||
-      old.track.color != track.color;
+      old.track.color != track.color ||
+      old.phase != phase;
 }
 
 /// 环形无刻度。
@@ -703,7 +797,8 @@ class _RingPainter extends CustomPainter {
     required this.shadow,
     required this.policy,
     this.indeterminate = false,
-  });
+    this.phase,
+  }) : super(repaint: phase);
 
   final double? value;
   final Color color;
@@ -711,6 +806,9 @@ class _RingPainter extends CustomPainter {
   final double thickness;
   final bool shadow;
   final OhosVisualPolicy policy;
+
+  /// 不确定态的相位（0→1 循环）：弧绕圈转。null = 停在静态中位。
+  final Animation<double>? phase;
   final bool indeterminate;
 
   @override
@@ -759,7 +857,13 @@ class _RingPainter extends CustomPainter {
     final double sweep = 360 * v;
     // 起点 12 点：源码在 `PaintWhole` 里 `Rotate(-90 - additionalAngle)`，
     // 即整条弧从 12 点起顺时针铺。
-    final double start = _rad(indeterminate ? -90 + 135 : -90);
+    //
+    // 不确定态：`ProgressStatus.LOADING` 下这段 90° 游标绕圈转（2000ms 一轮），
+    // 相位由 [_IndeterminateCycle] 给；null 时停在 `PaintTrailing` 的静态落点。
+    final double? phaseValue = indeterminate ? phase?.value : null;
+    final double start = _rad(
+      indeterminate ? -90 + 135 + 360 * (phaseValue ?? 0) : -90,
+    );
     if (shadow && policy.allowsShadow) {
       // 阴影取环色本身（官方「阴影颜色与圆环颜色一致」），靠 blur 实现，
       // 不用第二套色 —— 换主题时两者不会分家。
@@ -793,7 +897,8 @@ class _RingPainter extends CustomPainter {
       old.color != color ||
       old.thickness != thickness ||
       old.indeterminate != indeterminate ||
-      old.track.color != track.color;
+      old.track.color != track.color ||
+      old.phase != phase;
 }
 
 /// 月相。
