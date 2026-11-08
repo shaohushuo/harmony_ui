@@ -103,9 +103,15 @@ class _RecordingCanvas implements Canvas {
 /// `color`，若记录里存的是引用，回看时所有刻度都会显示成最后一个颜色 ——
 /// 「进度靠换色」那条用例正是这样假绿/假红的。
 class _DrawBase {
-  _DrawBase(Paint paint) : color = paint.color, strokeWidth = paint.strokeWidth;
+  _DrawBase(Paint paint)
+      : color = paint.color,
+        strokeWidth = paint.strokeWidth,
+        shader = paint.shader;
   final Color color;
   final double strokeWidth;
+
+  /// 非空表示这一笔用渐变画（彗星弧的尾巴就靠它连续淡出）。
+  final Shader? shader;
 }
 
 class _RectDraw extends _DrawBase {
@@ -12162,14 +12168,74 @@ void main() {
         tester.getSize(find.byType(OhosLoadingIndicator)),
         const Size(32, 32),
       );
-      // 分段拼出来的彗尾：不是一条弧
+      // 一条弧 + 渐变 shader：尾巴靠 GPU 连续插值淡出。
+      // 早先的 24 段写法在大尺寸露出台阶、小尺寸糊成团块，两档都不像彗尾。
       final List<_ArcDraw> arcs = _replay(
         tester,
         OhosLoadingIndicator,
       ).whereType<_ArcDraw>().toList();
-      expect(arcs.length, greaterThan(1));
-      // 头部最实、尾部渐隐
-      expect(arcs.first.color.a, greaterThan(arcs.last.color.a));
+      expect(arcs.length, 1, reason: '不许多笔分段，段间会有台阶与抗锯齿缝');
+      expect(arcs.single.shader, isNotNull, reason: '尾巴必须由 shader 连续淡出');
+      expect(
+        arcs.single.sweep,
+        moreOrLessEquals(0.6 * 2 * math.pi, epsilon: 0.01),
+        reason: '弧长固定 60%，不随动画变长',
+      );
+      // paint 的 alpha 会调制 shader 输出：这里必须是 1，透明度全交给渐变。
+      // 早先把带 alpha 的主题色原样写上，整条弧被乘了第二遍（峰值 0.22），
+      // 27vp 的圈在白底上就是一条浅灰带。
+      expect(arcs.single.color.a, 1.0, reason: 'paint 不能再调制一次 shader 的 alpha');
+    });
+
+    testWidgets('彗星弧的 alpha 曲线：弧头最亮、沿弧单调递减', (
+      WidgetTester tester,
+    ) async {
+      // 官方默认色 `#ff666666` = 60% 黑，就是色板里的次级文字色
+      final OhosThemeData theme = OhosThemeData.light();
+      expect(
+        theme.textSecondaryColor.a,
+        closeTo(0.6, 0.01),
+        reason: '0x99000000 叠白即 #666666',
+      );
+
+      final List<Color> fade = OhosLoadingIndicatorMetrics.cometFadeColors(
+        theme.textSecondaryColor,
+      );
+      expect(fade.length, 5);
+      expect(
+        fade.first.a,
+        closeTo(0.6, 0.01),
+        reason: '弧头取颜色自带的 alpha，不能被拉满成实黑',
+      );
+      for (int i = 1; i < fade.length; i++) {
+        expect(
+          fade[i].a,
+          lessThan(fade[i - 1].a),
+          reason: '第 $i 档必须比前一档淡 —— 早先 0.5625 覆盖 0.6 会在弧上冒出「亮肩」',
+        );
+      }
+      expect(fade.last.a, 0, reason: '弧尾要真的淡到看不见');
+    });
+
+    testWidgets('彗星弧的头在前进方向那端，不是拖在后面', (
+      WidgetTester tester,
+    ) async {
+      // drawArc 的正角度与 SweepGradient 的 stop 都沿顺时针增长，弧也顺时针
+      // 转 —— 所以 stop 越大越靠前，最亮的必须落在末位。早先按「stop 0 是
+      // 弧头」铺，真机上浅色尾巴在前面跑、深色脑袋拖在后面。
+      final List<Color> sweep = OhosLoadingIndicatorMetrics.cometSweepColors(
+        const Color(0x99000000),
+      );
+      expect(sweep.length, 6);
+      for (int i = 1; i < sweep.length; i++) {
+        expect(
+          sweep[i].a,
+          greaterThanOrEqualTo(sweep[i - 1].a),
+          reason: '沿 stop 递增方向 alpha 只能变大：第 $i 档比前一档亮或持平',
+        );
+      }
+      expect(sweep.first.a, 0, reason: 'stop 0 是弧尾');
+      expect(sweep.last.a, closeTo(0.6, 0.01), reason: '末位才是弧头');
     });
 
     testWidgets('enableLoading=false 仍占位，只是不转', (WidgetTester tester) async {
@@ -12222,17 +12288,18 @@ void main() {
       expect(_replay(tester, OhosLoadingIndicator), isNotEmpty);
     });
 
-    testWidgets('颜色默认取提示色，不是品牌色', (WidgetTester tester) async {
+    testWidgets('颜色默认取次级文字色，不是品牌色', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const OhosLoadingIndicator()));
       final Color painted = _replay(
         tester,
         OhosLoadingIndicator,
       ).whereType<_ArcDraw>().first.color;
       final OhosThemeData theme = OhosThemeData.light();
-      // 官方默认 #ff666666 是一档中性灰，不是主色 —— 加载态不是品牌露出
+      // 官方默认 #ff666666 是一档中性灰，不是主色 —— 加载态不是品牌露出。
+      // 透明度不进 paint（会二次调制 shader），所以这里只看色相。
       expect(
         painted.r,
-        moreOrLessEquals(theme.textTertiaryColor.r, epsilon: 0.02),
+        moreOrLessEquals(theme.textSecondaryColor.r, epsilon: 0.02),
       );
       expect(painted, isNot(theme.highlightColor));
     });
