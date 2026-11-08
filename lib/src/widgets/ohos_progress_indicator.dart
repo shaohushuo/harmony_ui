@@ -639,11 +639,7 @@ class OhosProgressIndicator extends StatelessWidget {
   }
 
   /// 胶囊上的文字，只上色不做定位 —— 居中由调用方的 `Stack` / `Center` 负责。
-  Widget _capsuleLabelWidget(
-    OhosThemeData theme,
-    String label,
-    Color color,
-  ) {
+  Widget _capsuleLabelWidget(OhosThemeData theme, String label, Color color) {
     return Padding(
       // 官方 `progress_text_margin` = 8vp：文字与端头弧线之间留出一个圆角的
       // 距离，否则 100% 时数字会顶到弧上。

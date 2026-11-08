@@ -662,12 +662,7 @@ class _OhosGlowMaterialPainter extends CustomPainter {
     final double lineLeft = rrect.left + math.max(topInset, 12);
     final double lineRight = rrect.right - math.max(topInset, 12);
     if (lineRight > lineLeft) {
-      final Rect lineRect = Rect.fromLTWH(
-        lineLeft,
-        0,
-        lineRight - lineLeft,
-        1,
-      );
+      final Rect lineRect = Rect.fromLTWH(lineLeft, 0, lineRight - lineLeft, 1);
       final Paint topLine = Paint()
         ..shader = LinearGradient(
           colors: <Color>[

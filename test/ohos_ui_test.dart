@@ -494,9 +494,7 @@ void main() {
       expect(spinner.color, ink.onHighlightColor.withValues(alpha: 0.7));
     });
 
-    testWidgets('深色墨水屏：filled 是纸白底 + 纸黑字，不是白底白字', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('深色墨水屏：filled 是纸白底 + 纸黑字，不是白底白字', (WidgetTester tester) async {
       // 深色墨屏的 `highlightColor` 就是纸白：写死 `Colors.white` 当字色会
       // 变成白底白字，整颗按钮只剩一块空白药丸（真机 MatePad Mini 上就是这样）。
       final OhosThemeData inkDark = OhosThemeData.ink(
@@ -3815,9 +3813,7 @@ void main() {
       expect(index, 1);
     });
 
-    testWidgets('悬浮栏把胶囊半径交给材质，模糊背板与顶部亮线才跟着圆角', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('悬浮栏把胶囊半径交给材质，模糊背板与顶部亮线才跟着圆角', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
           OhosNavigationBar(
@@ -8683,9 +8679,7 @@ void main() {
       expect(paintedColor(tester, '标签'), active);
     });
 
-    testWidgets('墨屏选中：实底反白，不再是「透明底 + 反白字」', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('墨屏选中：实底反白，不再是「透明底 + 反白字」', (WidgetTester tester) async {
       Future<void> pumpWith(OhosThemeData theme) async {
         await tester.pumpWidget(
           OhosTheme(
@@ -8707,7 +8701,10 @@ void main() {
 
       Material chipMaterial() => tester.widget<Material>(
         find
-            .descendant(of: find.byType(OhosChip), matching: find.byType(Material))
+            .descendant(
+              of: find.byType(OhosChip),
+              matching: find.byType(Material),
+            )
             .first,
       );
 
@@ -8730,16 +8727,15 @@ void main() {
       final OhosThemeData light = OhosThemeData.light();
       await tester.pumpWidget(
         wrap(
-          OhosChip(
-            label: const Text('展开'),
-            selected: true,
-            onPressed: () {},
-          ),
+          OhosChip(label: const Text('展开'), selected: true, onPressed: () {}),
         ),
       );
       final Material chip = tester.widget<Material>(
         find
-            .descendant(of: find.byType(OhosChip), matching: find.byType(Material))
+            .descendant(
+              of: find.byType(OhosChip),
+              matching: find.byType(Material),
+            )
             .first,
       );
       // 彩屏靠「浅底 + 品牌色」表达选中，不该被墨屏那套反白带跑
@@ -8749,9 +8745,7 @@ void main() {
       expect(paintedTextStyle(tester, '展开').color, light.highlightTextColor);
     });
 
-    testWidgets('选中底由调用方给成实心品牌色时，字仍取反白', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('选中底由调用方给成实心品牌色时，字仍取反白', (WidgetTester tester) async {
       final OhosThemeData light = OhosThemeData.light();
       await tester.pumpWidget(
         wrap(
@@ -8765,10 +8759,7 @@ void main() {
       );
       // 判据是「合成后的底色有多亮」，不是「底是不是透明」：实心蓝底上
       // 品牌色字同样读不出来，这里仍要反白。
-      expect(
-        paintedTextStyle(tester, '展开').color,
-        light.onHighlightColor,
-      );
+      expect(paintedTextStyle(tester, '展开').color, light.onHighlightColor);
     });
 
     testWidgets('选中底被判成透明时，字退回正文色', (WidgetTester tester) async {
@@ -8784,10 +8775,7 @@ void main() {
         ),
       );
       // 底没了，选中只剩描边：字必须回到常态色，否则反白字会整颗消失。
-      expect(
-        paintedTextStyle(tester, '展开').color,
-        light.textPrimaryColor,
-      );
+      expect(paintedTextStyle(tester, '展开').color, light.textPrimaryColor);
     });
 
     testWidgets('选中态字重 w500、常态 w400（官方 chip_*_text_font_weight）', (
@@ -9024,9 +9012,7 @@ void main() {
     // 收窄内容区：`Icon(24) + 间距 2 + 单行标签` 在 textScale ≳ 1.5 时撑破
     // 56−8=48，而未选中项还是 56 —— 于是只有选中项溢出，偏偏大字号正是墨水屏
     // 阅读器的常用档。
-    testWidgets('墨屏 1.5x 字号：选中项不溢出，且与非选中项同高', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('墨屏 1.5x 字号：选中项不溢出，且与非选中项同高', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           builder: (BuildContext context, Widget? child) => MediaQuery(
@@ -9120,15 +9106,21 @@ void main() {
       final OhosThemeData ink = OhosThemeData.ink();
       await pumpBadge(tester, ink);
       // 白纸墨屏的 dangerColor 是纯黑 → 白字；本体 14 不变，描边画在外侧
-      expect(tester.widget<Text>(find.text('2')).style!.color,
-          const Color(0xFFFFFFFF));
+      expect(
+        tester.widget<Text>(find.text('2')).style!.color,
+        const Color(0xFFFFFFFF),
+      );
       expect(haloOf(ink), findsOneWidget);
 
-      final OhosThemeData inkDark = OhosThemeData.ink(brightness: Brightness.dark);
+      final OhosThemeData inkDark = OhosThemeData.ink(
+        brightness: Brightness.dark,
+      );
       await pumpBadge(tester, inkDark);
       // 深色墨屏的 dangerColor 已反成纸白 → 字必须转黑，否则白底白字整颗消失
-      expect(tester.widget<Text>(find.text('2')).style!.color,
-          const Color(0xFF000000));
+      expect(
+        tester.widget<Text>(find.text('2')).style!.color,
+        const Color(0xFF000000),
+      );
       expect(haloOf(inkDark), findsOneWidget);
     });
 
@@ -9137,8 +9129,10 @@ void main() {
       await pumpBadge(tester, light);
       // 彩屏靠底色分层就分得开，多一圈线反而偏离官方
       expect(haloOf(light), findsNothing);
-      expect(tester.widget<Text>(find.text('2')).style!.color,
-          const Color(0xFFFFFFFF));
+      expect(
+        tester.widget<Text>(find.text('2')).style!.color,
+        const Color(0xFFFFFFFF),
+      );
     });
 
     testWidgets('墨屏选中块：内缩成栏内药丸，不越出栏体', (WidgetTester tester) async {
@@ -9170,14 +9164,18 @@ void main() {
             (w.decoration as BoxDecoration?)?.color == color,
       );
       // 栏体（实底那一层）与选中块（反白那一层）各自按底色认
-      final Rect bar = tester.getRect(byDecoration(ink.policy.quantize(ink.popupColor)));
+      final Rect bar = tester.getRect(
+        byDecoration(ink.policy.quantize(ink.popupColor)),
+      );
       final Rect selected = tester.getRect(byDecoration(ink.highlightColor));
 
       // 56 高的栏、四周各内缩 4 → 选中块 48；早先是满高 56 的方块，
       // 两端会直接顶到栏的圆弧外面
       expect(selected.height, moreOrLessEquals(48));
       final BoxDecoration deco =
-          tester.widget<DecoratedBox>(byDecoration(ink.highlightColor)).decoration
+          tester
+                  .widget<DecoratedBox>(byDecoration(ink.highlightColor))
+                  .decoration
               as BoxDecoration;
       expect(
         (deco.borderRadius! as BorderRadius).topLeft.x,
@@ -10710,7 +10708,9 @@ void main() {
       expect(paintedColor(tester, 'A'), ink.textSecondaryColor);
     });
 
-    testWidgets('墨屏：显式 selectedColor 优先，不被反白默认值吞掉', (WidgetTester tester) async {
+    testWidgets('墨屏：显式 selectedColor 优先，不被反白默认值吞掉', (
+      WidgetTester tester,
+    ) async {
       final OhosThemeData ink = OhosThemeData.ink();
       // 宿主自己挑的可读色：反白只是**默认值**，不是强制覆盖。
       const Color custom = Color(0xFF808080);
@@ -10739,9 +10739,7 @@ void main() {
       expect(paintedColor(tester, 'B'), isNot(ink.onHighlightColor));
     });
 
-    testWidgets('调用方传实心底时按实际底色反白，不被判成「浅底」', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('调用方传实心底时按实际底色反白，不被判成「浅底」', (WidgetTester tester) async {
       final OhosThemeData light = OhosThemeData.light();
       await tester.pumpWidget(
         wrap(
@@ -10844,9 +10842,7 @@ void main() {
       expect(paintedColor(tester, 'A'), light.textSecondaryColor);
     });
 
-    testWidgets('深色档选中字母仍是品牌色：叠色底不参与反白判定', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('深色档选中字母仍是品牌色：叠色底不参与反白判定', (WidgetTester tester) async {
       final OhosThemeData dark = OhosThemeData.dark();
       await tester.pumpWidget(
         OhosTheme(
@@ -14327,13 +14323,10 @@ void main() {
       final OhosThemeData ink = OhosThemeData.ink();
       // 官方字色 #182431 压在纯黑上只有 1.3:1，整段文字等于没画。
       // 轨道层保留官方深色，填充层换成反白色 —— 两层叠着才跨得过边界。
-      expect(
-        capsuleLabelColors(tester, '70%'),
-        <Color?>{
-          OhosProgressMetrics.capsuleTextColor,
-          ink.onHighlightColor,
-        },
-      );
+      expect(capsuleLabelColors(tester, '70%'), <Color?>{
+        OhosProgressMetrics.capsuleTextColor,
+        ink.onHighlightColor,
+      });
       expect(
         capsuleLabelColors(tester, '70%'),
         contains(ink.onHighlightColor),
@@ -14348,10 +14341,12 @@ void main() {
       // 不是按 `fill × width` 切直边。
       final ClipPath clip = tester.widget<ClipPath>(
         find.ancestor(
-          of: find.descendant(
-            of: find.byType(OhosProgressIndicator),
-            matching: find.text('20%'),
-          ).last,
+          of: find
+              .descendant(
+                of: find.byType(OhosProgressIndicator),
+                matching: find.text('20%'),
+              )
+              .last,
           matching: find.byType(ClipPath),
         ),
       );
@@ -14377,15 +14372,12 @@ void main() {
       // 蓝填充（#0A59F7）与官方字色约 2.8:1，是官方自己的观感下限，
       // 不该被墨屏的兜底逻辑误伤 —— 彩屏只有一层
       expect(find.text('70%'), findsOneWidget);
-      expect(
-        capsuleLabelColors(tester, '70%'),
-        <Color?>{OhosProgressMetrics.capsuleTextColor},
-      );
+      expect(capsuleLabelColors(tester, '70%'), <Color?>{
+        OhosProgressMetrics.capsuleTextColor,
+      });
     });
 
-    testWidgets('胶囊文字：半透明填充不判反白，不会白字压白底', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('胶囊文字：半透明填充不判反白，不会白字压白底', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
           SizedBox(
@@ -14403,15 +14395,12 @@ void main() {
       );
       // 合成背景后再判：只有一层，仍是官方深色字。
       expect(find.text('70%'), findsOneWidget);
-      expect(
-        capsuleLabelColors(tester, '70%'),
-        <Color?>{OhosProgressMetrics.capsuleTextColor},
-      );
+      expect(capsuleLabelColors(tester, '70%'), <Color?>{
+        OhosProgressMetrics.capsuleTextColor,
+      });
     });
 
-    testWidgets('胶囊文字：反白层不进语义树，读屏只念一遍', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('胶囊文字：反白层不进语义树，读屏只念一遍', (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       await pumpInkCapsule(tester, 0.7);
       // 视觉上两层（轨道层 + 填充反白层），语义上只能有一层。
@@ -14433,9 +14422,7 @@ void main() {
       );
     });
 
-    testWidgets('胶囊文字：两层字像素对齐，反白层只是同位置的拷贝', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('胶囊文字：两层字像素对齐，反白层只是同位置的拷贝', (WidgetTester tester) async {
       await pumpInkCapsule(tester, 0.7);
       final Finder labels = find.text('70%');
       expect(labels, findsNWidgets(2));
