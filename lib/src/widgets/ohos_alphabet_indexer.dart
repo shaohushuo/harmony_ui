@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_contrast.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_magnifier.dart';
 
@@ -419,12 +420,27 @@ class _OhosAlphabetIndexerState extends State<OhosAlphabetIndexer> {
     final Color selectedFill = solidFill
         ? theme.policy.line(theme.textPrimaryColor, 1)
         : highlightBackground;
-    // 反白只是**默认值**，不是强制：宿主显式给了 `selectedColor` 就听它的。
-    // 否则墨屏（以及任何 `quantize` 会改色的自定义策略）下，调用方挑好的可读
-    // 色会被静默换成 `onHighlightColor`，配色与对比度意图丢失且无处告警。
-    // 反白要解决的只是「默认值别把字画成和底同色」（issue #7）。
-    final Color selectedText = widget.selectedColor ??
-        (solidFill ? theme.onHighlightColor : active);
+    // 字色判据是**实际渲染出的那块底**，不是「策略有没有改过色」：
+    //
+    // - 调用方显式给了 `selectedColor` 就听它的（反白只是默认值）；
+    // - 底透明时退回常态色；
+    // - 否则底上反白读得清就用反白，读不清退回品牌色。
+    //
+    // 原先用 `solidFill`（`quantize` 有没有改色）当判据，调用方传实心底时
+    // `quantize` 会原样返回 ⇒ 判成「浅底」⇒ 退回品牌色字，蓝底压蓝字同样看不
+    // 见。判「这块底亮不亮」跟判「叠色有没有被压掉」是两件事，不能共用一个布
+    // 尔量。
+    final Color selectedText =
+        widget.selectedColor ??
+        (selectedFill.a == 0
+            ? active
+            : (ohosOnFillReadable(
+                theme.onHighlightColor,
+                selectedFill,
+                backdrop: theme.backgroundColor,
+              )
+                  ? theme.onHighlightColor
+                  : active));
     // 字号不作隐式动画：容器高度是立即变的，字号若走 200ms 过渡，拖动期间
     // 每一帧都偏大，字母会互相压住（0.3.0 里直接 `RenderFlex overflowed`）。
     final Widget content = DefaultTextStyle(

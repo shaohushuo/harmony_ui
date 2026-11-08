@@ -10354,6 +10354,28 @@ void main() {
       expect(paintedColor(tester, 'B'), isNot(ink.onHighlightColor));
     });
 
+    testWidgets('调用方传实心底时按实际底色反白，不被判成「浅底」', (
+      WidgetTester tester,
+    ) async {
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        wrap(
+          OhosAlphabetIndexer(
+            indexer: letters,
+            size: const Size(24, 160),
+            selectedIndex: 2,
+            selectedBackgroundColor: light.highlightColor,
+            onSelected: (String _) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // `quantize` 对这块实心品牌蓝原样返回 ⇒ 旧判据把它当「10% 浅底」、
+      // 退回品牌色字，结果蓝底压蓝字。判据必须看底实际亮不亮。
+      expect(paintedColor(tester, 'B'), light.onHighlightColor);
+    });
+
     testWidgets('选中圆标等径：窄字母 I 与宽字母 W 的底圆一样大', (WidgetTester tester) async {
       Widget host(int selected) => wrap(
         OhosAlphabetIndexer(
