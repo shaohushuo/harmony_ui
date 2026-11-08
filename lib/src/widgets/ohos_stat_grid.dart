@@ -1,0 +1,142 @@
+import 'package:flutter/material.dart';
+
+import '../theme/ohos_theme.dart';
+
+/// A grid of key-value metric cards.
+///
+/// This used to be called `OhosDataPanel`, which was a misnomer: ArkUI's
+/// `DataPanel` is a **proportion chart** (`Line` / `Circle`, `values` ≤ 9,
+/// `max` as either an absolute scale or a sum-to-100% mode). A grid of KPI
+/// cards has no official counterpart at all. The name was handed back to the
+/// real thing (see `OhosDataPanel`), and this widget — which several apps
+/// already use — moved here under a name that says what it draws.
+///
+/// Visual output is unchanged from the old `OhosDataPanel`; only the class
+/// name and the file moved.
+class OhosStatGrid extends StatelessWidget {
+  const OhosStatGrid({
+    super.key,
+    required this.title,
+    required this.entries,
+    this.columns = 2,
+    this.decimals = 0,
+    this.prefix,
+    this.suffix,
+  });
+
+  /// Panel title.
+  final String title;
+
+  /// Metric entries: label -> value.
+  final Map<String, num> entries;
+
+  /// Number of columns in the grid.
+  final int columns;
+
+  /// Decimal places of the values.
+  final int decimals;
+
+  /// Prefix symbol, e.g. `¥`.
+  final String? prefix;
+
+  /// Suffix symbol, e.g. `%`, `万`.
+  final String? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final List<MapEntry<String, num>> items = entries.entries.toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            title,
+            style: theme.typography.titleSmall?.copyWith(
+              color: theme.textPrimaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        GridView.count(
+          crossAxisCount: columns,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.6,
+          children: <Widget>[
+            for (final MapEntry<String, num> entry in items)
+              _OhosStatGridItem(
+                entry: entry,
+                theme: theme,
+                decimals: decimals,
+                prefix: prefix,
+                suffix: suffix,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _OhosStatGridItem extends StatelessWidget {
+  const _OhosStatGridItem({
+    required this.entry,
+    required this.theme,
+    required this.decimals,
+    required this.prefix,
+    required this.suffix,
+  });
+
+  final MapEntry<String, num> entry;
+  final OhosThemeData theme;
+  final int decimals;
+  final String? prefix;
+  final String? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      // 网格单元高度随宽度变化：320vp 下两行文字（小字 + 24sp 数值）会超出
+      // 单元高度，出斑马线。这里只让**数值**在放不下时等比缩小 ——
+      // 不能把整列塞进 FittedBox：那会给标签传无界宽度，`maxLines: 1` +
+      // 省略号直接失效，整个单元被缩小（1.3x 系统字号会被缩回 1x 以下，
+      // 长标签连带把数值也压小），信息层级全乱。
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            entry.key,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.typography.bodySmall?.copyWith(
+              color: theme.textSecondaryColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${prefix ?? ''}${entry.value.toStringAsFixed(decimals)}${suffix ?? ''}',
+                maxLines: 1,
+                style: theme.typography.headlineMedium?.copyWith(
+                  color: theme.textPrimaryColor,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

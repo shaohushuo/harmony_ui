@@ -8,12 +8,22 @@ Widget naming and APIs are aligned with Flutter's built-in `Material*` / `Cupert
 
 - Repository (AtomGit): [oh-flutter/harmony_ui](https://atomgit.com/oh-flutter/harmony_ui)
 - Repository (GitHub): [shaohushuo/harmony_ui](https://github.com/shaohushuo/harmony_ui)
-- Companion icon package: [ohos_icons](https://pub.dev/packages/ohos_icons) (HarmonyOS Symbol font icons, published on pub.dev)
+- Companion icon package: [harmony_icons](https://pub.dev/packages/harmony_icons) (HarmonyOS Symbol font icons, published on pub.dev). Renamed from `ohos_icons`, which is now marked discontinued — the `OhosIcons` class name is unchanged.
 - Changelog: [CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)
 
 ## Installation
 
-Add the git dependency in `pubspec.yaml`:
+Pick either of the two ways below.
+
+**Option 1: Add the published pub package**
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
+  harmony_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
+```
+
+**Option 2: Add the git dependency of this repository**
 
 ```yaml
 dependencies:
@@ -23,7 +33,7 @@ dependencies:
     git:
       url: https://atomgit.com/oh-flutter/harmony_ui.git
       ref: main
-  ohos_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
+  harmony_icons: ^0.1.0   # optional, companion HarmonyOS Symbol font icons
 ```
 
 Fetch dependencies:

@@ -42,6 +42,14 @@ class OhosGeometry {
   /// Capsule radius for fully rounded controls.
   static const double radiusCapsule = 999;
 
+  /// Corner radius of the ArkUI search field
+  /// (`sys.float.search_text_field_border_radius` = 20vp).
+  ///
+  /// Explicit rather than [radiusCapsule]: the official spec pins 20, and a
+  /// capsule radius silently becomes `height / 2`, so the moment someone sets a
+  /// 48vp-tall bar the corner would drift to 24 and stop matching the spec.
+  static const double radiusSearch = 20;
+
   // ---- Responsive breakpoints (窗口断点) ----
 
   /// Width breakpoint between the phone (4-column) and foldable / tablet

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
@@ -81,29 +81,84 @@ class ActionPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '工具栏 OhosToolbar',
-          description: '横向图标工具栏。',
-          child: DemoCard(child: _ToolbarDemo()),
+          description: '图标 + 文字，整条 57（56 + 1px 分割线）。'
+              '激活态要 activeIndex 与 ACTIVATE 同时满足；超过 5 项自动收进「更多」。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            child: _ToolbarDemo(),
+          ),
         ),
         const DemoSection(
           title: '核心操作栏 OhosActionBar',
-          description: '左侧次级操作 + 右侧主操作。',
+          description: '两端按钮组 + 居中主按钮，背板默认带模糊材质。',
           child: DemoCard(
             padding: EdgeInsets.zero,
             child: OhosActionBar(
-              primaryLabel: '确认支付',
-              onPrimaryPressed: _noop,
-              secondaryActions: <Widget>[
-                OhosButton(
+              startButtons: <OhosActionBarButton>[
+                OhosActionBarButton(
+                  icon: Icon(Icons.schedule_rounded),
+                  tooltip: '稍后',
                   onPressed: _noop,
-                  style: OhosButtonStyle.text,
-                  child: Text('稍后'),
                 ),
-                OhosButton(
+                OhosActionBarButton(
+                  icon: Icon(Icons.confirmation_number_outlined),
+                  tooltip: '优惠券',
                   onPressed: _noop,
-                  style: OhosButtonStyle.text,
-                  child: Text('优惠券'),
                 ),
               ],
+              endButtons: <OhosActionBarButton>[
+                OhosActionBarButton(
+                  icon: Icon(Icons.mic_none_rounded),
+                  tooltip: '语音',
+                  onPressed: _noop,
+                ),
+              ],
+              primaryButton: OhosActionBarButton(
+                icon: Icon(Icons.check_rounded),
+                tooltip: '确认支付',
+                onPressed: _noop,
+              ),
+            ),
+          ),
+        ),
+        const DemoSection(
+          title: '操作栏：竖直排列 + 整体禁用',
+          description:
+              'isHorizontal: false 时 startSpace / endSpace 落到上下边框；'
+              'style.enabled 是总开关，背板与所有按钮一起失效。',
+          child: DemoCard(
+            padding: EdgeInsets.zero,
+            // 竖直排列的操作栏高度由按钮数量决定（无界），必须给一个明确的
+            // 高度容器包住 —— 直接塞进纵向 ListView 会得到
+            // 「Vertical viewport was given unbounded height」。
+            child: SizedBox(
+              height: 240,
+              child: Center(
+                child: OhosActionBar(
+                  isExpand: true,
+                  startButtons: <OhosActionBarButton>[
+                    OhosActionBarButton(
+                      icon: Icon(Icons.share_rounded),
+                      tooltip: '分享（禁用）',
+                      enabled: false,
+                      onPressed: _noop,
+                    ),
+                  ],
+                  endButtons: <OhosActionBarButton>[
+                    OhosActionBarButton(
+                      icon: Icon(Icons.bookmark_border_rounded),
+                      tooltip: '收藏',
+                      onPressed: _noop,
+                    ),
+                  ],
+                  primaryButton: OhosActionBarButton(
+                    icon: Icon(Icons.send_rounded),
+                    tooltip: '发送',
+                    onPressed: _noop,
+                  ),
+                  style: OhosActionBarStyle(enabled: false, isHorizontal: false),
+                ),
+              ),
             ),
           ),
         ),
@@ -280,23 +335,110 @@ class _ChipsDemoState extends State<_ChipsDemo> {
   }
 }
 
-class _ToolbarDemo extends StatelessWidget {
+class _ToolbarDemo extends StatefulWidget {
   const _ToolbarDemo();
 
   @override
+  State<_ToolbarDemo> createState() => _ToolbarDemoState();
+}
+
+class _ToolbarDemoState extends State<_ToolbarDemo> {
+  /// 4 项的一档：正好演示激活态。
+  int _active = 1;
+
+  /// 7 项的一档：前 4 留在线内，后 3 收进「更多」。
+  int _activeLong = 0;
+
+  @override
   Widget build(BuildContext context) {
-    return OhosToolbar(
-      items: const <OhosToolbarItem>[
-        OhosToolbarItem(icon: OhosIcons.share, label: '分享', onPressed: _noop),
-        OhosToolbarItem(icon: OhosIcons.star, label: '收藏', onPressed: _noop),
-        OhosToolbarItem(
-          icon: OhosIcons.heart,
-          label: '点赞',
-          onPressed: _noop,
-          selected: true,
+    return Column(
+      children: <Widget>[
+        OhosToolbar(
+          activeIndex: _active,
+          items: <OhosToolbarItem>[
+            OhosToolbarItem(
+              icon: OhosIcons.share,
+              label: '分享',
+              onPressed: _noop,
+            ),
+            OhosToolbarItem(
+              icon: OhosIcons.star,
+              label: '收藏',
+              // 只有 ACTIVATE 才允许被 activeIndex 点亮。
+              state: OhosToolbarItemState.activated,
+              onPressed: () => setState(() => _active = 1),
+            ),
+            OhosToolbarItem(
+              icon: OhosIcons.heart,
+              label: '点赞',
+              state: OhosToolbarItemState.activated,
+              onPressed: () => setState(() => _active = 2),
+            ),
+            // 禁用项：不可点、变灰，也永远不会被点亮。
+            const OhosToolbarItem(
+              icon: OhosIcons.message,
+              label: '评论',
+              state: OhosToolbarItemState.disabled,
+            ),
+          ],
         ),
-        OhosToolbarItem(icon: OhosIcons.message, label: '评论', onPressed: _noop),
+        const SizedBox(height: 16),
+        OhosToolbar(
+          activeIndex: _activeLong,
+          moreIcon: OhosIcons.dot_grid_2x2,
+          items: <OhosToolbarItem>[
+            for (int i = 0; i < 7; i++)
+              OhosToolbarItem(
+                icon: _longIcons[i],
+                label: _longLabels[i],
+                state: OhosToolbarItemState.activated,
+                onPressed: () => setState(() => _activeLong = i),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _Hint('上：4 项，正好留出 24 侧边距；下：7 项，前 4 + 「更多」'),
       ],
+    );
+  }
+}
+
+const List<IconData> _longIcons = <IconData>[
+  OhosIcons.share,
+  OhosIcons.star,
+  OhosIcons.heart,
+  OhosIcons.message,
+  OhosIcons.save,
+  OhosIcons.bookmark,
+  OhosIcons.phone,
+];
+
+const List<String> _longLabels = <String>[
+  '分享',
+  '收藏',
+  '点赞',
+  '评论',
+  '保存',
+  '书签',
+  '通话',
+];
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: theme.typography.bodySmall?.copyWith(
+          color: theme.textSecondaryColor,
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
@@ -15,6 +15,7 @@ class InputPage extends StatefulWidget {
 class _InputPageState extends State<InputPage> {
   String _query = '';
   int _count = 1;
+  OhosDate _date = const OhosDate(year: 2024, month: 3, day: 7);
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +75,91 @@ class _InputPageState extends State<InputPage> {
             ),
           ),
         ),
+        // 这一节不能整体 const：onSecurityStateChange 的闭包捕获了 context，
+        // 常量表达式里不允许引用运行时的 BuildContext。
+        DemoSection(
+          title: '密码模式（末尾眼睛图标）',
+          description:
+              'obscurePassword 不只是遮蔽内容，它还带一整套密码形态：末尾 24vp 的眼睛'
+              '图标、40vp 的命中区、点一下切换显隐。obscureText 也能拿到同一套（两者是'
+              '同一形态的两个入口）。showPasswordIcon: false 保留遮蔽但不给切换入口。',
+          child: DemoCard(
+            child: Column(
+              children: <Widget>[
+                OhosTextField(
+                  labelText: '密码',
+                  hintText: '点右侧眼睛切换显隐',
+                  obscurePassword: true,
+                  prefixIcon: const Icon(OhosIcons.lock_fill, size: 20),
+                  onSecurityStateChange: (bool visible) =>
+                      showOhosToast(context, visible ? '密码已显示' : '密码已隐藏'),
+                ),
+                const SizedBox(height: 14),
+                const OhosTextField(
+                  labelText: '确认密码',
+                  hintText: '不给切换入口，只能遮蔽',
+                  obscurePassword: true,
+                  showPasswordIcon: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const DemoSection(
+          title: '内联模式（整行重命名）',
+          description:
+              'variant: inline 对应 ArkUI 的 TextInputStyle.Inline —— 圆角 4、'
+              '左右边距 2 / 12（不对称是官方值）、上下为 0，看起来就是一行可点的文本。'
+              '官方限定只支持 Normal 单行：给 obscurePassword 或 maxLines > 1 会回落成'
+              '下划线形态，不画官方不存在的「内联密码框」。',
+          child: DemoCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('项目名称', style: TextStyle(fontSize: 14)),
+                OhosTextField(
+                  initialValue: '鸿蒙风格组件库',
+                  variant: OhosTextFieldVariant.inline,
+                ),
+                SizedBox(height: 14),
+                Text('另一行', style: TextStyle(fontSize: 14)),
+                OhosTextField(
+                  initialValue: '点进来就能改',
+                  variant: OhosTextFieldVariant.inline,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const DemoSection(
+          title: '字数计数器',
+          description:
+              'showCounter + maxLength。阈值 50% 才出现（6 字上限里第 4 个字开始显示）；'
+              '超限时计数文字变 warning 色。注意官方的两条互斥：内联模式、密码模式下'
+              '计数器都不显示 —— 本组件直接跳过，不画半成品。',
+          child: DemoCard(
+            child: Column(
+              children: <Widget>[
+                OhosTextField(
+                  labelText: '昵称',
+                  hintText: '最多 6 个字',
+                  maxLength: 6,
+                  showCounter: true,
+                  counterOptions: OhosInputCounterOptions(
+                    thresholdPercentage: 50,
+                  ),
+                ),
+                SizedBox(height: 14),
+                OhosTextField(
+                  labelText: '签名',
+                  hintText: '一有输入就显示计数',
+                  maxLength: 20,
+                  showCounter: true,
+                ),
+              ],
+            ),
+          ),
+        ),
         DemoSection(
           title: '搜索框 OhosSearchBar',
           description:
@@ -107,6 +193,38 @@ class _InputPageState extends State<InputPage> {
           description: '3×3 手势密码，抬手返回点位序列。',
           child: DemoCard(
             child: Center(child: OhosPatternLock(onCompleted: _noopPattern)),
+          ),
+        ),
+        DemoSection(
+          title: '日期加减 OhosDateCounter',
+          description:
+              'CounterType.INLINE_DATE：YYYY / MM / DD 三段可点可输。'
+              '点中哪一段，右侧箭头就加减哪一段 —— 没点过时默认作用于「日」。'
+              '当前: $_date',
+          child: DemoCard(
+            child: Row(
+              children: <Widget>[
+                OhosDateCounter(
+                  value: _date,
+                  upIcon: OhosIcons.arrow_up,
+                  downIcon: OhosIcons.arrow_down,
+                  onChanged: (OhosDate v) => setState(() => _date = v),
+                ),
+                const SizedBox(width: OhosGeometry.spaceMd),
+                Flexible(
+                  child: Text(
+                    // 三段各自的回绕规则不同：年夹取、月回绕不进位、日按当月
+                    // 长度回绕。放一行提示，免得把「12 月加一月还是 12 月」
+                    // 当成 bug。
+                    '月/日回绕：12 月 +1 → 1 月，当月最后一天 +1 → 1 号',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: OhosTheme.of(context).textTertiaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

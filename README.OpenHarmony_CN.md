@@ -8,12 +8,22 @@
 
 - 仓库（AtomGit）：[oh-flutter/harmony_ui](https://atomgit.com/oh-flutter/harmony_ui)
 - 仓库（GitHub）：[shaohushuo/harmony_ui](https://github.com/shaohushuo/harmony_ui)
-- 配套图标包：[ohos_icons](https://pub.dev/packages/ohos_icons)（HarmonyOS Symbol 字体图标，已发布 pub.dev）
+- 配套图标包：[harmony_icons](https://pub.dev/packages/harmony_icons)（HarmonyOS Symbol 字体图标，已发布 pub.dev）。原 `ohos_icons` 已改名为 `harmony_icons`，旧包在 pub.dev 上标记为 discontinued，类名不变（仍是 `OhosIcons`）
 - 更新日志：[CHANGELOG.OpenHarmony.md](./CHANGELOG.OpenHarmony.md)
 
 ## 下载安装
 
-`pubspec.yaml` 中添加 git 依赖：
+两种方式任选其一。
+
+**方式一：添加 pub 上的包**
+
+```yaml
+dependencies:
+  harmony_ui: ^0.5.0
+  harmony_icons: ^0.1.0   # 可选，配套 HarmonyOS Symbol 字体图标
+```
+
+**方式二：通过 Git 引用本仓库**
 
 ```yaml
 dependencies:
@@ -23,7 +33,7 @@ dependencies:
     git:
       url: https://atomgit.com/oh-flutter/harmony_ui.git
       ref: main
-  ohos_icons: ^0.1.0   # 可选，配套 HarmonyOS Symbol 字体图标
+  harmony_icons: ^0.1.0   # 可选，配套 HarmonyOS Symbol 字体图标
 ```
 
 拉取依赖：

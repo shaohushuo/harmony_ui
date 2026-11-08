@@ -149,6 +149,15 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
                     onSelected: (int i) => controller.index = i,
                     scrollable: isScrollable,
                     activeColor: indicatorColor,
+                    // 页签是**条**，不是「一坨独立芯片」：两头和内边距都已经由
+                    // 这里的 16 水平 padding + 固定 [height] 表达过了。
+                    // 沿用 ChipGroup 的组内边距会得到两个后果：水平 16+16=32
+                    // 双倍缩进；纵向 14+14 把 36 高的芯片压进 48 高的栏里，
+                    // 只剩 20 —— 芯片被裁掉一半，点击也落在裁剪区外。
+                    // 所以这里显式归零，几何只由本组件的 [height] 决定。
+                    startSpace: 0,
+                    endSpace: 0,
+                    padding: EdgeInsets.zero,
                   ),
                 ),
               );

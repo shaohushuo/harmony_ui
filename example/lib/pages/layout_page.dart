@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'demo_scaffold.dart';
@@ -571,9 +571,14 @@ class _MotionCurveDemoState extends State<_MotionCurveDemo> {
                   widthFactor: _pressed ? eased : 0.3,
                   child: Container(
                     decoration: BoxDecoration(
-                      // 55% 品牌蓝压到灰阶上是中灰，仍读得出来；留着反而与
-                      // 彩屏版本对照最直观，所以只把轨道换成浅灰。
-                      color: const Color(0xFF0A59F7).withValues(alpha: 0.55),
+                      // 走 policy.quantize 而不是写死品牌蓝：彩屏原样返回，
+                      // 墨屏合成到纸面后取灰。此前这里留着 55% 蓝并写下
+                      // 「压到灰阶上是中灰」—— 那句话对真机成立，对**截图**
+                      // 不成立：截图里就是一条彩色带，放进「墨水屏」图集里
+                      // 等于自证主题没生效。
+                      color: theme.policy.quantize(
+                        const Color(0xFF0A59F7).withValues(alpha: 0.55),
+                      ),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),

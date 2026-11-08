@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:ohos_icons/ohos_icons.dart';
+import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import '../demo_frame.dart';
+import '../ink_color_data.dart';
 import 'demo_scaffold.dart';
 
 /// 展示类：文本 / 子标题 / 分隔器 / 进度条 / 索引条 / 滚动条 / 徽标 /
@@ -44,9 +46,12 @@ class DisplayPage extends StatelessWidget {
               '不再做每帧全屏模糊。',
           child: _InkThemeDemo(),
         ),
-        const DemoSection(
+        DemoSection(
           title: '子标题 OhosSubheader',
-          description: '区块标题，可带尾部链接。',
+          description:
+              '区块标题。形态由字段推导、不由开关决定：给了主副两个标题就是双行 72 高，'
+              '其余 56 高。副标题单独成行时字重升到 500（双行时 400），左图标只在有'
+              '副标题时出现 —— 三条都照官方恰好在这些地方不一样。',
           child: DemoCard(
             padding: EdgeInsets.zero,
             child: Column(
@@ -54,6 +59,22 @@ class DisplayPage extends StatelessWidget {
                 OhosSubheader(title: '热门推荐', trailing: '更多'),
                 OhosSubheader(title: '最近使用', trailing: '查看全部'),
                 OhosSubheader(title: '本地服务'),
+                OhosSubheader(
+                  title: '本周更新',
+                  secondaryTitle: '共 12 项，其中 3 项待处理',
+                  trailing: '全部',
+                  onTrailingTap: () {},
+                ),
+                OhosSubheader(
+                  secondaryTitle: '已同步',
+                  icon: Icon(Icons.cloud_done_outlined),
+                ),
+                OhosSubheader(
+                  secondaryTitle: '纯文本右侧不带箭头',
+                  trailing: '操作',
+                  showTrailingArrow: false,
+                  onTrailingTap: () {},
+                ),
               ],
             ),
           ),
@@ -159,11 +180,12 @@ class DisplayPage extends StatelessWidget {
           description: '锚定目标控件的气泡。',
           child: DemoCard(child: _PopupDemo()),
         ),
-        const DemoSection(
-          title: '数据可视化 OhosDataPanel',
-          description: '指标卡片面板，支持前缀 / 后缀与小数位。',
-          child: DemoCard(
-            child: OhosDataPanel(
+        DemoSection(
+          title: '指标卡片 OhosStatGrid',
+          description: '原来的 KPI 卡片网格。它曾叫 OhosDataPanel，但 ArkUI 的 '
+              'DataPanel 是占比图而不是卡片 —— 名字已还给真组件，此处保留原视觉。',
+          child: const DemoCard(
+            child: OhosStatGrid(
               title: '本日健康数据',
               prefix: '',
               suffix: '',
@@ -175,6 +197,18 @@ class DisplayPage extends StatelessWidget {
               },
             ),
           ),
+        ),
+        const DemoSection(
+          title: '占比图 OhosDataPanel',
+          description: 'DataPanel 的两种形态：环形 / 线形。values ≤ 9 段，'
+              'max > 0 时是标尺（剩余部分留作底槽），max ≤ 0 时按数组之和铺满。',
+          child: DemoCard(child: _DataPanelDemo()),
+        ),
+        const DemoSection(
+          title: '量规图 OhosGauge',
+          description: 'Gauge：环是静态装饰（分段色 / 权重），指针才跟 value 走。'
+              '起止角度是钟面语义 —— 0 点 0 度、顺时针为正。',
+          child: DemoCard(child: _GaugeDemo()),
         ),
         const DemoSection(
           title: '二维码 OhosQrCode',
@@ -261,28 +295,85 @@ class _ProgressDemoState extends State<_ProgressDemo> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        const _ProgressLabel('五种形态 · 官方 ProgressType 全量'),
+        const SizedBox(height: 8),
+        // 五型的差异是**几何**差异，不是同一张图的五种涂装：并排才看得出
+        // 「月相填面积、刻度环换色、胶囊两端走月牙」这几件事。
+        // 官方示例 1 就是把这五型摆在一列里对照的。
+        Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            OhosProgressIndicator.circular(),
-            OhosProgressIndicator.circular(
-              value: 0.6,
-              size: 56,
-              strokeWidth: 6,
+            OhosProgressIndicator.ring(value: _value),
+            OhosProgressIndicator.eclipse(value: _value),
+            // 刻度环默认 120 刻度在 72 直径下会退化（刻度比间距还宽），
+            // 所以示例换成 40 刻度 —— 这也是官方示例 1 的做法
+            OhosProgressIndicator.scaleRing(
+              value: _value,
+              size: 72,
+              scaleCount: 40,
+              scaleWidth: 2,
             ),
-            OhosProgressIndicator.circular(
-              value: 1.0,
-              size: 40,
-              color: Color(0xFF64BB5C),
+            SizedBox(
+              width: 120,
+              height: 36,
+              child: OhosProgressIndicator.capsule(
+                value: _value,
+                showDefaultPercentage: true,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 16),
+        const _ProgressLabel('线性 · 确定 / 不确定'),
+        const SizedBox(height: 8),
         OhosProgressIndicator.linear(value: _value),
         const SizedBox(height: 12),
         const OhosProgressIndicator.linear(),
+        const SizedBox(height: 16),
+        const _ProgressLabel('胶囊 · 内描边 + 自定义文本'),
+        const SizedBox(height: 8),
+        const SizedBox(
+          height: 44,
+          child: OhosProgressIndicator.capsule(
+            value: 0.7,
+            content: '正在安装…',
+            borderColor: Color(0xFF007DFF),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const _ProgressLabel('加载动效 OhosLoadingIndicator（彗星形）'),
+        const SizedBox(height: 8),
+        Row(
+          children: <Widget>[
+            const OhosLoadingIndicator(),
+            const SizedBox(width: 16),
+            const OhosLoadingIndicator(size: 24),
+            const SizedBox(width: 16),
+            // enableLoading=false 仍然占位：加载完成后切换不会让布局跳一下
+            const OhosLoadingIndicator(enableLoading: false),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+/// 进度条 demo 里的分组小标题。
+class _ProgressLabel extends StatelessWidget {
+  const _ProgressLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Text(
+      text,
+      style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
     );
   }
 }
@@ -642,7 +733,10 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
           ),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
+        // 这条色带是**取色器的数据源**：观感上它就该是十二个真彩块，
+        // 量化成灰之后「拖到紫色报 #8B7FE8」这件事就演示不了了。
+        InkColorData(
+          child: GestureDetector(
           key: _stripKey,
           onHorizontalDragStart: _onDragStart,
           onHorizontalDragUpdate: _onDragUpdate,
@@ -673,6 +767,7 @@ class _MagnifierDemoState extends State<_MagnifierDemo> {
               ),
             ),
           ),
+          ),
         ),
       ],
     );
@@ -702,13 +797,17 @@ class _HexBubble extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              color: swatch.color,
-              shape: BoxShape.circle,
-              border: Border.all(color: demoFrameColor(theme)),
+          // 泡泡里的色点是**被报出的那个色值本身**，和旁边那行 `#0A59F7`
+          // 同属数据：量化成灰之后，泡泡会显示「灰圆点 + #0A59F7」，自相矛盾。
+          InkColorData(
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: swatch.color,
+                shape: BoxShape.circle,
+                border: Border.all(color: demoFrameColor(theme)),
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -759,6 +858,243 @@ class _ScrollbarDemoState extends State<_ScrollbarDemo> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DataPanelDemo extends StatefulWidget {
+  const _DataPanelDemo();
+
+  @override
+  State<_DataPanelDemo> createState() => _DataPanelDemoState();
+}
+
+class _DataPanelDemoState extends State<_DataPanelDemo> {
+  /// 官方示例的 `values: [50, 12, 8, 5]`、`max: 100`：四段共 75%，剩下四分之一
+  /// 是底槽 —— 一眼能看出「标尺」与「铺满」的区别。
+  static const List<double> _values = <double>[50, 12, 8, 5];
+
+  /// `max <= 0` 时按数组之和铺满，段数一样、观感完全不同。
+  bool _fill = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            SizedBox.square(
+              dimension: 132,
+              child: OhosDataPanel(
+                values: _values,
+                max: _fill ? 0 : 100,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      _fill ? '100' : '75',
+                      style: theme.typography.titleLarge?.copyWith(
+                        color: theme.textPrimaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      _fill ? '按和铺满' : 'max 100',
+                      style: theme.typography.labelSmall?.copyWith(
+                        color: theme.textTertiaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    '环形',
+                    style: theme.typography.bodySmall?.copyWith(
+                      color: theme.textSecondaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  OhosDataPanel(
+                    values: _values,
+                    max: _fill ? 0 : 100,
+                    trackShadow: _fill ? null : const OhosDataPanelShadow(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '线形',
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textSecondaryColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 20,
+          child: OhosDataPanel(
+            values: _values,
+            max: _fill ? 0 : 100,
+            type: OhosDataPanelType.line,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OhosButton(
+            style: OhosButtonStyle.text,
+            onPressed: () => setState(() => _fill = !_fill),
+            child: Text(_fill ? '改回 max 100' : '改成 max 0（按和铺满）'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GaugeDemo extends StatefulWidget {
+  const _GaugeDemo();
+
+  @override
+  State<_GaugeDemo> createState() => _GaugeDemoState();
+}
+
+class _GaugeDemoState extends State<_GaugeDemo> {
+  double _value = 60;
+
+  /// 官方示例 1 的九段配色（饱和度由暖到冷），每段等权。
+  static const List<OhosGaugeSegment> _nineSegments = <OhosGaugeSegment>[
+    OhosGaugeSegment(
+      color: Color(0xFFDEB6FB),
+      endColor: Color(0xFFAC49F5),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFBBB7FC),
+      endColor: Color(0xFF564AF7),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFF5B5C2),
+      endColor: Color(0xFFE64566),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFF8C5A6),
+      endColor: Color(0xFFED6F21),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFFCEB99),
+      endColor: Color(0xFFF7CE00),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFDBEFA5),
+      endColor: Color(0xFFA5D61D),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFC1E4BE),
+      endColor: Color(0xFF64BB5C),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFC0ECE5),
+      endColor: Color(0xFF61CFBE),
+    ),
+    OhosGaugeSegment(
+      color: Color(0xFFB5E0F4),
+      endColor: Color(0xFF46B1E3),
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      children: <Widget>[
+        // 两个 140 见方并排需要 360 + 内边距。窄屏（320vp 档）放不下 ——
+        // 静态分析看不见，只有真布局才炸（溢出 24px）。用 `LayoutBuilder`
+        // 按可用宽度缩：圆的直径跟着屏宽走，标签字号不动。
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double side = math.min(
+              140,
+              (constraints.maxWidth - 24) / 2,
+            );
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                Column(
+                  children: <Widget>[
+                    SizedBox.square(
+                      dimension: side,
+                      child: OhosGauge(
+                        value: _value,
+                        min: 0,
+                        max: 100,
+                        startAngle: 225,
+                        endAngle: 135,
+                        strokeWidth: 18,
+                        child: Text(
+                          _value.toStringAsFixed(0),
+                          style: theme.typography.headlineMedium?.copyWith(
+                            color: theme.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '默认渐变环',
+                      style: theme.typography.labelSmall?.copyWith(
+                        color: theme.textTertiaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: <Widget>[
+                    SizedBox.square(
+                      dimension: side,
+                      child: OhosGauge(
+                        value: _value,
+                        min: 0,
+                        max: 100,
+                        startAngle: 210,
+                        endAngle: 150,
+                        strokeWidth: 14,
+                        segments: _nineSegments,
+                        // 九段等分后每段都不到 24°，指针比环更抢眼；官方示例 6
+                        // 就是这一档用 `indicator(null)` 把指针关掉。
+                        showIndicator: false,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '九段 · 无指针',
+                      style: theme.typography.labelSmall?.copyWith(
+                        color: theme.textTertiaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+        Slider(
+          value: _value,
+          max: 100,
+          onChanged: (double v) => setState(() => _value = v),
+        ),
+      ],
     );
   }
 }
