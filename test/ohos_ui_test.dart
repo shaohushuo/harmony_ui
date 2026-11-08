@@ -13737,6 +13737,82 @@ void main() {
         reason: '月相没有不确定态，null 按 0 画',
       );
     });
+
+    testWidgets('linear 不确定态：库内自驱，游标随时间扫过', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            width: 200,
+            height: 4,
+            child: OhosProgressIndicator.linear(),
+          ),
+        ),
+      );
+      double cursorLeft() => _replay(
+        tester,
+        OhosProgressIndicator,
+        size: const Size(200, 4),
+      ).whereType<_RectDraw>().last.rect.left;
+
+      final double first = cursorLeft();
+      await tester.pump(const Duration(milliseconds: 400));
+      final double second = cursorLeft();
+      await tester.pump(const Duration(milliseconds: 400));
+      final double third = cursorLeft();
+
+      expect(
+        second,
+        isNot(first),
+        reason: '不确定态要自己转，不能要求调用方另接 AnimationController',
+      );
+      expect(third, isNot(second), reason: '一轮 2000ms，两帧之间必须前进');
+    });
+
+    testWidgets('ring 不确定态：90° 游标绕圈转', (WidgetTester tester) async {
+      await tester.pumpWidget(wrap(const OhosProgressIndicator.ring()));
+      double startAngle() => _replay(tester, OhosProgressIndicator)
+          .whereType<_ArcDraw>()
+          .first
+          .start;
+
+      final double first = startAngle();
+      await tester.pump(const Duration(milliseconds: 500));
+      final double second = startAngle();
+
+      // 500ms 是四分之一轮，正好 90°（π/2）
+      expect(second - first, closeTo(math.pi / 2, 0.05));
+    });
+
+    testWidgets('墨屏：不确定态不转，停在静态中位', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: const OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 200,
+                  height: 4,
+                  child: OhosProgressIndicator.linear(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      double cursorLeft() => _replay(
+        tester,
+        OhosProgressIndicator,
+        size: const Size(200, 4),
+      ).whereType<_RectDraw>().last.rect.left;
+
+      final double first = cursorLeft();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      // 策略把动画时长压成 0：相位为 null，落在 35% 的静态中位
+      expect(cursorLeft(), first, reason: '墨水屏上不许有帧动画');
+      expect(first, closeTo(200 * 0.35, 0.01));
+    });
   });
 
   group('OhosLoadingIndicator', () {
