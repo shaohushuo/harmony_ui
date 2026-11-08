@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_chip_metrics.dart';
+import '../theme/ohos_contrast.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 
@@ -109,6 +110,12 @@ class OhosChip extends StatelessWidget {
   /// 激活态背景色（官方 `activatedBackgroundColor`，默认
   /// `ohos_id_color_emphasize`）。
   ///
+  /// 默认值的依据：官方文档 `ohos-arkui-advanced-Chip.md` 的
+  /// `ChipOptions.activatedBackgroundColor` 表格（API 12 起）写的就是
+  /// `$r('sys.color.ohos_id_color_emphasize')`；源码 `chip.ets:389` 走的是
+  /// `sys.color.chip_container_activated_color` —— 与文档不同源，但同属高亮
+  /// 容器色，此处按文档口径记默认值，不追 hex。
+  ///
   /// 与 [selectedColor] 是同一条规格的两个入口：那个是 0.5 起的本库参数名，
   /// 这个对齐官方文档。两者都给时 [activatedBackgroundColor] 优先。
   final Color? activatedBackgroundColor;
@@ -119,6 +126,16 @@ class OhosChip extends StatelessWidget {
 
   /// 激活态文字色（官方 `LabelOptions.activatedFontColor`，默认
   /// `ohos_id_color_text_primary_contrary`）。
+  ///
+  /// 默认值的依据：官方文档 `ohos-arkui-advanced-Chip.md`（`ChipOptions.label`
+  /// 表格，API 12 起）明写 `activatedFontColor` 默认
+  /// `$r('sys.color.ohos_id_color_text_primary_contrary')`；源码 `chip.ets:328`
+  /// 的 theme 走 `sys.color.chip_activated_fontcolor`，语义同为「高亮容器上的
+  /// 反色前景」。**不要**改成 `ohos_id_color_text_primary` —— 那是非激活态的
+  /// `fontColor`，配强调色底会掉到 ~1.1:1。
+  ///
+  /// 文档另提醒：调用方把 [activatedBackgroundColor] 换成浅色时必须同步给
+  /// 本参数，否则对比度不足 —— 那是调用方配置问题，不是默认值问题。
   ///
   /// 注意它与图标色的默认值**不同源**：图标非激活是
   /// `ohos_id_color_secondary`、激活是 `ohos_id_color_text_primary_contrary`；
@@ -144,18 +161,13 @@ class OhosChip extends StatelessWidget {
     final OhosChipMetrics metrics = OhosChipMetrics.of(size);
     final bool enabled = onPressed != null;
     final OhosVisualPolicy policy = theme.policy;
-    // 文字色与图标色**分开**：官方 `LabelOptions.fontColor` 默认
-    // `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认
-    // `chip_usually_icon_color`（≈ `ohos_id_color_secondary`）。老实现把两者
-    // 绑在同一个 `fg` 上，文字常态因此偏淡一档。
-    final Color iconFg = selected
-        ? theme.onHighlightColor
-        : theme.textSecondaryColor;
-    final Color labelFg = selected
-        ? (activatedLabelColor ?? theme.onHighlightColor)
-        : (labelColor ?? theme.textPrimaryColor);
-    // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，下面统一改成
-    // 「留白 + 描边」，靠线的深浅而不是色的浓淡表意。
+    // 12% 的选中底活不过 16 级灰阶：策略会把它判成透明，这时改走
+    // 「反白实底」—— 与 tabs / toolbar 同一条 `selectionMark` 约定。
+    //
+    // 早先这里只把底判成透明、字色却仍是 `onHighlightColor`：白纸上白字压白纸、
+    // 深色纸上是纸色字压纸底，选中的 chip 整颗字消失，只剩一圈稍深的描边。
+    final OhosSelectionMark mark = policy.selectionMark;
+    final bool inverse = selected && mark == OhosSelectionMark.inverse;
     final Color idleFill =
         backgroundColor ?? theme.compBackgroundGrayColor ?? theme.cardColor;
     final Color selectedFill =
@@ -165,8 +177,21 @@ class OhosChip extends StatelessWidget {
               theme.highlightColor.withValues(alpha: 0.10));
     // 激活底色的优先级：官方参数名 → 本库旧参数名 → 主题回落。
     final Color bg = selected
-        ? (activatedBackgroundColor ?? selectedColor ?? selectedFill)
+        ? (activatedBackgroundColor ??
+              selectedColor ??
+              (inverse ? theme.highlightColor : selectedFill))
         : idleFill;
+    // 文字色与图标色**分开**：官方 `LabelOptions.fontColor` 默认
+    // `ohos_id_color_text_primary`，而 `prefixIcon.fillColor` 默认
+    // `chip_usually_icon_color`（≈ `ohos_id_color_secondary`）。老实现把两者
+    // 绑在同一个 `fg` 上，文字常态因此偏淡一档。
+    final Color iconFg = !selected
+        ? theme.textSecondaryColor
+        : _selectedForeground(theme, bg, onNoFill: theme.highlightColor);
+    final Color labelFg = !selected
+        ? (labelColor ?? theme.textPrimaryColor)
+        : (activatedLabelColor ??
+              _selectedForeground(theme, bg, onNoFill: theme.textPrimaryColor));
     // 描边：选中用品牌色，未选中用提示色；墨屏上两者都由策略换成实色
     final Color borderColor = selected
         ? policy.line(theme.highlightColor, 0.20)
@@ -280,4 +305,30 @@ class OhosChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 选中态的文字 / 图标该用什么颜色 —— 按**实际底色**算，不按分支猜。
+///
+/// 官方 `activatedFontColor` 默认 `text_primary_contrary`（≈ 反白），那是在
+/// 「实底 `highlightColor`」这个前提下给的。本库彩屏的选中底是 10% 品牌色
+/// tint，照抄反白就是白字压白纸；反过来，调用方显式传了实心品牌底时，退回
+/// 品牌色字又是蓝字压蓝底。所以判据只能是合成后的真实底色。
+///
+/// [onNoFill] 是底色最终被判成完全透明时的退路（选中表达只剩描边，字要用
+/// 常态色）。
+Color _selectedForeground(
+  OhosThemeData theme,
+  Color fill, {
+  required Color onNoFill,
+}) {
+  if (fill.a == 0) {
+    return onNoFill;
+  }
+  return ohosOnFillReadable(
+        theme.onHighlightColor,
+        fill,
+        backdrop: theme.backgroundColor,
+      )
+      ? theme.onHighlightColor
+      : theme.highlightTextColor;
 }
