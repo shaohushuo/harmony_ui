@@ -107,9 +107,9 @@ class _RecordingCanvas implements Canvas {
 /// 「进度靠换色」那条用例正是这样假绿/假红的。
 class _DrawBase {
   _DrawBase(Paint paint)
-      : color = paint.color,
-        strokeWidth = paint.strokeWidth,
-        shader = paint.shader;
+    : color = paint.color,
+      strokeWidth = paint.strokeWidth,
+      shader = paint.shader;
   final Color color;
   final double strokeWidth;
 
@@ -13776,10 +13776,10 @@ void main() {
 
     testWidgets('ring 不确定态：90° 游标绕圈转', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const OhosProgressIndicator.ring()));
-      double startAngle() => _replay(tester, OhosProgressIndicator)
-          .whereType<_ArcDraw>()
-          .first
-          .start;
+      double startAngle() => _replay(
+        tester,
+        OhosProgressIndicator,
+      ).whereType<_ArcDraw>().first.start;
 
       final double first = startAngle();
       await tester.pump(const Duration(milliseconds: 500));
@@ -13847,9 +13847,7 @@ void main() {
       expect(arcs.single.color.a, 1.0, reason: 'paint 不能再调制一次 shader 的 alpha');
     });
 
-    testWidgets('彗星弧的 alpha 曲线：弧头最亮、沿弧单调递减', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('彗星弧的 alpha 曲线：弧头最亮、沿弧单调递减', (WidgetTester tester) async {
       // 官方默认色 `#ff666666` = 60% 黑，就是色板里的次级文字色
       final OhosThemeData theme = OhosThemeData.light();
       expect(
@@ -13877,9 +13875,7 @@ void main() {
       expect(fade.last.a, 0, reason: '弧尾要真的淡到看不见');
     });
 
-    testWidgets('彗星弧的头在前进方向那端，不是拖在后面', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('彗星弧的头在前进方向那端，不是拖在后面', (WidgetTester tester) async {
       // drawArc 的正角度与 SweepGradient 的 stop 都沿顺时针增长，弧也顺时针
       // 转 —— 所以 stop 越大越靠前，最亮的必须落在末位。早先按「stop 0 是
       // 弧头」铺，真机上浅色尾巴在前面跑、深色脑袋拖在后面。

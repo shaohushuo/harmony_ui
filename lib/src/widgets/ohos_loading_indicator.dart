@@ -193,9 +193,9 @@ class OhosLoadingIndicatorMetrics {
   /// 断言「弧头最亮、沿弧单调递减」。
   @visibleForTesting
   static List<Color> cometFadeColors(Color base) => <Color>[
-        for (final double factor in _cometFadeFactors)
-          base.withValues(alpha: base.a * factor),
-      ];
+    for (final double factor in _cometFadeFactors)
+      base.withValues(alpha: base.a * factor),
+  ];
 
   /// 弧长 0 / 25% / 50% / 75% / 100% 处的 alpha 系数。
   static const List<double> _cometFadeFactors = <double>[
