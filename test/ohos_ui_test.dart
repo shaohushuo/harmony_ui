@@ -13909,6 +13909,156 @@ void main() {
       expect(circles.first.strokeWidth, 1);
     });
 
+    /// 胶囊文字被切成两层时的字色（轨道层 + 填充层）。
+    Set<Color?> capsuleLabelColors(WidgetTester tester, String label) => tester
+        .widgetList<Text>(find.text(label))
+        .map((Text text) => text.style?.color)
+        .toSet();
+
+    Future<void> pumpInkCapsule(WidgetTester tester, double value) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 200,
+                  height: 40,
+                  child: OhosProgressIndicator.capsule(
+                    value: value,
+                    showDefaultPercentage: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('胶囊文字：墨屏压在纯黑填充上时反白', (WidgetTester tester) async {
+      await pumpInkCapsule(tester, 0.7);
+      final OhosThemeData ink = OhosThemeData.ink();
+      // 官方字色 #182431 压在纯黑上只有 1.3:1，整段文字等于没画。
+      // 轨道层保留官方深色，填充层换成反白色 —— 两层叠着才跨得过边界。
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        <Color?>{
+          OhosProgressMetrics.capsuleTextColor,
+          ink.onHighlightColor,
+        },
+      );
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        contains(ink.onHighlightColor),
+        reason: '墨屏填充是纯黑，深色字压上去读不出来',
+      );
+    });
+
+    testWidgets('胶囊文字：进度很低时反白层被裁在填充区内', (WidgetTester tester) async {
+      await pumpInkCapsule(tester, 0.2);
+      // 20% 的填充盖不到居中的文字，白色那层被裁到左侧 40px，视觉上仍是
+      // 白纸轨道 + 官方深色字。裁切用的是与填充同源的 `ClipPath`（圆头右端），
+      // 不是按 `fill × width` 切直边。
+      final ClipPath clip = tester.widget<ClipPath>(
+        find.ancestor(
+          of: find.descendant(
+            of: find.byType(OhosProgressIndicator),
+            matching: find.text('20%'),
+          ).last,
+          matching: find.byType(ClipPath),
+        ),
+      );
+      expect(
+        clip.clipper!.getClip(const Size(200, 40)).getBounds().right,
+        moreOrLessEquals(40),
+      );
+    });
+
+    testWidgets('胶囊文字：彩屏不反白，仍是官方字色', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            width: 200,
+            height: 40,
+            child: OhosProgressIndicator.capsule(
+              value: 0.7,
+              showDefaultPercentage: true,
+            ),
+          ),
+        ),
+      );
+      // 蓝填充（#0A59F7）与官方字色约 2.8:1，是官方自己的观感下限，
+      // 不该被墨屏的兜底逻辑误伤 —— 彩屏只有一层
+      expect(find.text('70%'), findsOneWidget);
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        <Color?>{OhosProgressMetrics.capsuleTextColor},
+      );
+    });
+
+    testWidgets('胶囊文字：半透明填充不判反白，不会白字压白底', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 200,
+            height: 40,
+            child: OhosProgressIndicator.capsule(
+              value: 0.7,
+              // 15% 的黑压在白轨道上几乎是白纸。按「实心黑」算亮度会误判成
+              // 低对比 ⇒ 走反白档 ⇒ 白字落在近白底上，整段标签消失。
+              color: Colors.black.withValues(alpha: 0.15),
+              showDefaultPercentage: true,
+            ),
+          ),
+        ),
+      );
+      // 合成背景后再判：只有一层，仍是官方深色字。
+      expect(find.text('70%'), findsOneWidget);
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        <Color?>{OhosProgressMetrics.capsuleTextColor},
+      );
+    });
+
+    testWidgets('胶囊文字：反白层不进语义树，读屏只念一遍', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await pumpInkCapsule(tester, 0.7);
+      // 视觉上两层（轨道层 + 填充反白层），语义上只能有一层。
+      expect(find.text('70%'), findsNWidgets(2));
+      expect(find.bySemanticsLabel('70%'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('胶囊文字：进度为 0 时不叠反白层', (WidgetTester tester) async {
+      await pumpInkCapsule(tester, 0);
+      // 裁切区为空，那层字画不出来 —— 也就没必要存在（语义树同理）。
+      expect(find.text('0%'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(OhosProgressIndicator),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('胶囊文字：两层字像素对齐，反白层只是同位置的拷贝', (
+      WidgetTester tester,
+    ) async {
+      await pumpInkCapsule(tester, 0.7);
+      final Finder labels = find.text('70%');
+      expect(labels, findsNWidgets(2));
+      // 轨道层与反白层必须落在同一处：任何偏移都会让填充边界上的笔画出现
+      // 错位重影（一半深、一半白，两边都不完整）。
+      expect(tester.getRect(labels.at(0)), tester.getRect(labels.at(1)));
+    });
+
     testWidgets('value 为 null：线性/环形给不确定态，月相不画进度', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(

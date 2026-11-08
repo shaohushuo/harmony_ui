@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/ohos_contrast.dart';
 import '../theme/ohos_theme.dart';
 
 /// 进度条形态，对应 ArkUI 的 `ProgressType`。
@@ -529,6 +530,13 @@ class OhosProgressIndicator extends StatelessWidget {
     final double height = trackHeight ?? 40;
     final String? label = _capsuleLabel;
     final double strokeWidth = ohosProgressStrokeWidth(context);
+    final double fill = value ?? 0;
+    // 填充与裁切必须用同一个圆角：填充是「圆头胶囊」，右端是半径 r 的弧。
+    final double radius = capsuleBorderRadius ?? height / 2;
+    // 两段字色：轨道上照官方的深色，填充上在同色时才换成反白色
+    // （见 _capsuleOnFillColor）。
+    const Color onTrack = OhosProgressMetrics.capsuleTextColor;
+    final Color onFill = _capsuleOnFillColor(theme, active, track);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.hasBoundedWidth
@@ -543,31 +551,39 @@ class OhosProgressIndicator extends StatelessWidget {
               Positioned.fill(
                 child: CustomPaint(
                   painter: _CapsulePainter(
-                    value: value ?? 0,
+                    value: fill,
                     color: active,
                     track: track,
-                    borderRadius: capsuleBorderRadius ?? height / 2,
+                    borderRadius: radius,
                     borderColor:
                         borderColor ?? OhosProgressMetrics.capsuleBorderColor,
                     strokeWidth: strokeWidth,
                   ),
                 ),
               ),
-              if (label != null)
-                Padding(
-                  // 官方 `progress_text_margin` = 8vp：文字与端头弧线之间留出
-                  // 一个圆角的距离，否则 100% 时数字会顶到弧上。
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    style: TextStyle(
-                      fontSize: OhosProgressMetrics.capsuleTextSize,
-                      color: OhosProgressMetrics.capsuleTextColor,
-                      // 官方 `font` 的其余参数「跟随 Text 组件的主题值」，
-                      // 所以字重交给主题排版，只钉死字号与颜色。
-                      fontFamily: theme.typography.fontFamily,
+              if (label != null) _capsuleLabelWidget(theme, label, onTrack),
+              // 填充与官方字色几乎同色时才叠第二层：只保留填充区那一段的
+              // 反白字。整段换色不行 —— 文字跨在填充边界上（如 `52%`）时，
+              // 落在轨道上的那半个字形会跟着变白、直接消失。
+              // `fill <= 0` 时裁切矩形是空的，这一层画不出任何东西，也就不该
+              // 进语义树 —— 否则「进度 0%」读屏仍会多念一遍。
+              if (label != null && onFill != onTrack && fill > 0)
+                Positioned.fill(
+                  // 这一层只是同一行字的反白拷贝：必须排除语义，否则读屏会把
+                  // 「70%」连读两次（同 `ohos_list_item_card` / `ohos_magnifier`
+                  // 的处理）。语义只保留上面轨道层那一份。
+                  child: ExcludeSemantics(
+                    child: ClipPath(
+                      // 裁切路径与填充路径同源：填充右端是圆头，用直线
+                      // (`fill × width`) 裁会在弧内的三角区留下反白笔画 ——
+                      // 那块其实是轨道，高进度 + 宽标签时肉眼可见。
+                      clipper: _CapsuleFillClipper(
+                        fill: fill,
+                        borderRadius: radius,
+                      ),
+                      child: Center(
+                        child: _capsuleLabelWidget(theme, label, onFill),
+                      ),
                     ),
                   ),
                 ),
@@ -575,6 +591,73 @@ class OhosProgressIndicator extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  /// 胶囊文字落在**填充**上时该用的颜色。
+  ///
+  /// 官方给的 `capsuleTextColor`（`#ff182431`）是深色：压在彩屏的蓝填充
+  /// （`#0A59F7`）上约 2.8:1，是官方自己认可的观感；但墨屏的
+  /// `highlightColor` 是纯黑，深色字压上去只剩 **1.3:1** —— 文字整段消失。
+  /// 所以这一档按对比度兜底：低于 2:1（＝两者几乎同色）
+  /// 换成主题现成的 [OhosThemeData.onHighlightColor]（白纸墨屏 = 纸白，
+  /// 深色墨屏 = 纸黑）。阈值取 2 而不是 WCAG 的 3，正是因为官方彩屏本身
+  /// 就站在 2.8 —— 抬到 3 会把彩屏一起改掉，偏离官方。
+  Color _capsuleOnFillColor(
+    OhosThemeData theme,
+    Color active,
+    _TrackStyle track,
+  ) {
+    const Color official = OhosProgressMetrics.capsuleTextColor;
+    // `computeLuminance()` 只看 RGB、**不看 alpha**：半透明填充必须先跟它
+    // 实际压着的背景合成，否则判的是「这块色如果实心」的亮度。彩屏上
+    // `color: Colors.black.withValues(alpha: .15)` 会被算成接近纯黑 ⇒ 判进
+    // 反白档，而画出来几乎是白纸 ⇒ 白字压白底、整段标签消失（issue #8 的
+    // 症状，只是触发条件从「墨屏」换成「半透明填充」）。
+    //
+    // 背景取轨道色：填充是画在轨道上的。轨道在灰阶屏是 1px 实线（`outline`，
+    // 铺底透明），那时实际背景是纸面，用 `cardColor` 顶上。
+    //
+    // 轨道自己也是**半透明**的（`policy.tint(highlightColor, .15)`），所以
+    // 要先把它合成到纸面上得到一块不透明背景，再让填充压上去 —— 只叠一层
+    // 的话背景仍是半透明，`computeLuminance` 照样读不出真实亮度。
+    final Color backdrop = track.outline || track.color.a == 0
+        ? theme.cardColor
+        : Color.alphaBlend(track.color, theme.cardColor);
+    // 阈值取 2 而不是公共默认的 2.5：官方彩屏蓝底深色字本身就站在 2.8 附近，
+    // 抬到 2.5 会把官方观感一起改掉（见上面的 dartdoc）。
+    return ohosOnFillReadable(
+          official,
+          active,
+          backdrop: backdrop,
+          minContrast: 2,
+        )
+        ? official
+        : theme.onHighlightColor;
+  }
+
+  /// 胶囊上的文字，只上色不做定位 —— 居中由调用方的 `Stack` / `Center` 负责。
+  Widget _capsuleLabelWidget(
+    OhosThemeData theme,
+    String label,
+    Color color,
+  ) {
+    return Padding(
+      // 官方 `progress_text_margin` = 8vp：文字与端头弧线之间留出一个圆角的
+      // 距离，否则 100% 时数字会顶到弧上。
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.clip,
+        style: TextStyle(
+          fontSize: OhosProgressMetrics.capsuleTextSize,
+          color: color,
+          // 官方 `font` 的其余参数「跟随 Text 组件的主题值」，
+          // 所以字重交给主题排版，只钉死字号与颜色。
+          fontFamily: theme.typography.fontFamily,
+        ),
+      ),
     );
   }
 
@@ -1113,4 +1196,34 @@ class _CapsulePainter extends CustomPainter {
       old.borderColor != borderColor ||
       old.strokeWidth != strokeWidth ||
       old.track.color != track.color;
+}
+
+/// 只保留胶囊左侧「已填充」那一段的裁切器。
+///
+/// 用来叠第二层反白文字：填充区里的字用反白色、轨道区里的字保持官方深色，
+/// 文字跨在边界上时两半都还在。
+/// 把反白字裁到**填充区**上，形状与 [_CapsulePainter] 画的填充完全一致。
+///
+/// 早先用 `Rect.fromLTRB(0, 0, fill * width, height)` 直线裁切：填充是圆头
+/// 胶囊，右端那段是半径 `r` 的弧，直线会在弧内的三角区留下反白笔画 ——
+/// 那块其实是轨道。进度接近 100%、标签又宽时，能看到反白字冒出填充之外。
+class _CapsuleFillClipper extends CustomClipper<Path> {
+  const _CapsuleFillClipper({required this.fill, required this.borderRadius});
+
+  /// 已完成比例（0–1），与画笔同一个值。
+  final double fill;
+
+  /// 与画笔同一个圆角，`ohosCapsuleProgressPath` 内部会夹到 `h / 2`。
+  final double borderRadius;
+
+  @override
+  Path getClip(Size size) => ohosCapsuleProgressPath(
+    size: size,
+    value: fill,
+    borderRadius: borderRadius,
+  );
+
+  @override
+  bool shouldReclip(_CapsuleFillClipper oldClipper) =>
+      oldClipper.fill != fill || oldClipper.borderRadius != borderRadius;
 }
