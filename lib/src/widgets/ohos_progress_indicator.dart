@@ -95,6 +95,15 @@ class OhosProgressMetrics {
 /// `ohosCanvasAngle` 不同，那个服务的是 Gauge 的「钟面 0 点在 12 点」语义。
 double _rad(double degrees) => degrees * math.pi / 180;
 
+/// WCAG 2.x 的对比度（1:1 ~ 21:1），用相对亮度线性化后的比值。
+///
+/// 只用来判「这行字压在填充上还能不能读」，不参与配色决策。
+double _contrastRatio(Color a, Color b) {
+  final double la = a.computeLuminance();
+  final double lb = b.computeLuminance();
+  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+}
+
 /// 月相（Eclipse）的形状。
 ///
 /// 算法照 `progress_modifier.cpp` 的 `PaintMoon`，因为它不是「画个扇形」：
@@ -529,6 +538,11 @@ class OhosProgressIndicator extends StatelessWidget {
     final double height = trackHeight ?? 40;
     final String? label = _capsuleLabel;
     final double strokeWidth = ohosProgressStrokeWidth(context);
+    final double fill = value ?? 0;
+    // 两段字色：轨道上照官方的深色，填充上在同色时才换成反白色
+    // （见 _capsuleOnFillColor）。
+    const Color onTrack = OhosProgressMetrics.capsuleTextColor;
+    final Color onFill = _capsuleOnFillColor(theme, active);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.hasBoundedWidth
@@ -543,7 +557,7 @@ class OhosProgressIndicator extends StatelessWidget {
               Positioned.fill(
                 child: CustomPaint(
                   painter: _CapsulePainter(
-                    value: value ?? 0,
+                    value: fill,
                     color: active,
                     track: track,
                     borderRadius: capsuleBorderRadius ?? height / 2,
@@ -553,21 +567,16 @@ class OhosProgressIndicator extends StatelessWidget {
                   ),
                 ),
               ),
-              if (label != null)
-                Padding(
-                  // 官方 `progress_text_margin` = 8vp：文字与端头弧线之间留出
-                  // 一个圆角的距离，否则 100% 时数字会顶到弧上。
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    style: TextStyle(
-                      fontSize: OhosProgressMetrics.capsuleTextSize,
-                      color: OhosProgressMetrics.capsuleTextColor,
-                      // 官方 `font` 的其余参数「跟随 Text 组件的主题值」，
-                      // 所以字重交给主题排版，只钉死字号与颜色。
-                      fontFamily: theme.typography.fontFamily,
+              if (label != null) _capsuleLabelWidget(theme, label, onTrack),
+              // 填充与官方字色几乎同色时才叠第二层：只保留填充区那一段的
+              // 反白字。整段换色不行 —— 文字跨在填充边界上（如 `52%`）时，
+              // 落在轨道上的那半个字形会跟着变白、直接消失。
+              if (label != null && onFill != onTrack)
+                Positioned.fill(
+                  child: ClipRect(
+                    clipper: _CapsuleFillClipper(fill * width),
+                    child: Center(
+                      child: _capsuleLabelWidget(theme, label, onFill),
                     ),
                   ),
                 ),
@@ -575,6 +584,47 @@ class OhosProgressIndicator extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  /// 胶囊文字落在**填充**上时该用的颜色。
+  ///
+  /// 官方给的 `capsuleTextColor`（`#ff182431`）是深色：压在彩屏的蓝填充
+  /// （`#0A59F7`）上约 2.8:1，是官方自己认可的观感；但墨屏的
+  /// `highlightColor` 是纯黑，深色字压上去只剩 **1.3:1** —— 文字整段消失。
+  /// 所以这一档按对比度兜底：低于 2:1（＝两者几乎同色）
+  /// 换成主题现成的 [OhosThemeData.onHighlightColor]（白纸墨屏 = 纸白，
+  /// 深色墨屏 = 纸黑）。阈值取 2 而不是 WCAG 的 3，正是因为官方彩屏本身
+  /// 就站在 2.8 —— 抬到 3 会把彩屏一起改掉，偏离官方。
+  Color _capsuleOnFillColor(OhosThemeData theme, Color active) {
+    const Color official = OhosProgressMetrics.capsuleTextColor;
+    return _contrastRatio(official, active) < 2
+        ? theme.onHighlightColor
+        : official;
+  }
+
+  /// 胶囊上的文字，只上色不做定位 —— 居中由调用方的 `Stack` / `Center` 负责。
+  Widget _capsuleLabelWidget(
+    OhosThemeData theme,
+    String label,
+    Color color,
+  ) {
+    return Padding(
+      // 官方 `progress_text_margin` = 8vp：文字与端头弧线之间留出一个圆角的
+      // 距离，否则 100% 时数字会顶到弧上。
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.clip,
+        style: TextStyle(
+          fontSize: OhosProgressMetrics.capsuleTextSize,
+          color: color,
+          // 官方 `font` 的其余参数「跟随 Text 组件的主题值」，
+          // 所以字重交给主题排版，只钉死字号与颜色。
+          fontFamily: theme.typography.fontFamily,
+        ),
+      ),
     );
   }
 
@@ -1113,4 +1163,22 @@ class _CapsulePainter extends CustomPainter {
       old.borderColor != borderColor ||
       old.strokeWidth != strokeWidth ||
       old.track.color != track.color;
+}
+
+/// 只保留胶囊左侧「已填充」那一段的裁切器。
+///
+/// 用来叠第二层反白文字：填充区里的字用反白色、轨道区里的字保持官方深色，
+/// 文字跨在边界上时两半都还在。
+class _CapsuleFillClipper extends CustomClipper<Rect> {
+  const _CapsuleFillClipper(this.right);
+
+  /// 填充右边界（相对胶囊左端的像素宽度）。
+  final double right;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(0, 0, right, size.height);
+
+  @override
+  bool shouldReclip(_CapsuleFillClipper oldClipper) =>
+      oldClipper.right != right;
 }

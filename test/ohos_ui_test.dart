@@ -13715,6 +13715,94 @@ void main() {
       expect(circles.first.strokeWidth, 1);
     });
 
+    /// 胶囊文字被切成两层时的字色（轨道层 + 填充层）。
+    Set<Color?> capsuleLabelColors(WidgetTester tester, String label) => tester
+        .widgetList<Text>(find.text(label))
+        .map((Text text) => text.style?.color)
+        .toSet();
+
+    Future<void> pumpInkCapsule(WidgetTester tester, double value) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 200,
+                  height: 40,
+                  child: OhosProgressIndicator.capsule(
+                    value: value,
+                    showDefaultPercentage: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('胶囊文字：墨屏压在纯黑填充上时反白', (WidgetTester tester) async {
+      await pumpInkCapsule(tester, 0.7);
+      final OhosThemeData ink = OhosThemeData.ink();
+      // 官方字色 #182431 压在纯黑上只有 1.3:1，整段文字等于没画。
+      // 轨道层保留官方深色，填充层换成反白色 —— 两层叠着才跨得过边界。
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        <Color?>{
+          OhosProgressMetrics.capsuleTextColor,
+          ink.onHighlightColor,
+        },
+      );
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        contains(ink.onHighlightColor),
+        reason: '墨屏填充是纯黑，深色字压上去读不出来',
+      );
+    });
+
+    testWidgets('胶囊文字：进度很低时反白层被裁在填充区内', (WidgetTester tester) async {
+      await pumpInkCapsule(tester, 0.2);
+      // 20% 的填充盖不到居中的文字，白色那层被裁到左侧 40px，视觉上仍是
+      // 白纸轨道 + 官方深色字
+      final ClipRect clip = tester.widget<ClipRect>(
+        find.ancestor(
+          of: find.descendant(
+            of: find.byType(OhosProgressIndicator),
+            matching: find.text('20%'),
+          ).last,
+          matching: find.byType(ClipRect),
+        ),
+      );
+      expect(
+        clip.clipper!.getClip(const Size(200, 40)).right,
+        moreOrLessEquals(40),
+      );
+    });
+
+    testWidgets('胶囊文字：彩屏不反白，仍是官方字色', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            width: 200,
+            height: 40,
+            child: OhosProgressIndicator.capsule(
+              value: 0.7,
+              showDefaultPercentage: true,
+            ),
+          ),
+        ),
+      );
+      // 蓝填充（#0A59F7）与官方字色约 2.8:1，是官方自己的观感下限，
+      // 不该被墨屏的兜底逻辑误伤 —— 彩屏只有一层
+      expect(find.text('70%'), findsOneWidget);
+      expect(
+        capsuleLabelColors(tester, '70%'),
+        <Color?>{OhosProgressMetrics.capsuleTextColor},
+      );
+    });
+
     testWidgets('value 为 null：线性/环形给不确定态，月相不画进度', (WidgetTester tester) async {
       await tester.pumpWidget(
         wrap(
