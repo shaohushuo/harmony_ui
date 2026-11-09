@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Semantic constraints an AI assistant cannot infer from Dart types alone. Hand-written on purpose: only rules that cannot be derived from source code or existing documents belong here.",
+  "authority": "Hand-maintained. gen_ai_catalog.py validates that every name in invariants[].symbols still exists in the public API and embeds this file into catalog.json.",
+  "breakingPolicy": {
+    "description": "The 12 breaking changes are NOT duplicated here. They are parsed from the table in doc/MIGRATION-0.6.md by gen_ai_catalog.py, so a new migration row cannot drift from the catalog.",
+    "silentChanges": "Derived from the migration table on every generation (see catalog.json breakingSummary): 9 of 12 produce a compile error, 3 produce none at all (#7 OhosChipGroup default selection, #10 OhosCheckbox default circular shape, #12 OhosSelect no longer draws a check mark). A further 6 change appearance even after the compile error is fixed. Older prose saying '2 silent changes' counted only the audit round (#8-#12); do not reuse it. A passing build does NOT prove a correct upgrade.",
+    "source": "doc/MIGRATION-0.6.md"
+  },
+  "invariants": [
+    {
+      "id": "I1",
+      "severity": "error",
+      "rule": "Import only package:harmony_ui/harmony_ui.dart. Never import lib/src/... paths and never reach into another package's internals.",
+      "why": "The barrel is the only public boundary; src files are implementation detail and one of them (ohos_arc.dart) is intentionally not exported.",
+      "symbols": [],
+      "detect": "grep -R \"package:harmony_ui/src/\" lib example || true",
+      "source": "lib/harmony_ui.dart"
+    },
+    {
+      "id": "I2",
+      "severity": "error",
+      "rule": "Do not branch on theme.monochrome inside a component. Use OhosVisualPolicy: policy.tint for fills, policy.line for strokes, allows* for shadow/blur/ripple/animation, disabledFill and usesOutlines for disabled and outline states.",
+      "why": "Theme data answers 'what colour', visual policy answers 'how to stay legible'. Reading the mode directly bypasses the e-ink adaptation and silently produces invisible controls.",
+      "symbols": ["OhosThemeData", "OhosVisualPolicy"],
+      "detect": "grep -R \"monochrome\" lib/src/widgets || true",
+      "source": "lib/src/theme/ohos_visual_policy.dart"
+    },
+    {
+      "id": "I3",
+      "severity": "error",
+      "rule": "Every new value object reachable from OhosThemeData must implement == and hashCode. Consumers must not exhaustively switch over policy enums.",
+      "why": "Missing equality makes InheritedWidget.updateShouldNotify a no-op, so theme changes never reach the widgets. Enumerating enum values breaks when a policy gains a mode.",
+      "symbols": ["OhosThemeData", "OhosVisualPolicy"],
+      "source": "test/theme_extension_test.dart"
+    },
+    {
+      "id": "I4",
+      "severity": "error",
+      "rule": "Content passed to showDialog / showOhosDialog must be wrapped in an explicit DefaultTextStyle. showMenu, showModalBottomSheet, Toast and Popup already provide a Material ancestor and do not need it.",
+      "why": "showDialog attaches to the Navigator overlay without a Material ancestor. DefaultTextStyle.fallback is the yellow #FFFF00 double-underline alarm style. flutter_test also supplies that style, so widget tests cannot catch it - only a real e-ink screenshot can.",
+      "symbols": ["showOhosDialog", "OhosAlertDialog"],
+      "source": "lib/src/widgets/ohos_alert_dialog.dart"
+    },
+    {
+      "id": "I5",
+      "severity": "error",
+      "rule": "An official maximum width is an upper bound, never a guaranteed width. Clamp it against the available width (screen minus margins) as well.",
+      "why": "RenderFlex does not throw when a child exceeds its parent; it just paints off screen. This bug has been made twice: a 328vp max in a 340vp container, and a 400vp dialog max on a 360vp screen.",
+      "symbols": ["OhosButton", "OhosAlertDialog", "OhosMenuMetrics"],
+      "source": "doc/AUDIT-IMAGE-SPECS.md"
+    },
+    {
+      "id": "I6",
+      "severity": "error",
+      "rule": "Text inside a fixed-width container must use Expanded + maxLines: 1 + TextOverflow.ellipsis.",
+      "why": "A bare Text in the 224vp menu overflows by a few pixels once padding shrinks; the overflow is nearly invisible by eye but fails in tests and on narrow screens.",
+      "symbols": ["OhosMenuMetrics"],
+      "source": "lib/src/widgets/ohos_menu.dart"
+    },
+    {
+      "id": "I7",
+      "severity": "warn",
+      "rule": "On a 16-level e-ink display, black at <=20% opacity is indistinguishable from white. Replace tinted fills with whitespace plus a 1px solid line; semi-transparent lines must be composited to an opaque colour. Shadows, BackdropFilter, ripples and long animations are effectively unavailable.",
+      "why": "The simulator and ordinary screenshots do not reproduce this. Generated code that looks fine in a screenshot can render as nothing on the device.",
+      "symbols": ["OhosVisualPolicy", "ohosStrokeWidth", "ohosBorderSide"],
+      "source": "lib/src/theme/ohos_stroke.dart"
+    },
+    {
+      "id": "I8",
+      "severity": "error",
+      "rule": "Do not translate ArkUI / HDS parameter names into Ohos* constructors, and do not assume Material analogues share parameters. Resolve the exact symbol in catalog.json first.",
+      "why": "This library is a translation layer: its API deliberately diverges from both ArkUI and Flutter. The 0.6.0 removals (selected, isExpand, borderRadius, timeZone, BoxFit fit) are exactly the names an assistant is most likely to guess.",
+      "symbols": ["OhosToolbarItem", "OhosActionBar", "OhosAlertDialog", "OhosTextClock", "OhosImage"],
+      "source": "doc/MIGRATION-0.6.md"
+    },
+    {
+      "id": "I9",
+      "severity": "warn",
+      "rule": "Official control specs are split by device class (phone / PC / wearable / large screen). Only phone, tablet and large-screen forms are in scope here. Never apply a wearable value to a phone layout.",
+      "why": "149 of 233 annotated image measurements come from the wearable section. The apparent 'subheader 15vp vs 18fp' conflict is two different device classes, not a contradiction.",
+      "symbols": [],
+      "source": "doc/AUDIT-IMAGE-SPECS.md"
+    },
+    {
+      "id": "I10",
+      "severity": "warn",
+      "rule": "For a numeric spec, resolve in this order: pattern.json -> float_sys.json -> float.json -> source/*.ets -> annotated design image. A design-image suggestion is not a component token. If the resource tables have no such entry, a documented constant is correct - do not invent a sys.float.* name.",
+      "why": "45 of 84 verified phone measurements have no token at all (e.g. the 8vp sheet top gap, the 448vp button max width). Searching harder for a token produces fabricated names.",
+      "symbols": ["OhosSheetSpec", "OhosButton"],
+      "source": "doc/reference/README.md"
+    },
+    {
+      "id": "I11",
+      "severity": "warn",
+      "rule": "Do not edit doc/reference/ by hand. Refresh the upstream mirror with ./tool/upstream.sh (status / verify / all|api|ux|source|resources / index); fetch_*.sh alone does not update the manifest.",
+      "why": "The reference tree is a generated mirror of official HarmonyOS docs, sources and resource tables.",
+      "symbols": [],
+      "source": "doc/reference/README.md"
+    },
+    {
+      "id": "I12",
+      "severity": "warn",
+      "rule": "OhosThemeSwitcher must sit outside MaterialApp. OhosThemeController.mode is nullable (OhosThemeMode?) and must be null-checked before use.",
+      "why": "The controller stores an OhosThemeData, not an enum; toggle() restores the last colour theme rather than cycling into e-ink.",
+      "symbols": ["OhosThemeSwitcher", "OhosThemeController", "OhosThemeMode"],
+      "source": "lib/src/theme/ohos_theme.dart"
+    }
+  ],
+  "verification": [
+    "env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY flutter test",
+    "flutter analyze",
+    "dart format --output=none --set-exit-if-changed lib test",
+    "python3 tool/gen_ai_catalog.py --check"
+  ],
+  "environment": {
+    "flutter": "Use the version in .fvmrc (ohos/oh-3.35.7-release). CI runs upstream stable 3.47.x, so a clean local analyze does not guarantee a green CI: check deprecations against both SDKs.",
+    "proxy": "Unset http(s)_proxy when running flutter test or the test runner fails with WebSocketException.",
+    "hapBuild": "Build HAP with env -u NODE_OPTIONS; otherwise ohpm install fails with a misleading network message."
+  }
+}
