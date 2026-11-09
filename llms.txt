@@ -1,0 +1,25 @@
+# harmony_ui
+
+> HarmonyOS design language widgets for Flutter: 42 official controls, 239 public symbols, version 0.6.1. Import only `package:harmony_ui/harmony_ui.dart`.
+
+## Start here (small, safe to load)
+
+- [AGENTS.md](AGENTS.md): rules for AI coding agents -- import boundary, forbidden patterns, verification commands.
+- [AI API index](doc/ai/API-INDEX.md): one compact line per public symbol with constructor defaults and source anchors.
+- [Machine-readable catalog](doc/ai/catalog.json): full API index, official shape matrix, breaking changes, cross references.
+- [Semantic contract](doc/ai/contract.json): invariants that a compiler cannot check (theme / e-ink / policy).
+- [AI-friendly roadmap](doc/ai/AI-FRIENDLY-ROADMAP.md): how this layer is meant to grow.
+
+## Migration and specification
+
+- [0.5.0 to 0.6.0 migration](doc/MIGRATION-0.6.md): 12 breaking changes; 3 produce no compile error.
+- [Control shape matrix](doc/CONTROL-MATRIX.md): official forms per device class. Large; prefer `catalog.json` -> `officialForms`.
+- [0.6 audit](doc/AUDIT-0.6.md): per-control conformance verdicts.
+- [Upstream mirror README](doc/reference/README.md): how the official specs are mirrored and refreshed.
+
+## Optional (large; do not load wholesale)
+
+- [README](README.md): overview, install, coverage table, 27 Dart snippets.
+- [CHANGELOG](CHANGELOG.md): full history.
+- [Roadmap](doc/ROADMAP-0.6.md): historical planning document.
+
