@@ -178,6 +178,46 @@ void main() {
       );
       expect((box2.decoration as BoxDecoration).color, isNull);
     });
+
+    testWidgets('墨屏下 isSelected 不铺透明底，改画 1px 实色描边', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.ink(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  height: 64,
+                  child: OhosListItem(
+                    isSelected: true,
+                    child: Container(height: 64, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final BoxDecoration decoration =
+          tester
+                  .widget<DecoratedBox>(
+                    find.descendant(
+                      of: find.byType(OhosListItem),
+                      matching: find.byType(DecoratedBox),
+                    ),
+                  )
+                  .decoration
+              as BoxDecoration;
+      // 10% 浅底在墨屏判透明，不铺；选中态靠 1px 实色描边承载。
+      expect(decoration.color, isNull);
+      expect(decoration.border, isNotNull);
+      final BorderSide side = decoration.border!.top;
+      expect(side.color.a, 1);
+      expect(side.width, greaterThan(0));
+    });
   });
 
   group('OhosColorPicker', () {

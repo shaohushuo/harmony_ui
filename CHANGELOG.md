@@ -1,3 +1,20 @@
+## 0.6.2
+
+Release date: 2026-11-10
+
+> 0.6.1 之后的**评审修复轮**，对应 GitCode PR #24 的代码评审意见（1 个阻塞项 + 5 个建议项 + 3 个细节项）。主线是把「无障碍语义」与「墨水屏形体」两类此前靠巧合通过的问题补齐：`OhosPressFeedback` 统一接管按钮语义，消除嵌套 button 节点导致的离屏断言；墨屏下托不住形体的浅底一律改画 1px 实色线。**没有破坏性 API 变更**，新增的 `OhosPressFeedback.semanticLabel` / `onLongPressCancel` 都是可选参数。
+>
+> **行为变更（需留意）**：`OhosTextField.labelText` 从 Material 的**浮动标签**改为框外上方的**静态文字**——聚焦时文字不再缩放、输入框高度不再从 40 涨到 56；内联形态（`variant: inline`）下传入的 `labelText` 不渲染，需要标签请在组件外部放一行 `Text`。该视觉变更在 0.6.1 之后的开发提交中已落地，本版补上记录与迁移说明。
+
+- 修复（阻塞）：`OhosPressFeedback` 外层再包 `Semantics(button: true)` 时，两层 button 语义不合并，内层节点在离屏/被遮挡时 rect 退化为零宽，触发框架「Invisible SemanticsNodes should not be added to the tree」断言（example 的 `ink_no_color_test.dart` 因此失败）。`OhosPressFeedback` 新增 `semanticLabel`，由内部出**唯一一层** `Semantics`（有标签时即使禁用也保持按钮角色、`enabled: false`）；`ohos_text_field.dart`（密码图标）、`ohos_icon_button.dart`、`ohos_counter.dart` 三处同构点，以及排查中发现的 `ohos_selection_toolbar.dart`、`ohos_swiper.dart`、`ohos_toolbar.dart`（两处）一并改为统一写法。`OhosToolbar` 的选中态用外层 `Semantics(selected:)` 保留，与内层节点合并、不产生第二个按钮。同时补上语义层的 `tap` 动作——内部 `GestureDetector` 带 `excludeFromSemantics`，此前读屏只会念「按钮」却点不动它；`OhosToolbar` 的图标标签改由 `ExcludeSemantics` 排除文本语义，名称只念一遍
+- 修复：`OhosListItem` 墨屏选中背板的注释与实现相反——`policy.tint(highlight, 0.1)` 在 `InkVisualPolicy` 对 alpha ≤ 20% 直接返回透明，选中态整块消失。现按「返回透明就改画线」的策略约定补 1px 实色描边（`ohosBorderSide` + `policy.line`，画在盒内）；彩屏仍是 10% 浅底，并补墨屏回归用例
+- 修复：`OhosPatternLock` 的 `shouldRepaint` 漏比 `centers` / `circleRadius` / `ringRadius` / `strokeWidth`，仅改几何参数时不重绘会画旧形状；同时把 List 比较从引用改为 `listEquals`（`pattern` 是被 mutate 的同一个 list，引用比较会漏刷新）。易误读的 `activeColorPair` 改名 `colorSignature`，注释写明它是 path/circle/ring 三个颜色的 hash
+- 修复：`OhosTextField` 内联形态传 `labelText` 会被外层 `Column` 撑成两行。label 判断与计数器一样排除 `_inlineEffective`，内联是「一行文本」、框外标签无处落位；`labelText` 的 dartdoc 写明该行为，并补内联不渲染的测试
+- 修复：`OhosButton` 的 `circle` 形态默认不是正圆——旧实现只给 `height/2` 圆角、不约束宽高，纯图标按钮实测渲染成 52×36 的横向药丸。circle 分支现把宽高都钉到直径（取按钮高度），图标 `Center` 居中、圆角为直径一半，并补正圆几何测试（紧约束父级强制不等宽时仍受布局模型限制，与其它形态处理一致）
+- 修复：`OhosPressFeedback` 同时注册 `onLongPressEnd` 与 `onLongPressUp`，框架在一次正常抬起时两个回调依次触发，外部回调被调用两次（一次带本地坐标、一次 `Offset.zero`）；移除 `onLongPressUp`，只保留带坐标的 `onLongPressEnd`。同时新增 `onLongPressCancel` 并在 `OhosCounter` 接入——长按被取消时框架不再给 end 事件，此前重复加减的 Timer 无法停止
+- 文档：`OhosSlider.divisions` 的行为写入 dartdoc——它是「段数」不是步长，每段间隔 `(max - min) / divisions`、分点共 `divisions + 1` 个，与官方 `step` 的换算关系、`null` 时连续滑动、以及与 `showSteps` 的关系一并写清
+- 测试：新增 4 条用例（墨屏 ListItem 选中描边、内联 TextField 不渲染 label、circle 正圆几何与图标居中、Toolbar 激活项语义合并成单节点）；库 **823 条**、example **187 条**全绿（基线 SDK `ohos/oh-3.35.7-release`）；`pubspec.yaml` 版本号 0.6.1 → 0.6.2
+
 ## 0.6.1
 
 Release date: 2026-11-08

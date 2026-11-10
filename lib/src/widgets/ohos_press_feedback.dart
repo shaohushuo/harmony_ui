@@ -22,6 +22,13 @@ import '../theme/ohos_theme.dart';
 /// 与 [OhosPressShadow] 的分工：那个是 HDS 的 `pressShadow` 视觉特效（白色混合
 /// 或指尖径向渐变），属于可选的增强；这里是**基础交互反馈**，任何可点控件都该
 /// 有这个，且不需要 `Material` 祖先。
+///
+/// ## 语义由这里统一接管
+///
+/// 本组件内部自带一层 `Semantics`（按钮角色 + 启用状态）。需要无障碍标签时
+/// 传 [semanticLabel]，**不要**在外部再包一层 `Semantics(button: true)`：
+/// 两层 button 语义不会合并，离屏时内层节点会退化为零宽，触发框架的
+/// invisible-node 断言。需要合并外部零散语义时用 `MergeSemantics`。
 class OhosPressFeedback extends StatefulWidget {
   const OhosPressFeedback({
     super.key,
@@ -29,7 +36,9 @@ class OhosPressFeedback extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.onLongPressEnd,
+    this.onLongPressCancel,
     this.onTapDown,
+    this.semanticLabel,
     this.borderRadius,
     this.pressedColor,
     this.enabled = true,
@@ -45,11 +54,29 @@ class OhosPressFeedback extends StatefulWidget {
   /// 长按回调。
   final VoidCallback? onLongPress;
 
-  /// 长按结束（手指抬起或取消）回调，参数是**本地坐标**。
+  /// 长按结束（手指抬起）回调，参数是**本地坐标**。
+  ///
+  /// 注意框架在一次正常抬起时会先调 [onLongPressEnd] 再调 `onLongPressUp`，
+  /// 本组件只注册前者，避免外部回调被调用两次。
   final ValueChanged<Offset>? onLongPressEnd;
+
+  /// 长按被取消（手势输掉竞技场或收到 cancel 事件）回调。
+  ///
+  /// 取消时框架**不会**再调 [onLongPressEnd]，需要在这里做收尾
+  /// （例如停止长按期间启动的定时器）。
+  final VoidCallback? onLongPressCancel;
 
   /// 按下瞬间的回调，参数是**本地坐标**（供需要知道落点的调用方使用）。
   final ValueChanged<Offset>? onTapDown;
+
+  /// 无障碍标签；由本组件统一出**唯一一层**按钮语义。
+  ///
+  /// 传入后不要再在外部包一层 `Semantics(button: true)`：两层 button 节点
+  /// 不会自动合并，内层节点在离屏/被遮挡时会触发框架的
+  /// 「Invisible SemanticsNodes should not be added to the tree」断言。
+  /// 只要提供了标签，即使当前禁用（[onTap] 为 null），节点仍保持按钮角色，
+  /// 只是 `enabled` 为 false —— 读屏会念出「按钮，已停用」。
+  final String? semanticLabel;
 
   /// 按压层的圆角，默认直角。
   ///
@@ -129,9 +156,16 @@ class _OhosPressFeedbackState extends State<OhosPressFeedback>
         : Colors.transparent;
     final bool showOverlay = overlay.a > 0;
 
+    // 语义只出这一层：有标签时即使禁用也保持按钮角色，外部不要再包 Semantics。
+    final bool buttonRole =
+        widget.isInteractive || widget.semanticLabel != null;
     return Semantics(
-      button: widget.isInteractive,
+      button: buttonRole,
       enabled: widget.isInteractive,
+      label: widget.semanticLabel,
+      // GestureDetector 带了 excludeFromSemantics，它不会自己往语义树上挂
+      // tap 动作 —— 不在这里补，读屏只会念「按钮」却点不动它。
+      onTap: widget.isInteractive ? () => widget.onTap?.call() : null,
       child: GestureDetector(
         // 与 `InkWell` 一致：整块区域可点，而不只是子节点画到的地方。
         behavior: HitTestBehavior.opaque,
@@ -159,8 +193,10 @@ class _OhosPressFeedbackState extends State<OhosPressFeedback>
             ? (LongPressEndDetails d) =>
                   widget.onLongPressEnd!.call(d.localPosition)
             : null,
-        onLongPressUp: widget.isInteractive && widget.onLongPressEnd != null
-            ? () => widget.onLongPressEnd!.call(Offset.zero)
+        // 取消时框架不会再给 end 事件，单独回调收尾；与 end 互斥，不会重复。
+        onLongPressCancel:
+            widget.isInteractive && widget.onLongPressCancel != null
+            ? () => widget.onLongPressCancel!.call()
             : null,
         child: Stack(
           fit: StackFit.passthrough,

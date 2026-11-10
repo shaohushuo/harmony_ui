@@ -168,6 +168,10 @@ class OhosButton extends StatelessWidget {
         padding ??
         EdgeInsets.symmetric(horizontal: controlSize.horizontalPadding);
     final double effectiveCorner = controlSize.cornerRadius;
+    // circle 形态：直径取按钮高度，强制宽高相等，否则只画 height/2 圆角得到的是
+    // 「两端半圆的药丸」（纯图标时实测 52×36），不是正圆。
+    final bool isCircle = shape == OhosButtonShape.circle;
+    final double circleDiameter = effectiveMinSize.height;
     // loading 与「没有回调」是两件事：前者只是暂时不能点，视觉上仍是「正在
     // 干活」的主按钮；后者才是禁用。混在一个布尔里会让 filled + loading 落到
     // 禁用分支，而转圈的白色是写死的 —— 浅底白圈在 16 级灰上整块消失（真机：
@@ -312,6 +316,17 @@ class OhosButton extends StatelessWidget {
       ],
     );
 
+    // circle 里没有「图标 + 间距 + 文字」的横向排布 —— 复用上面的 Row 会带上
+    // 那 8vp 间距，纯图标时图标被推偏 4vp、看上去不在圆心。这里只取一个元素。
+    final Widget circleContent = loading
+        ? label
+        : (icon != null
+              ? IconTheme.merge(
+                  data: IconThemeData(color: foreground, size: 20),
+                  child: icon!,
+                )
+              : label);
+
     // 按钮的按压反馈是整块底板换一档色，不是 Material 那种从触点扩散、再淡出
     // 的圆形高光。官方的按钮按下态就是 `bg_color_clicked_blend` 压在整块底上，
     // 形状与按钮自身一致 —— 涟漪那圈圆斑在 448vp 宽的药丸上尤其明显。
@@ -323,9 +338,7 @@ class OhosButton extends StatelessWidget {
             OhosGeometry.radiusCapsule,
           ),
           OhosButtonShape.rounded => BorderRadius.circular(effectiveCorner),
-          OhosButtonShape.circle => BorderRadius.circular(
-            effectiveMinSize.height / 2,
-          ),
+          OhosButtonShape.circle => BorderRadius.circular(circleDiameter / 2),
         },
         // 判 `border` 而不是 `borderSide.width`：后者恒为 1，照它判会给每个
         // 按钮都描一圈（`border` 是透明时那圈看不见，但会占掉 1vp 内容宽度）。
@@ -351,9 +364,7 @@ class OhosButton extends StatelessWidget {
             OhosGeometry.radiusCapsule,
           ),
           OhosButtonShape.rounded => BorderRadius.circular(effectiveCorner),
-          OhosButtonShape.circle => BorderRadius.circular(
-            effectiveMinSize.height / 2,
-          ),
+          OhosButtonShape.circle => BorderRadius.circular(circleDiameter / 2),
         },
         // 实心按钮的底是品牌色，官方按下态是**压亮**而不是压暗（`blend_white`
         // 一档），所以这里用白而不是默认的 `interactive_click` 黑。
@@ -370,12 +381,25 @@ class OhosButton extends StatelessWidget {
         // 700。**没有 Widget 能在紧约束下变窄**，所以正确做法是：
         // 上限只负责「宽内容别撑成横幅」，容器铺满由调用方自己传宽度。
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: effectiveMinSize.width,
-            minHeight: effectiveMinSize.height,
-            maxWidth: maxWidth ?? OhosButtonMetrics.maxWidth,
+          constraints: isCircle
+              // 宽高都钉到直径：minWidth == maxWidth == 直径，content 无法再
+              // 把宽度撑大；图标靠 Center 落在圆心。
+              ? BoxConstraints(
+                  minWidth: circleDiameter,
+                  maxWidth: circleDiameter,
+                  minHeight: circleDiameter,
+                  maxHeight: circleDiameter,
+                )
+              : BoxConstraints(
+                  minWidth: effectiveMinSize.width,
+                  minHeight: effectiveMinSize.height,
+                  maxWidth: maxWidth ?? OhosButtonMetrics.maxWidth,
+                ),
+          child: Padding(
+            // circle 不吃水平文字内边距，只居中单个元素；其余形态保留官方 padding。
+            padding: isCircle ? EdgeInsets.zero : effectivePadding,
+            child: isCircle ? Center(child: circleContent) : content,
           ),
-          child: Padding(padding: effectivePadding, child: content),
         ),
       ),
     );

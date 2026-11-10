@@ -498,6 +498,28 @@ void main() {
       expect(size.height, 50, reason: '显式 minSize 优先于 small 的 28');
     });
 
+    testWidgets('circle 形态是正圆：宽高相等、圆角为直径一半、图标居中', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosButton(
+            onPressed: () {},
+            shape: OhosButtonShape.circle,
+            icon: const Icon(Icons.phone),
+          ),
+        ),
+      );
+      final Size size = tester.getSize(find.byType(OhosButton));
+      // 宽高相等 —— 旧实现纯图标也会渲染成 52×36 的横向药丸。
+      expect(size.width, size.height);
+      final BoxDecoration deco = buttonDecoration(tester);
+      final double radius = (deco.borderRadius as BorderRadius).topLeft.x;
+      expect(radius, moreOrLessEquals(size.shortestSide / 2, epsilon: 0.01));
+      // 图标圆心与按钮圆心重合（用两点距离判断，Offset 没有近似匹配器）。
+      final Offset buttonCenter = tester.getCenter(find.byType(OhosButton));
+      final Offset iconCenter = tester.getCenter(find.byType(Icon));
+      expect((iconCenter - buttonCenter).distance, lessThan(0.01));
+    });
+
     testWidgets('ink 主题下禁用按钮：浅底换成实线描边，字也不再是白色', (WidgetTester tester) async {
       // 墨水屏（highlightColor 为纯黑）上两件事同时失效：
       // 1. 淡到 20% 的填充等于没有，按钮连形状都留不住；
@@ -5470,6 +5492,25 @@ void main() {
           ),
         );
         expect(find.text('这个名字不合法'), findsOneWidget);
+      });
+
+      testWidgets('内联形态不渲染框外 labelText，控件不被撑成两行', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          wrap(
+            const OhosTextField(
+              initialValue: '重命名',
+              variant: OhosTextFieldVariant.inline,
+              labelText: '文件名',
+            ),
+          ),
+        );
+        // 内联是一行文本，框外标签无处落位，不渲染。
+        expect(find.text('文件名'), findsNothing);
+        // 高度仍是单行输入框，没有被上方标签撑高。
+        final double fieldHeight = tester
+            .getSize(find.byType(TextField))
+            .height;
+        expect(fieldHeight, lessThanOrEqualTo(48));
       });
     });
 
@@ -14165,6 +14206,42 @@ void main() {
       await tester.tap(find.text('可用'));
       await tester.pumpAndSettle();
       expect(taps, 1);
+    });
+
+    // 语义只出一层：选中态（selected）与按钮角色（button）必须落在**同一个**
+    // 节点上，且名称只念一遍。文本自身的语义已由 ExcludeSemantics 排除。
+    testWidgets('激活项语义合并成单节点：既是按钮、又是选中', (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        wrap(
+          OhosToolbar(
+            // 选中态由 activeIndex 决定，item.state 只表示「可激活」。
+            activeIndex: 0,
+            items: <OhosToolbarItem>[
+              item(
+                '首页',
+                state: OhosToolbarItemState.activated,
+                onPressed: () {},
+              ),
+              item('消息', onPressed: () {}),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.text('首页')),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasSelectedState: true,
+          isSelected: true,
+          label: '首页',
+        ),
+      );
+      handle.dispose();
     });
 
     // 常态文字用 textPrimary 而不是 textSecondary：工具栏是主导航，不是

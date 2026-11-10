@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_press_feedback.dart';
 
@@ -154,6 +155,8 @@ class _OhosListItemState extends State<OhosListItem>
     final Color fg = theme.textPrimaryColor;
     final List<OhosSwipeAction> actions = widget.actions;
     final bool hasActions = actions.isNotEmpty;
+    // 选中背板色；墨屏下为透明，调用处改走 1px 描边。
+    final Color selectedFill = policy.tint(highlight, 0.1);
     return ClipRRect(
       borderRadius: widget.borderRadius,
       child: Stack(
@@ -189,10 +192,18 @@ class _OhosListItemState extends State<OhosListItem>
               onHorizontalDragEnd: hasActions ? _onHorizontalDragEnd : null,
               behavior: HitTestBehavior.opaque,
               child: DecoratedBox(
-                // 选中背板：强调色 10%（item_selected_alpha）。墨屏下 tint
-                // 判透明时 policy 会换成可读实色，不会整块消失。
+                // 选中背板：强调色 10%（item_selected_alpha）。
+                // 墨屏 tint 对 alpha ≤ 20% 直接返回透明，浅底托不住形体 ——
+                // 此时改画 1px 实色描边，选中态不会整块消失。
                 decoration: BoxDecoration(
-                  color: widget.isSelected ? policy.tint(highlight, 0.1) : null,
+                  color: widget.isSelected && selectedFill.a > 0
+                      ? selectedFill
+                      : null,
+                  border: widget.isSelected && selectedFill.a == 0
+                      ? Border.fromBorderSide(
+                          ohosBorderSide(context, policy.line(highlight, 1)),
+                        )
+                      : null,
                   borderRadius: widget.borderRadius,
                 ),
                 child: widget.child,

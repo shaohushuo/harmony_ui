@@ -68,7 +68,18 @@ class OhosSlider extends StatefulWidget {
   /// Maximum value.
   final double max;
 
-  /// Snap divisions; when set the value snaps to discrete steps.
+  /// 离散分段数：把 [min]..[max] 区间**等分**成多少段，滑动时取值吸附到最近的
+  /// 分点。
+  ///
+  /// 注意它是「段数」而不是步长：每段间隔 = `(max - min) / divisions`，
+  /// 分点共 `divisions + 1` 个（含两端）。例如 `min: 0, max: 100, divisions: 10`
+  /// 的可选值是 0、10、20 … 100。这与官方 `Slider` 的 `step` 参数互为换算：
+  /// `step = (max - min) / divisions` —— 这里沿用 Flutter `Slider.divisions` 的
+  /// 口径，没有直接搬 `step`，是为了让底层 `Slider` 原样吸附。
+  ///
+  /// 为 `null`（默认）时是连续滑条，取值不吸附、可停在任意位置。[showSteps]
+  /// 为 `true` 时，刻度点就画在这些分点上；没有 `divisions` 便不知道点落在哪，
+  /// 此时 `showSteps` 不生效。
   final int? divisions;
 
   /// Label shown in the bubble.

@@ -221,18 +221,18 @@ class _CounterButtonState extends State<_CounterButton> {
         onTap: widget.onTap,
         onLongPress: _canRepeat ? _startRepeat : null,
         onLongPressEnd: _canRepeat ? (_) => _stopRepeat() : null,
+        // 取消时框架不会再给 end 事件，这里同样要停掉重复定时器，
+        // 否则手指离开后仍在连续加减。
+        onLongPressCancel: _canRepeat ? _stopRepeat : null,
+        semanticLabel: widget.semanticLabel,
         borderRadius: radius,
         child: SizedBox(
           width: widget.size,
           height: widget.size,
-          child: Semantics(
-            button: true,
-            label: widget.semanticLabel,
-            child: Icon(
-              widget.icon,
-              size: widget.size * 0.5,
-              color: widget.color,
-            ),
+          child: Icon(
+            widget.icon,
+            size: widget.size * 0.5,
+            color: widget.color,
           ),
         ),
       ),

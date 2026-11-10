@@ -259,13 +259,13 @@ class _ToolbarTile extends StatelessWidget {
         ? theme.onHighlightColor
         : (active ? theme.highlightColor : theme.textPrimaryColor);
 
+    // button/enabled/label 由 OhosPressFeedback 统一出一层；selected 是导航项
+    // 独有语义，外层 Semantics 只标 selected，与内层节点合并，不产生第二个按钮。
     return Semantics(
-      button: true,
-      enabled: enabled,
       selected: active,
-      label: item.label,
       child: OhosPressFeedback(
         onTap: enabled ? item.onPressed : null,
+        semanticLabel: item.label,
         borderRadius: BorderRadius.circular(OhosToolbar._radius),
         // 反白要自己给实底；tint / emphasis 用透明，页面底色透上来。
         pressedColor: inverse ? Colors.white.withValues(alpha: 0.16) : null,
@@ -296,11 +296,15 @@ class _ToolbarTile extends StatelessWidget {
                               : FontWeight.w500,
                           color: fg,
                         ),
-                child: Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+                // 文本语义排除掉：名称已由 OhosPressFeedback 的 semanticLabel
+                // 承载，留着它会让读屏在同一项上念两遍，节点也不再是单层。
+                child: ExcludeSemantics(
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ],
@@ -329,32 +333,33 @@ class _MoreTile extends StatelessWidget {
     // 官方是 `sys.symbol.dot_grid_2x2`；拿不到系统图标集时退到最接近的点阵 —
     // 这里借 `Icons.more_horiz` 的邻居 `Icons.grid_view_rounded`（四格）。
     // 调用方可用 [OhosToolbar.moreIcon] 传入 `OhosIcons.dot_grid_2x2` 对齐官方。
-    return Semantics(
-      button: true,
-      label: label,
-      child: OhosPressFeedback(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(OhosToolbar._radius),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            IconTheme.merge(
-              data: IconThemeData(
-                size: OhosToolbar._iconSize,
-                color: theme.textPrimaryColor,
-              ),
-              child: Icon(icon ?? Icons.grid_view_rounded),
+    // 语义由 OhosPressFeedback 统一出一层（button + label）。
+    return OhosPressFeedback(
+      onTap: onPressed,
+      semanticLabel: label,
+      borderRadius: BorderRadius.circular(OhosToolbar._radius),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          IconTheme.merge(
+            data: IconThemeData(
+              size: OhosToolbar._iconSize,
+              color: theme.textPrimaryColor,
             ),
-            const SizedBox(height: OhosToolbar._iconLabelGap),
-            DefaultTextStyle.merge(
-              style:
-                  (theme.typography.labelSmall ??
-                          const TextStyle(fontSize: OhosToolbar._labelSize))
-                      .copyWith(
-                        fontSize: OhosToolbar._labelSize,
-                        fontWeight: FontWeight.w500,
-                        color: theme.textPrimaryColor,
-                      ),
+            child: Icon(icon ?? Icons.grid_view_rounded),
+          ),
+          const SizedBox(height: OhosToolbar._iconLabelGap),
+          DefaultTextStyle.merge(
+            style:
+                (theme.typography.labelSmall ??
+                        const TextStyle(fontSize: OhosToolbar._labelSize))
+                    .copyWith(
+                      fontSize: OhosToolbar._labelSize,
+                      fontWeight: FontWeight.w500,
+                      color: theme.textPrimaryColor,
+                    ),
+            // 同 _ToolbarTile：名称由 semanticLabel 承载，文本语义不重复出。
+            child: ExcludeSemantics(
               child: Text(
                 label,
                 maxLines: 1,
@@ -362,8 +367,8 @@ class _MoreTile extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

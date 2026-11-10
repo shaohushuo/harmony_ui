@@ -49,32 +49,35 @@ class OhosIconButton extends StatelessWidget {
     final Color effective =
         color ?? (enabled ? theme.textPrimaryColor : theme.textTertiaryColor);
     final BorderRadius radius = BorderRadius.circular(size / 2);
+    final String? label = (tooltip != null && tooltip!.isNotEmpty)
+        ? tooltip
+        : null;
     return Tooltip(
       message: tooltip ?? '',
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        child: DecoratedBox(
-          // 圆形底原来由 `Material(shape: CircleBorder())` 提供。Material 会给
-          // 每个可点子节点挂上水波纹 —— 一个 40vp 的图标按钮上，那圈扩散的
-          // 圆形高光几乎盖满整个按钮，是「Material 的味道」最重的一处。
-          // 底色自己画，按压反馈换成整块换一档色（圆形靠圆角裁出）。
-          decoration: BoxDecoration(
-            color: backgroundColor ?? Colors.transparent,
-            borderRadius: radius,
-          ),
-          child: OhosPressFeedback(
-            onTap: onPressed,
-            onLongPress: onLongPress,
-            borderRadius: radius,
-            child: SizedBox(
-              width: size,
-              height: size,
-              child: Center(
-                child: IconTheme.merge(
-                  data: IconThemeData(size: iconSize, color: effective),
-                  child: icon,
-                ),
+      // 无障碍名称由 OhosPressFeedback 的 semanticLabel 统一出一层，
+      // Tooltip 只负责视觉气泡，避免同一文本在 label/tooltip 上各念一遍。
+      excludeFromSemantics: true,
+      child: DecoratedBox(
+        // 圆形底原来由 `Material(shape: CircleBorder())` 提供。Material 会给
+        // 每个可点子节点挂上水波纹 —— 一个 40vp 的图标按钮上，那圈扩散的
+        // 圆形高光几乎盖满整个按钮，是「Material 的味道」最重的一处。
+        // 底色自己画，按压反馈换成整块换一档色（圆形靠圆角裁出）。
+        decoration: BoxDecoration(
+          color: backgroundColor ?? Colors.transparent,
+          borderRadius: radius,
+        ),
+        child: OhosPressFeedback(
+          onTap: onPressed,
+          onLongPress: onLongPress,
+          semanticLabel: label,
+          borderRadius: radius,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Center(
+              child: IconTheme.merge(
+                data: IconThemeData(size: iconSize, color: effective),
+                child: icon,
               ),
             ),
           ),

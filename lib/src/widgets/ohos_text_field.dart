@@ -290,6 +290,10 @@ class OhosTextField extends StatefulWidget {
   /// 自己画一行标签。早先直接透传，得到的是 Material 的浮动标签：聚焦时文字
   /// 缩到 12fp 并往上跳，输入框高度会跟着从 40 涨到 56 —— 那是本库唯一一处
   /// 「一聚焦就换高度」的控件，也正是用户看到的「和规范不一样」。
+  ///
+  /// 内联形态（[OhosTextFieldVariant.inline] 生效时）是「一行可点的文本」，
+  /// 框外没有标签的落位空间，此时传入的 [labelText] 不渲染；需要标签请在
+  /// 组件外部自己放一行 [Text]，或改用默认形态。
   final String? labelText;
 
   /// Leading icon inside the field.
@@ -672,7 +676,12 @@ class _OhosTextFieldState extends State<OhosTextField> {
     // 它不进 `InputDecoration`，所以既不会在聚焦时缩小上浮，也不会把 40 的
     // 容器撑成 56；间距取 `padding_level4` = 8（与 `textfield_error_spacing`
     // 同一个令牌，官方表单里「标签—控件」「控件—错误提示」都是这一档）。
-    final Widget? label = widget.labelText == null || widget.labelText!.isEmpty
+    // 内联形态是一行文本，框外标签无处落位，与计数器一样排除 _inlineEffective。
+    final bool labelVisible =
+        widget.labelText != null &&
+        widget.labelText!.isNotEmpty &&
+        !widget._inlineEffective;
+    final Widget? label = !labelVisible
         ? null
         : Padding(
             padding: const EdgeInsets.only(
@@ -759,24 +768,21 @@ class _OhosTextFieldState extends State<OhosTextField> {
     final Color color =
         widget.passwordIconColor ??
         (widget.enabled ? theme.textSecondaryColor : theme.textTertiaryColor);
-    return Semantics(
-      button: true,
-      label: _passwordVisible ? '隐藏密码' : '显示密码',
-      child: OhosPressFeedback(
-        onTap: widget.enabled ? _togglePassword : null,
-        borderRadius: BorderRadius.circular(
-          OhosTextFieldMetrics.iconHotZone / 2,
-        ),
-        child: SizedBox(
-          width: OhosTextFieldMetrics.iconHotZone,
-          height: OhosTextFieldMetrics.iconHotZone,
-          child: Icon(
-            _passwordVisible
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
-            size: OhosTextFieldMetrics.iconSize,
-            color: color,
-          ),
+    // 语义由 OhosPressFeedback 统一出一层：外层不再包 Semantics，
+    // 否则两层 button 节点在离屏时触发 invisible-node 断言。
+    return OhosPressFeedback(
+      onTap: widget.enabled ? _togglePassword : null,
+      semanticLabel: _passwordVisible ? '隐藏密码' : '显示密码',
+      borderRadius: BorderRadius.circular(OhosTextFieldMetrics.iconHotZone / 2),
+      child: SizedBox(
+        width: OhosTextFieldMetrics.iconHotZone,
+        height: OhosTextFieldMetrics.iconHotZone,
+        child: Icon(
+          _passwordVisible
+              ? Icons.visibility_outlined
+              : Icons.visibility_off_outlined,
+          size: OhosTextFieldMetrics.iconSize,
+          color: color,
         ),
       ),
     );

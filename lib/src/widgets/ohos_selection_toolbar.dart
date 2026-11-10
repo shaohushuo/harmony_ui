@@ -428,31 +428,28 @@ class _IconActionButtonState extends State<_IconActionButton> {
     // 不用 `InkWell`：选择菜单活在 overlay 里，祖先没有 `Material`，
     // `InkWell` 会直接抛 "No Material widget found"。`OhosPressFeedback` 自带
     // 手势与自绘按压层，不依赖 Material 祖先，正好是这条约束下该用的东西。
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: widget.label,
-      child: OhosPressFeedback(
-        onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(OhosGeometry.radiusSmall),
-        pressedColor: theme.policy.tint(theme.textPrimaryColor, 0.06),
-        child: SizedBox(
-          width: _size,
-          height: _size,
-          child: Center(
-            child: IconTheme(
-              data: IconThemeData(
-                size: 24,
-                color: enabled
-                    ? theme.textPrimaryColor
-                    : theme.policy.disabledFill(theme.textPrimaryColor),
-              ),
-              // 没有图标时给一个同尺寸空盒：`IconTheme.child` 不接受 null，
-              // 而这类只画图标的按钮必须保持 40×40 的命中区。
-              child: widget.icon == null
-                  ? const SizedBox(width: 24, height: 24)
-                  : Icon(widget.icon),
+    // 语义（button/enabled/label）也由它统一出一层，不再外包 Semantics。
+    return OhosPressFeedback(
+      onTap: widget.onTap,
+      semanticLabel: widget.label,
+      borderRadius: BorderRadius.circular(OhosGeometry.radiusSmall),
+      pressedColor: theme.policy.tint(theme.textPrimaryColor, 0.06),
+      child: SizedBox(
+        width: _size,
+        height: _size,
+        child: Center(
+          child: IconTheme(
+            data: IconThemeData(
+              size: 24,
+              color: enabled
+                  ? theme.textPrimaryColor
+                  : theme.policy.disabledFill(theme.textPrimaryColor),
             ),
+            // 没有图标时给一个同尺寸空盒：`IconTheme.child` 不接受 null，
+            // 而这类只画图标的按钮必须保持 40×40 的命中区。
+            child: widget.icon == null
+                ? const SizedBox(width: 24, height: 24)
+                : Icon(widget.icon),
           ),
         ),
       ),

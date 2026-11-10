@@ -444,29 +444,27 @@ class _SwiperArrow extends StatelessWidget {
     // 底板 32、底板色 `#19182431`（约 10% 黑）、箭头取底板 3/4。
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Semantics(
-        button: true,
-        child: DecoratedBox(
-          // 官方底板色 `#19182431`（约 10% 黑）。走 policy.tint：墨屏上 10%
-          // 落在第 0–1 级灰、铺在白底上等于不存在，tint 会返回透明，此时靠
-          // 图标本身 + 1px 外圈表达「这里有个可按的圆」。
-          decoration: BoxDecoration(
-            color: theme.policy.tint(theme.textPrimaryColor, 0.10),
-            shape: BoxShape.circle,
-          ),
-          child: OhosPressFeedback(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(backgroundSize / 2),
-            child: SizedBox(
-              width: backgroundSize,
-              height: backgroundSize,
-              child: IconTheme.merge(
-                data: IconThemeData(
-                  size: iconSize * 3 / 4,
-                  color: theme.textPrimaryColor,
-                ),
-                child: Icon(icon),
+      // button 语义由 OhosPressFeedback 内部统一提供，外层不再重复包。
+      child: DecoratedBox(
+        // 官方底板色 `#19182431`（约 10% 黑）。走 policy.tint：墨屏上 10%
+        // 落在第 0–1 级灰、铺在白底上等于不存在，tint 会返回透明，此时靠
+        // 图标本身 + 1px 外圈表达「这里有个可按的圆」。
+        decoration: BoxDecoration(
+          color: theme.policy.tint(theme.textPrimaryColor, 0.10),
+          shape: BoxShape.circle,
+        ),
+        child: OhosPressFeedback(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(backgroundSize / 2),
+          child: SizedBox(
+            width: backgroundSize,
+            height: backgroundSize,
+            child: IconTheme.merge(
+              data: IconThemeData(
+                size: iconSize * 3 / 4,
+                color: theme.textPrimaryColor,
               ),
+              child: Icon(icon),
             ),
           ),
         ),

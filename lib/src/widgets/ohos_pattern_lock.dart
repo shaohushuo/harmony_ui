@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
@@ -333,11 +334,21 @@ class _PatternLockPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PatternLockPainter oldDelegate) {
-    return oldDelegate.pattern != pattern ||
-        oldDelegate.current != current ||
-        oldDelegate.activeColorPair != activeColorPair;
+    // 几何字段（centers / 三个半径宽度）也要比：size 不变、仅改这些参数时
+    // CustomPaint 不会因为尺寸变化而自动重绘，漏掉就会画旧几何。
+    // List 用 listEquals 比内容 —— 引用比较在「同一个 list 被 mutate」
+    // （pattern 的 add/clear）时永远判等，会漏刷新。
+    return oldDelegate.current != current ||
+        !listEquals(oldDelegate.pattern, pattern) ||
+        !listEquals(oldDelegate.centers, centers) ||
+        oldDelegate.circleRadius != circleRadius ||
+        oldDelegate.ringRadius != ringRadius ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.colorSignature != colorSignature;
   }
 
-  /// 参与相等性判定的颜色组合。
-  int get activeColorPair => Object.hash(pathColor, circleColor, ringColor);
+  /// 三种颜色（连线 / 圆点 / 圆环）的相等性签名。
+  ///
+  /// 不是「两个颜色」：painter 有 path / circle / ring 三个颜色字段，一起 hash。
+  int get colorSignature => Object.hash(pathColor, circleColor, ringColor);
 }
