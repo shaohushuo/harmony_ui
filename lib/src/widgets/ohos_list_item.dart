@@ -76,6 +76,12 @@ class OhosListItem extends StatefulWidget {
   ///
   /// true 时在整行铺一层强调色 10% 背板（令牌 `item_selected_alpha = 0.1`），
   /// 与设计图里的浅蓝选中背板一致；背板跟着内容一起横滑，露出后面的动作。
+  ///
+  /// **墨屏没有这层浅底**：`InkVisualPolicy.tint` 对 alpha ≤ 20% 一律返回透明
+  /// （16 级灰里那点差值与白底不可分），所以选中态改画 1px 实色描边——这正是
+  /// 墨屏约定里的「留白 + 1px 实线」。整周描边而不是左侧强调条，是因为强调条
+  /// 要么占掉 2vp 内容宽度、要么压住文字，而描边画在装饰层里，不参与布局：
+  /// 选中/取消切换时子节点的位置与尺寸都不变。
   final bool isSelected;
 
   @override

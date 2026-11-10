@@ -520,6 +520,41 @@ void main() {
       expect((iconCenter - buttonCenter).distance, lessThan(0.01));
     });
 
+    testWidgets('circle 的 maxWidth 是直径上限：传更小值就整体缩小、仍是正圆', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          OhosButton(
+            onPressed: () {},
+            shape: OhosButtonShape.circle,
+            maxWidth: 24,
+            icon: const Icon(Icons.phone),
+          ),
+        ),
+      );
+      final Size size = tester.getSize(find.byType(OhosButton));
+      // 直径默认取 controlSize 高度（normal 36），被更小的 maxWidth 收紧到 24。
+      expect(size.width, 24);
+      expect(size.height, 24);
+      final BoxDecoration deco = buttonDecoration(tester);
+      final double radius = (deco.borderRadius as BorderRadius).topLeft.x;
+      expect(radius, moreOrLessEquals(12, epsilon: 0.01));
+    });
+
+    test('circle 同时传 icon 与 child 会在构造时断言失败', () {
+      // 圆形只承载一个元素，两者同时给会让 child 静默消失 —— 改成响亮的断言。
+      expect(
+        () => OhosButton(
+          onPressed: () {},
+          shape: OhosButtonShape.circle,
+          icon: const Icon(Icons.phone),
+          child: const Text('拨号'),
+        ),
+        throwsAssertionError,
+      );
+    });
+
     testWidgets('ink 主题下禁用按钮：浅底换成实线描边，字也不再是白色', (WidgetTester tester) async {
       // 墨水屏（highlightColor 为纯黑）上两件事同时失效：
       // 1. 淡到 20% 的填充等于没有，按钮连形状都留不住；

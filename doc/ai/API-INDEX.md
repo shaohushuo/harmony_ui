@@ -101,11 +101,11 @@
 
 ## `lib/src/widgets/ohos_button.dart`
 
-- `OhosButtonMetrics` | class | () | `lib/src/widgets/ohos_button.dart:9`
-- `OhosButtonSize` | enum | {OhosButtonSize, OhosButtonSize, OhosButtonSize, OhosButtonSize} | `lib/src/widgets/ohos_button.dart:31`
-- `OhosButtonShape` | enum | 1 forms | `lib/src/widgets/ohos_button.dart:64`
-- `OhosButtonStyle` | enum | `lib/src/widgets/ohos_button.dart:76`
-- `OhosButton` | class | extends StatelessWidget | (key, required onPressed, child, icon, style=OhosButtonStyle.filled, shape=OhosButtonShape.capsule, controlSize=OhosButtonSize.normal, loading=false, minSize, padding, maxWidth) | ✓ 1 forms | `lib/src/widgets/ohos_button.dart:102`
+- `OhosButtonMetrics` | class | () | `lib/src/widgets/ohos_button.dart:11`
+- `OhosButtonSize` | enum | {OhosButtonSize, OhosButtonSize, OhosButtonSize, OhosButtonSize} | `lib/src/widgets/ohos_button.dart:33`
+- `OhosButtonShape` | enum | 1 forms | `lib/src/widgets/ohos_button.dart:66`
+- `OhosButtonStyle` | enum | `lib/src/widgets/ohos_button.dart:86`
+- `OhosButton` | class | extends StatelessWidget | (key, required onPressed, child, icon, style=OhosButtonStyle.filled, shape=OhosButtonShape.capsule, controlSize=OhosButtonSize.normal, loading=false, minSize, padding, maxWidth) | ✓ 1 forms | `lib/src/widgets/ohos_button.dart:112`
 
 ## `lib/src/widgets/ohos_card.dart`
 

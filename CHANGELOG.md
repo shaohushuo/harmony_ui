@@ -11,9 +11,11 @@ Release date: 2026-11-10
 - 修复：`OhosPatternLock` 的 `shouldRepaint` 漏比 `centers` / `circleRadius` / `ringRadius` / `strokeWidth`，仅改几何参数时不重绘会画旧形状；同时把 List 比较从引用改为 `listEquals`（`pattern` 是被 mutate 的同一个 list，引用比较会漏刷新）。易误读的 `activeColorPair` 改名 `colorSignature`，注释写明它是 path/circle/ring 三个颜色的 hash
 - 修复：`OhosTextField` 内联形态传 `labelText` 会被外层 `Column` 撑成两行。label 判断与计数器一样排除 `_inlineEffective`，内联是「一行文本」、框外标签无处落位；`labelText` 的 dartdoc 写明该行为，并补内联不渲染的测试
 - 修复：`OhosButton` 的 `circle` 形态默认不是正圆——旧实现只给 `height/2` 圆角、不约束宽高，纯图标按钮实测渲染成 52×36 的横向药丸。circle 分支现把宽高都钉到直径（取按钮高度），图标 `Center` 居中、圆角为直径一半，并补正圆几何测试（紧约束父级强制不等宽时仍受布局模型限制，与其它形态处理一致）
+- 收紧：`circle` 形态只承载**一个**元素——`icon` 与 `child` 同时给会在构造时断言失败（此前 `child` 被静默丢弃，纯文字塞进 36vp 圆里 2 字已接近上限）；`maxWidth` 在 circle 下改为**直径上限**（传更小值整体缩小、仍是正圆，此前被静默忽略）；`OhosButtonShape.circle`、`shape`、`maxWidth` 的 dartdoc 一并写清，并补两条用例（`maxWidth` 收紧、`icon`+`child` 断言失败）
+- 文档：`OhosListItem.isSelected` 补墨屏行为说明——10% 浅底在墨屏判透明后改画 1px 实色描边（即墨屏「留白 + 1px 实线」约定），并写明为什么用整周描边而不是左侧强调条（强调条要么占 2vp 内容宽、要么压字；描边画在装饰层，不参与布局）；补一条「切换选中时内容不位移」的回归用例
 - 修复：`OhosPressFeedback` 同时注册 `onLongPressEnd` 与 `onLongPressUp`，框架在一次正常抬起时两个回调依次触发，外部回调被调用两次（一次带本地坐标、一次 `Offset.zero`）；移除 `onLongPressUp`，只保留带坐标的 `onLongPressEnd`。同时新增 `onLongPressCancel` 并在 `OhosCounter` 接入——长按被取消时框架不再给 end 事件，此前重复加减的 Timer 无法停止
 - 文档：`OhosSlider.divisions` 的行为写入 dartdoc——它是「段数」不是步长，每段间隔 `(max - min) / divisions`、分点共 `divisions + 1` 个，与官方 `step` 的换算关系、`null` 时连续滑动、以及与 `showSteps` 的关系一并写清
-- 测试：新增 4 条用例（墨屏 ListItem 选中描边、内联 TextField 不渲染 label、circle 正圆几何与图标居中、Toolbar 激活项语义合并成单节点）；库 **823 条**、example **187 条**全绿（基线 SDK `ohos/oh-3.35.7-release`）；`pubspec.yaml` 版本号 0.6.1 → 0.6.2
+- 测试：新增 7 条用例（墨屏 ListItem 选中描边与「不位移」、内联 TextField 不渲染 label、circle 正圆几何与图标居中、circle 的 `maxWidth` 直径上限、`icon`+`child` 断言、Toolbar 激活项语义合并成单节点）；库 **826 条**、example **187 条**全绿（`ohos/oh-3.35.7-release` 与 `ohos/oh-3.47.5-release` 两端各跑过）；`pubspec.yaml` 版本号 0.6.1 → 0.6.2
 
 ## 0.6.1
 

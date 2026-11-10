@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
@@ -69,6 +71,14 @@ enum OhosButtonShape {
   rounded,
 
   /// Perfect circle, typically for icon-only buttons.
+  ///
+  /// 直径取 [OhosButtonSize] 的高度（normal 36 / small 28），宽高相等、圆角为
+  /// 直径一半；被 [OhosButton.maxWidth] 更小的值收紧时按该值缩小。
+  ///
+  /// 只能承载**一个**元素：有 `icon` 时用 `icon`，否则用 `child`。同时传两者
+  /// 会在构造时断言失败 —— 圆形没有「图标 + 8vp 间距 + 文字」的横向排布，
+  /// 复用那条 Row 会把图标推离圆心。极短的纯文字（如单字「+」）可以塞进直径
+  /// 36 的圆里，2 字已接近上限（实测约 32.5×22），更长请改用其它形态。
   circle,
 }
 
@@ -112,7 +122,12 @@ class OhosButton extends StatelessWidget {
     this.minSize,
     this.padding,
     this.maxWidth,
-  });
+  }) : assert(
+         !(shape == OhosButtonShape.circle && icon != null && child != null),
+         'circle 形态只承载单个元素：给了 icon 就用 icon、否则用 child。'
+         '两者同时传会让 child 不渲染（圆形按钮没有「图标 + 间距 + 文字」的'
+         '横向排布），请改用 capsule / rounded 形态承载图文按钮。',
+       );
 
   /// Called when the button is tapped. When null the button is disabled.
   final VoidCallback? onPressed;
@@ -127,6 +142,10 @@ class OhosButton extends StatelessWidget {
   final OhosButtonStyle style;
 
   /// Shape of the button.
+  ///
+  /// [OhosButtonShape.circle] 是**单元素**形态：只取 [icon]（没有 icon 时取
+  /// [child]），宽高都钉成直径，并忽略 [padding] 与 [minSize] 的宽度部分 ——
+  /// 图文并排请用 [OhosButtonShape.capsule] / [OhosButtonShape.rounded]。
   final OhosButtonShape shape;
 
   /// 尺寸档位（官方 `controlSize`，默认 [OhosButtonSize.normal]）。
@@ -157,6 +176,11 @@ class OhosButton extends StatelessWidget {
   /// 调用方的布局选择，本组件只负责「不限宽时别无限拉伸」。
   ///
   /// 传 `double.infinity` 关闭上限。
+  ///
+  /// [OhosButtonShape.circle] 下它只作为**直径上限**：直径取 [controlSize] 的
+  /// 高度，传了更小的 [maxWidth] 就按它缩小（仍是正圆），传更大值或 `null`
+  /// 则不影响 —— 与其它形态「限制横向拉伸」的语义不同，因为圆形的宽度就是
+  /// 高度，没有「变宽不变高」这一说。
   final double? maxWidth;
 
   @override
@@ -169,9 +193,12 @@ class OhosButton extends StatelessWidget {
         EdgeInsets.symmetric(horizontal: controlSize.horizontalPadding);
     final double effectiveCorner = controlSize.cornerRadius;
     // circle 形态：直径取按钮高度，强制宽高相等，否则只画 height/2 圆角得到的是
-    // 「两端半圆的药丸」（纯图标时实测 52×36），不是正圆。
+    // 「两端半圆的药丸」（纯图标时实测 52×36），不是正圆。`maxWidth` 在这里是
+    // 直径上限（圆没有「变宽不变高」的形态），传更小的值就整体缩小。
     final bool isCircle = shape == OhosButtonShape.circle;
-    final double circleDiameter = effectiveMinSize.height;
+    final double circleDiameter = isCircle && maxWidth != null
+        ? math.min(effectiveMinSize.height, maxWidth!)
+        : effectiveMinSize.height;
     // loading 与「没有回调」是两件事：前者只是暂时不能点，视觉上仍是「正在
     // 干活」的主按钮；后者才是禁用。混在一个布尔里会让 filled + loading 落到
     // 禁用分支，而转圈的白色是写死的 —— 浅底白圈在 16 级灰上整块消失（真机：
