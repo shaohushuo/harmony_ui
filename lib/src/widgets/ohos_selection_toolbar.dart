@@ -5,6 +5,7 @@ import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_light_material.dart';
 import 'ohos_menu.dart';
+import 'ohos_press_feedback.dart';
 
 /// 内置选择菜单动作的固定顺序，取自设计规范：
 /// 剪切 → 复制 → 粘贴 → 全选 → 翻译 → 分享 → 搜索 → 其他。
@@ -420,60 +421,38 @@ class _IconActionButton extends StatefulWidget {
 class _IconActionButtonState extends State<_IconActionButton> {
   static const double _size = 40;
 
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final bool enabled = widget.onTap != null;
     // 不用 `InkWell`：选择菜单活在 overlay 里，祖先没有 `Material`，
-    // `InkWell` 会直接抛 "No Material widget found"。这里按策略自己画按压
-    // 底色 —— 彩屏给一档浅色叠底，灰阶屏上 `tint` 返回透明，于是整块不画
-    // （20% 的灰块既读不出「按下」也刷新慢，那正是策略要挡的东西）。
-    final Color pressed = theme.policy.tint(theme.textPrimaryColor, 0.06);
-    final Color? fill = _pressed && pressed != const Color(0x00000000)
-        ? pressed
-        : null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: widget.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        onTapDown: enabled ? (TapDownDetails _) => _setPressed(true) : null,
-        onTapUp: enabled ? (TapUpDetails _) => _setPressed(false) : null,
-        onTapCancel: enabled ? () => _setPressed(false) : null,
-        child: Container(
-          width: _size,
-          height: _size,
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: BorderRadius.circular(OhosGeometry.radiusSmall),
-          ),
-          child: Center(
-            child: IconTheme(
-              data: IconThemeData(
-                size: 24,
-                color: enabled
-                    ? theme.textPrimaryColor
-                    : theme.policy.disabledFill(theme.textPrimaryColor),
-              ),
-              // 没有图标时给一个同尺寸空盒：`IconTheme.child` 不接受 null，
-              // 而这类只画图标的按钮必须保持 40×40 的命中区。
-              child: widget.icon == null
-                  ? const SizedBox(width: 24, height: 24)
-                  : Icon(widget.icon),
+    // `InkWell` 会直接抛 "No Material widget found"。`OhosPressFeedback` 自带
+    // 手势与自绘按压层，不依赖 Material 祖先，正好是这条约束下该用的东西。
+    // 语义（button/enabled/label）也由它统一出一层，不再外包 Semantics。
+    return OhosPressFeedback(
+      onTap: widget.onTap,
+      semanticLabel: widget.label,
+      borderRadius: BorderRadius.circular(OhosGeometry.radiusSmall),
+      pressedColor: theme.policy.tint(theme.textPrimaryColor, 0.06),
+      child: SizedBox(
+        width: _size,
+        height: _size,
+        child: Center(
+          child: IconTheme(
+            data: IconThemeData(
+              size: 24,
+              color: enabled
+                  ? theme.textPrimaryColor
+                  : theme.policy.disabledFill(theme.textPrimaryColor),
             ),
+            // 没有图标时给一个同尺寸空盒：`IconTheme.child` 不接受 null，
+            // 而这类只画图标的按钮必须保持 40×40 的命中区。
+            child: widget.icon == null
+                ? const SizedBox(width: 24, height: 24)
+                : Icon(widget.icon),
           ),
         ),
       ),
     );
-  }
-
-  void _setPressed(bool value) {
-    if (_pressed != value) {
-      setState(() => _pressed = value);
-    }
   }
 }

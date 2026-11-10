@@ -4,6 +4,7 @@ import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
+import 'ohos_press_feedback.dart';
 
 /// 官方 `SegmentButton` 的两种形态，对应 `SegmentButtonOptions.tab()` /
 /// `.capsule()`。
@@ -395,8 +396,8 @@ class OhosSegmentedButton<T> extends StatelessWidget {
 ///
 /// 单独抽出来是因为 [OhosSegmentedButton] 本身要能在**没有 Material 祖先**的
 /// 场景下工作（嵌在 `Stack` / `CustomPaint` 里时并不保证有 `Material`），
-/// 所以不用 `InkWell`，按策略自己画按压底色。
-class _SegmentTapTarget extends StatefulWidget {
+/// `OhosPressFeedback` 不依赖 Material，正好是这条约束下该用的东西。
+class _SegmentTapTarget extends StatelessWidget {
   const _SegmentTapTarget({
     required this.enabled,
     required this.onTap,
@@ -408,53 +409,16 @@ class _SegmentTapTarget extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_SegmentTapTarget> createState() => _SegmentTapTargetState();
-}
-
-class _SegmentTapTargetState extends State<_SegmentTapTarget> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     // 灰阶屏上 `tint` 返回透明 —— 那一档的按压反馈由段的描边与位移承担，
     // 在这里再叠一块 20% 的灰既读不出「按下」也刷新慢。
-    final Color overlay = theme.policy.tint(theme.textPrimaryColor, 0.06);
-    final bool showsOverlay =
-        _pressed && widget.enabled && overlay != Colors.transparent;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.enabled ? widget.onTap : null,
-      onTapDown: widget.enabled
-          ? (TapDownDetails _) => _setPressed(true)
-          : null,
-      onTapUp: widget.enabled ? (TapUpDetails _) => _setPressed(false) : null,
-      onTapCancel: widget.enabled ? () => _setPressed(false) : null,
-      child: Stack(
-        fit: StackFit.passthrough,
-        children: <Widget>[
-          widget.child,
-          if (showsOverlay)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: overlay,
-                    borderRadius: BorderRadius.circular(
-                      OhosGeometry.radiusCapsule,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+    return OhosPressFeedback(
+      onTap: enabled ? onTap : null,
+      enabled: enabled,
+      borderRadius: BorderRadius.circular(OhosGeometry.radiusCapsule),
+      pressedColor: theme.policy.tint(theme.textPrimaryColor, 0.06),
+      child: child,
     );
-  }
-
-  void _setPressed(bool value) {
-    if (_pressed != value) {
-      setState(() => _pressed = value);
-    }
   }
 }

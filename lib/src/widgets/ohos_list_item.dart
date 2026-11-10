@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
+import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// A swipe action button of an [OhosListItem] (横滑动效按钮).
 class OhosSwipeAction {
@@ -49,6 +51,7 @@ class OhosListItem extends StatefulWidget {
     this.onFullDelete,
     this.borderRadius = BorderRadius.zero,
     this.deleteThreshold = 0.65,
+    this.isSelected = false,
   });
 
   /// The row content (usually an [OhosListTile] or a custom row).
@@ -68,6 +71,18 @@ class OhosListItem extends StatefulWidget {
 
   /// Fraction of the total action width that counts as a full delete.
   final double deleteThreshold;
+
+  /// 是否处于选中态（官方 `HdsListItem.isSelected`，6.1.0+）。
+  ///
+  /// true 时在整行铺一层强调色 10% 背板（令牌 `item_selected_alpha = 0.1`），
+  /// 与设计图里的浅蓝选中背板一致；背板跟着内容一起横滑，露出后面的动作。
+  ///
+  /// **墨屏没有这层浅底**：`InkVisualPolicy.tint` 对 alpha ≤ 20% 一律返回透明
+  /// （16 级灰里那点差值与白底不可分），所以选中态改画 1px 实色描边——这正是
+  /// 墨屏约定里的「留白 + 1px 实线」。整周描边而不是左侧强调条，是因为强调条
+  /// 要么占掉 2vp 内容宽度、要么压住文字，而描边画在装饰层里，不参与布局：
+  /// 选中/取消切换时子节点的位置与尺寸都不变。
+  final bool isSelected;
 
   @override
   State<OhosListItem> createState() => _OhosListItemState();
@@ -141,9 +156,13 @@ class _OhosListItemState extends State<OhosListItem>
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final OhosVisualPolicy policy = theme.policy;
+    final Color highlight = theme.highlightColor;
     final Color fg = theme.textPrimaryColor;
     final List<OhosSwipeAction> actions = widget.actions;
     final bool hasActions = actions.isNotEmpty;
+    // 选中背板色；墨屏下为透明，调用处改走 1px 描边。
+    final Color selectedFill = policy.tint(highlight, 0.1);
     return ClipRRect(
       borderRadius: widget.borderRadius,
       child: Stack(
@@ -178,7 +197,23 @@ class _OhosListItemState extends State<OhosListItem>
                   : null,
               onHorizontalDragEnd: hasActions ? _onHorizontalDragEnd : null,
               behavior: HitTestBehavior.opaque,
-              child: widget.child,
+              child: DecoratedBox(
+                // 选中背板：强调色 10%（item_selected_alpha）。
+                // 墨屏 tint 对 alpha ≤ 20% 直接返回透明，浅底托不住形体 ——
+                // 此时改画 1px 实色描边，选中态不会整块消失。
+                decoration: BoxDecoration(
+                  color: widget.isSelected && selectedFill.a > 0
+                      ? selectedFill
+                      : null,
+                  border: widget.isSelected && selectedFill.a == 0
+                      ? Border.fromBorderSide(
+                          ohosBorderSide(context, policy.line(highlight, 1)),
+                        )
+                      : null,
+                  borderRadius: widget.borderRadius,
+                ),
+                child: widget.child,
+              ),
             ),
           ),
         ],
@@ -192,9 +227,9 @@ class _OhosListItemState extends State<OhosListItem>
     OhosThemeData theme,
   ) {
     final Color color = action.foregroundColor ?? defaultFg;
-    return Material(
+    return ColoredBox(
       color: action.backgroundColor,
-      child: InkWell(
+      child: OhosPressFeedback(
         onTap: () {
           _controller.reverse();
           action.onTap?.call();

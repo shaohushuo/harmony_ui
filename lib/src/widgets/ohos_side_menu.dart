@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_badge.dart';
+import 'ohos_press_feedback.dart';
 
 /// A sub (second-level) item of an [OhosSideMenuItem].
 class OhosSideMenuSubItem {
@@ -123,60 +124,57 @@ class _OhosSideMenuState extends State<OhosSideMenu> {
     final bool expanded = _isExpanded(item);
     final bool hasChildren = item.subItems.isNotEmpty;
     final Color fg = selected ? theme.highlightColor : theme.textPrimaryColor;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: item.enabled
-            ? () {
-                if (hasChildren) {
-                  _toggle(item);
-                }
-                widget.onSelected?.call(item.value ?? item.label);
+    return OhosPressFeedback(
+      onTap: item.enabled
+          ? () {
+              if (hasChildren) {
+                _toggle(item);
               }
-            : null,
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          color: selected
-              ? (theme.emphasizeSecondaryColor ??
-                    theme.highlightColor.withValues(alpha: 0.12))
-              : Colors.transparent,
-          child: Row(
-            children: <Widget>[
-              if (item.icon != null) ...<Widget>[
-                IconTheme.merge(
-                  data: IconThemeData(color: fg, size: 20),
-                  child: item.icon!,
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style:
-                      (theme.typography.bodyMedium ??
-                              const TextStyle(fontSize: 15))
-                          .copyWith(color: fg, fontWeight: FontWeight.w500),
-                ),
+              widget.onSelected?.call(item.value ?? item.label);
+            }
+          : null,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        color: selected
+            ? (theme.emphasizeSecondaryColor ??
+                  theme.highlightColor.withValues(alpha: 0.12))
+            : Colors.transparent,
+        child: Row(
+          children: <Widget>[
+            if (item.icon != null) ...<Widget>[
+              IconTheme.merge(
+                data: IconThemeData(color: fg, size: 20),
+                child: item.icon!,
               ),
-              if (item.badgeCount != null) ...<Widget>[
-                const SizedBox(width: 8),
-                OhosBadge(count: item.badgeCount!),
-              ],
-              if (hasChildren) ...<Widget>[
-                const SizedBox(width: 6),
-                Icon(
-                  expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: theme.textTertiaryColor,
-                ),
-              ],
+              const SizedBox(width: 12),
             ],
-          ),
+            Expanded(
+              child: Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    (theme.typography.bodyMedium ??
+                            const TextStyle(fontSize: 15))
+                        .copyWith(color: fg, fontWeight: FontWeight.w500),
+              ),
+            ),
+            if (item.badgeCount != null) ...<Widget>[
+              const SizedBox(width: 8),
+              OhosBadge(count: item.badgeCount!),
+            ],
+            if (hasChildren) ...<Widget>[
+              const SizedBox(width: 6),
+              Icon(
+                expanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: theme.textTertiaryColor,
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -190,10 +188,14 @@ class _OhosSideMenuState extends State<OhosSideMenu> {
         final Color fg = selected
             ? theme.highlightColor
             : theme.textSecondaryColor;
-        return InkWell(
+        return OhosPressFeedback(
           onTap: sub.enabled
               ? () => widget.onSelected?.call(sub.value ?? sub.label)
               : null,
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(OhosGeometry.radiusMedium),
+            bottomRight: Radius.circular(OhosGeometry.radiusMedium),
+          ),
           child: Container(
             height: 44,
             padding: const EdgeInsets.only(left: 44, right: 16),

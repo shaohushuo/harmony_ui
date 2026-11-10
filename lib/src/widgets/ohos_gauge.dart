@@ -230,7 +230,7 @@ class OhosGauge extends StatelessWidget {
       child: CustomPaint(
         painter: _OhosGaugePainter(
           theme: theme,
-          segments: _visibleSegments(),
+          segments: _visibleSegments(theme),
           sweep: ohosSweepRadians(startAngle, endAngle),
           startRad: ohosCanvasAngle(startAngle),
           progress: progress,
@@ -281,7 +281,12 @@ class OhosGauge extends StatelessWidget {
   }
 
   /// Segments that actually get drawn, capped at nine.
-  List<OhosGaugeSegment> _visibleSegments() {
+  ///
+  /// 配色在这里过一遍 [OhosVisualPolicy.quantize]：`segments` 是**环的外观**
+  /// （一组起止色），不是「这台屏上就该显示这些 RGB」。墨屏上不过 policy 的话，
+  /// 环会保持原色 —— `OhosDataPanel` 的同名字段正好踩过这个坑（它连底槽都做了
+  /// 量化，只有分段色漏了），两个组件各犯一次，所以判据放在这里而不是调用方。
+  List<OhosGaugeSegment> _visibleSegments(OhosThemeData theme) {
     final List<OhosGaugeSegment>? source = segments;
     if (source == null) {
       // A single three-stop span. Modelling the default as two adjacent
@@ -289,10 +294,17 @@ class OhosGauge extends StatelessWidget {
       // gradient that is supposed to be continuous.
       return const <OhosGaugeSegment>[];
     }
-    return source
-        .where((OhosGaugeSegment s) => s.isVisible)
-        .take(9)
-        .toList(growable: false);
+    return <OhosGaugeSegment>[
+      for (final OhosGaugeSegment s in source)
+        if (s.isVisible)
+          OhosGaugeSegment(
+            color: theme.policy.quantize(s.color),
+            endColor: s.endColor == null
+                ? null
+                : theme.policy.quantize(s.endColor!),
+            weight: s.weight,
+          ),
+    ].take(9).toList(growable: false);
   }
 
   Widget _buildDescription(OhosThemeData theme, double side) {
@@ -454,7 +466,13 @@ class _OhosGaugePainter extends CustomPainter {
       return <_ArcSpan>[
         _ArcSpan(
           sweep: sweep,
-          colors: OhosGauge.defaultRingColors,
+          // 默认三档同样要过 policy：`segments` 为 null 只是「用官方的默认环」，
+          // 不代表「墨屏上也画绿黄红」。前面只改了调用方传入的那条分支，
+          // 这条漏掉时墨屏上**默认环**仍是彩色，而多条用例里恰好都用默认环。
+          colors: <Color>[
+            for (final Color c in OhosGauge.defaultRingColors)
+              theme.policy.quantize(c),
+          ],
           stops: const <double>[0, 0.5, 1],
         ),
       ];

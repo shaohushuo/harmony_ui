@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// Indicator style of an [OhosSwiper] — ArkUI's `DotIndicator` /
 /// `DigitIndicator`.
@@ -118,15 +119,11 @@ class OhosPageIndicator extends StatelessWidget {
       spacing: gap,
       children: <Widget>[
         for (int i = 0; i < count; i++)
-          AnimatedContainer(
-            duration: OhosGeometry.durationShort,
-            curve: OhosGeometry.spring,
+          _OhosPressableDot(
+            key: ValueKey<int>(i),
             width: i == currentIndex ? activeWidth * inkStretch : size,
             height: size,
-            decoration: BoxDecoration(
-              color: i == currentIndex ? active : inactive,
-              borderRadius: BorderRadius.circular(size / 2),
-            ),
+            color: i == currentIndex ? active : inactive,
           ),
       ],
     );
@@ -155,6 +152,60 @@ class OhosPageIndicator extends StatelessWidget {
         Text(digitSeparator, style: dimmed),
         Text('$count', style: dimmed),
       ],
+    );
+  }
+}
+
+/// 单颗导航点：保留页切换时的胶囊宽度动画，并补上官方的**按压放大**反馈
+/// （`swiper_indicator_scale = 1.33`）。
+///
+/// 缩放走 [AnimatedScale] 而不是改 width：按下放大是围绕点中心的整体放大，
+/// 且 [Transform] 只影响绘制、不占布局，点与点之间的间距不会被放大撑乱。
+class _OhosPressableDot extends StatefulWidget {
+  const _OhosPressableDot({
+    super.key,
+    required this.width,
+    required this.height,
+    required this.color,
+  });
+
+  final double width;
+  final double height;
+  final Color color;
+
+  @override
+  State<_OhosPressableDot> createState() => _OhosPressableDotState();
+}
+
+class _OhosPressableDotState extends State<_OhosPressableDot> {
+  /// 官方按压放大倍率 `swiper_indicator_scale`。
+  static const double pressedScale = 1.33;
+
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      // 不设 onTap：内置导航点默认不负责翻页（翻页要 IndicatorComponentController
+      // 绑定），但按压反馈独立成立，手指按下仍要放大。
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? pressedScale : 1.0,
+        duration: OhosGeometry.durationPress,
+        curve: OhosGeometry.easeOut,
+        child: AnimatedContainer(
+          duration: OhosGeometry.durationShort,
+          curve: OhosGeometry.spring,
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: widget.color,
+            borderRadius: BorderRadius.circular(widget.height / 2),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -393,28 +444,27 @@ class _SwiperArrow extends StatelessWidget {
     // 底板 32、底板色 `#19182431`（约 10% 黑）、箭头取底板 3/4。
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Semantics(
-        button: true,
-        child: Material(
-          // 官方底板色 `#19182431`（约 10% 黑）。走 policy.tint：墨屏上 10%
-          // 落在第 0–1 级灰、铺在白底上等于不存在，tint 会返回透明，此时靠
-          // 图标本身 + 1px 外圈表达「这里有个可按的圆」。
+      // button 语义由 OhosPressFeedback 内部统一提供，外层不再重复包。
+      child: DecoratedBox(
+        // 官方底板色 `#19182431`（约 10% 黑）。走 policy.tint：墨屏上 10%
+        // 落在第 0–1 级灰、铺在白底上等于不存在，tint 会返回透明，此时靠
+        // 图标本身 + 1px 外圈表达「这里有个可按的圆」。
+        decoration: BoxDecoration(
           color: theme.policy.tint(theme.textPrimaryColor, 0.10),
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onPressed,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: backgroundSize,
-              height: backgroundSize,
-              child: IconTheme.merge(
-                data: IconThemeData(
-                  size: iconSize * 3 / 4,
-                  color: theme.textPrimaryColor,
-                ),
-                child: Icon(icon),
+          shape: BoxShape.circle,
+        ),
+        child: OhosPressFeedback(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(backgroundSize / 2),
+          child: SizedBox(
+            width: backgroundSize,
+            height: backgroundSize,
+            child: IconTheme.merge(
+              data: IconThemeData(
+                size: iconSize * 3 / 4,
+                color: theme.textPrimaryColor,
               ),
+              child: Icon(icon),
             ),
           ),
         ),

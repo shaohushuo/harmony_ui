@@ -94,8 +94,26 @@ void main() {
 
       final List<String> offenders = <String>[];
 
-      // 每页下滑 20 屏，覆盖全部 DemoSection。
-      for (int screen = 0; screen < 20; screen++) {
+      // 滚动**不用 `tester.drag`**，直接改视口位置。
+      //
+      // 这条看起来只是写法偏好，实际是这条测试第一版**假绿**的原因：`drag` 从
+      // `find.byType(Scrollable).first` 的中心点按下，而页面中段的中心点会落在
+      // 横向滑动的内容上（`横滑列表项`），外层垂直视口从此拿不到手势 ——
+      // 实测滚到 1680vp 就再也不动，`maxScrollExtent` 却是 3662。
+      //
+      // 当时的表现极具误导性：每屏扫到的装饰节点数恒为 29，八条用例全绿，
+      // 而页面下半部分（颜色选择器色板、分层图标）**从来没被扫过**。判据没写错，
+      // 是**它没被跑到**。这和「判据看起来在检查、实际检查不到那一类对象」是
+      // 同一个错误模式的另一面：这次连判据本身都没被送达目标。
+      //
+      // 回归测试要确认的是「整页没有彩色」，不是「页面能滚动」。所以直接
+      // `jumpTo` 到下一屏：确定、可控，且不依赖任何控件的手势实现。
+      final ScrollableState viewport = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      // 是否滚到过页底 —— 见循环之后的断言。
+      bool reachedEnd = false;
+      for (int screen = 0; screen < 40; screen++) {
         for (final Element element in find.byType(DecoratedBox).evaluate()) {
           if (_insideColorData(element)) {
             continue;
@@ -107,16 +125,22 @@ void main() {
           }
           final String? problem = _describeColor(decoration);
           if (problem != null) {
-            offenders.add('$problem  ${tester.getRect(find.byWidget(element.widget))}');
+            offenders.add(
+              '$problem  ${tester.getRect(find.byWidget(element.widget))}',
+            );
           }
         }
         for (final Element element in find.byType(Icon).evaluate()) {
           if (_insideColorData(element)) {
             continue;
           }
-          final String? problem = _describeColorValue((element.widget as Icon).color);
+          final String? problem = _describeColorValue(
+            (element.widget as Icon).color,
+          );
           if (problem != null) {
-            offenders.add('ICON $problem  ${tester.getRect(find.byWidget(element.widget))}');
+            offenders.add(
+              'ICON $problem  ${tester.getRect(find.byWidget(element.widget))}',
+            );
           }
         }
         // 第三条判据：**直接量像素**。
@@ -146,9 +170,31 @@ void main() {
         if (pixelProblem != null) {
           offenders.add('PIXEL $pixelProblem');
         }
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -420));
+        // 下一屏：按视口高度走，末尾会被 `ScrollPosition` 自己夹到 `maxScrollExtent`。
+        final double next = viewport.position.pixels + 420;
+        if (next > viewport.position.maxScrollExtent) {
+          // 已经到底，再滚也不会出现新内容。
+          reachedEnd = true;
+          break;
+        }
+        viewport.position.jumpTo(next);
         await tester.pump(const Duration(milliseconds: 200));
       }
+
+      // 扫完**必须**真的到过页底，否则「八条用例全绿」只说明「上面那半页没
+      // 彩色」。这一句是给上一条注释配的守卫：判据的送达范围本身也要断言，
+      // 不然下次改回任何一种「滚动到一半就不动了」的写法，测试又悄悄变回假绿。
+      //
+      // 用 `pixels >= maxScrollExtent` 而不是「循环跑满 40 次」：页面长短会
+      // 随示例增删变化，跑满次数什么都不能证明。
+      expect(
+        reachedEnd,
+        isTrue,
+        reason:
+            '没滚到页底（停在 ${viewport.position.pixels} / '
+            '${viewport.position.maxScrollExtent}）—— 下半页没被扫过，'
+            '这条用例的「全绿」不算数',
+      );
 
       if (offenders.isNotEmpty) {
         // 去重：同一块装饰在多屏里会重复出现。
@@ -215,7 +261,16 @@ Future<String?> _describePixels(
   final int width = image!.width;
   final int height = image!.height;
   final Uint8List bytes = data!.buffer.asUint8List();
-  final double pixelRatio = width / tester.view.physicalSize.width;
+  // `RenderRepaintBoundary.toImage()` **默认 `pixelRatio: 1.0`**，所以拿到的
+  // 位图是「1 像素 = 1 逻辑像素」，`width` 就是逻辑宽（390），不是物理宽。
+  //
+  // 这里原来算的是 `width / tester.view.physicalSize.width`（390/1170 ≈ 0.33），
+  // 于是每个块的坐标都被**放大 3 倍** —— 报出来的 `@ (886,3938)` 超出了 390
+  // 的屏宽，一眼就该看出来。后果比报错位置难看更要紧：`skipRects` 里是
+  // `getRect` 给的**逻辑**坐标，与放大后的块矩形永远不相交，所以
+  // **`InkColorData` 的跳过分支一次都没执行过**。色板之所以没被报出来，纯粹
+  // 是因为滚动没到那儿（见上），不是因为申报生效了。两个缺陷正好互相遮盖。
+  const double pixelRatio = 1.0;
   image!.dispose();
 
   const int block = 8;

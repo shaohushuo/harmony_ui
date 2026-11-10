@@ -468,18 +468,38 @@ class _ScrollEffectBar extends StatelessWidget {
                 ? Curves.easeOut.transform(t)
                 : t;
             final double sigma = effect.blurSigma * eased;
+            // 尺寸**由 `child!` 决定**，模糊层与色罩用 `Positioned.fill` 贴上去。
+            //
+            // 早先写的是 `Stack(fit: StackFit.expand)`。它在**高度无界**的父约束
+            // 下会把 `BoxConstraints.biggest`（此时 h = Infinity）原样传给
+            // `BackdropFilter`，于是直接抛
+            // 「BoxConstraints forces an infinite height」。
+            //
+            // 触发条件不罕见：标题栏被放进可滚动容器（`ListView` / `Column` 里的
+            // 弹性区）就会出现 —— 而 `OhosAppBar` 正是被设计成能塞进任意父容器的
+            // 一个普通 widget。示例页「kit 页」在 320vp × 1.3 字号下就是这条路径，
+            // 一旦某个示例变高、把这块滚进视口，整页红屏。
+            //
+            // `Positioned.fill` 的子节点拿到的是 Stack 尺寸的**紧约束**，而 Stack
+            // 尺寸只由非定位子节点（这里的 `child!`）决定，所以无界高度天然被
+            // `child` 的高度兜住。
             return ClipRect(
               child: Stack(
-                fit: StackFit.expand,
                 children: <Widget>[
-                  BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                    child: const SizedBox.expand(),
+                  Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
                   child!,
                   // Frosted tint over the blurred backdrop.
-                  ColoredBox(
-                    color: Colors.white.withValues(alpha: 0.20 + 0.30 * eased),
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: Colors.white.withValues(
+                        alpha: 0.20 + 0.30 * eased,
+                      ),
+                    ),
                   ),
                 ],
               ),

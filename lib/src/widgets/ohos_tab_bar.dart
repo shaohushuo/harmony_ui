@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_chip_group.dart';
+import 'ohos_press_feedback.dart';
 
 /// Visual style of an [OhosTabBar].
 enum OhosTabBarType {
@@ -258,7 +259,10 @@ class OhosTabBar extends StatelessWidget implements PreferredSizeWidget {
   ) {
     final OhosThemeData theme = OhosTheme.of(context);
     final Color activeColor = indicatorColor ?? theme.highlightColor;
-    return InkWell(
+    // 页签的按压反馈是「整块换一档底色」，不是 Material 那种从触点扩散的
+    // 圆形水波纹 —— 后者在一条 48vp 高的页签上会露出一个比文字大一圈的圆斑，
+    // 圆角与页签底边对不上，一眼就能认出是 Material。
+    return OhosPressFeedback(
       onTap: onTap,
       child: Stack(
         alignment: Alignment.center,

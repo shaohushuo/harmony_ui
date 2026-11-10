@@ -4,6 +4,7 @@ import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_light_material.dart';
+import 'ohos_press_feedback.dart';
 
 /// 背板模糊的生效策略，对应官方 `BlurStrategy`
 /// （定义在 `hds-hdsnavigation.md`，`HdsNavigation` / `HdsActionBar` 共用）。
@@ -498,10 +499,23 @@ class _OhosActionBarState extends State<OhosActionBar> {
         widget.style.innerSpace ?? OhosActionBarMetrics.innerSpace;
     final List<Widget> children = <Widget>[
       for (final OhosActionBarButton button in buttons)
-        _SecondaryButton(
-          button: button,
-          enabled: _enabled && button.enabled,
-          theme: theme,
+        // 每个按钮包一层 `Flexible`。
+        //
+        // 按钮自身是**固定宽度**（官方 `width`，默认 56），而这一组被塞在
+        // 一个 `Expanded` 里。窄屏上 `Expanded` 给的空间可能比
+        // `n × 56 + (n−1) × gap` 小，固定宽度的 Row 于是溢出 ——
+        // 320vp 屏放 5 个按钮就会溢出 8vp（示例「kit 页」320vp × 1.3 字号
+        // 正好撞上）。官方在窄屏下是把按钮压窄而不是让它溢出屏幕。
+        //
+        // `Flexible` 而不是 `Expanded`：空间充足时按钮仍是官方的 56vp，
+        // 只有挤不下时才按比例收窄 —— 用 `Expanded` 会让按钮在所有屏宽下
+        // 都被拉伸到均分宽度，与官方尺寸不符。
+        Flexible(
+          child: _SecondaryButton(
+            button: button,
+            enabled: _enabled && button.enabled,
+            theme: theme,
+          ),
         ),
     ];
     if (vertical) {
@@ -659,17 +673,22 @@ class _CircleButton extends StatelessWidget {
       ),
     );
 
-    final Widget material = Material(
-      color: enabled ? background : theme.policy.disabledFill(background),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        // 墨屏的水波纹真机上会「留灰块且慢」，`policy.allowsRipple` 是唯一
-        // 该问的地方 —— 不要在组件里判 `theme.mono`。
-        canRequestFocus: enabled,
-        child: core,
+    final Widget material = SizedBox(
+      width: size,
+      height: size,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: enabled ? background : theme.policy.disabledFill(background),
+          shape: BoxShape.circle,
+        ),
+        child: OhosPressFeedback(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(size / 2),
+          enabled: enabled,
+          // 墨屏的水波纹真机上会「留灰块且慢」，`policy.allowsRipple` 是唯一
+          // 该问的地方 —— 不要在组件里判 `theme.mono`。
+          child: core,
+        ),
       ),
     );
 

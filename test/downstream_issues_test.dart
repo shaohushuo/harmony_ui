@@ -14,6 +14,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+/// 读 [OhosChip] 的底板装饰。
+///
+/// 0.6 起芯片不再套 `Material(color: bg)`：Material 那层会顺带带来从触点
+/// 扩散的圆形高光，在胶囊形状上按下去露出一圈与圆角对不上的弧。底色 / 描边
+/// 改由 `DecoratedBox` 自己画，所以断言也得跟着读 `BoxDecoration`。
+BoxDecoration _chipDeco(WidgetTester tester) {
+  return tester
+          .widget<DecoratedBox>(
+            find
+                .descendant(
+                  of: find.byType(OhosChip),
+                  matching: find.byType(DecoratedBox),
+                )
+                .first,
+          )
+          .decoration
+      as BoxDecoration;
+}
+
 /// WCAG 2.1 相对亮度。
 double _luminance(Color c) {
   double channel(double v) =>
@@ -144,15 +163,7 @@ void main() {
         _themed(dark, OhosChip(label: const Text('标签'), onPressed: () {})),
       );
 
-      final Material material = tester.widget<Material>(
-        find
-            .descendant(
-              of: find.byType(OhosChip),
-              matching: find.byType(Material),
-            )
-            .first,
-      );
-      expect(_luminance(material.color!), lessThan(0.25));
+      expect(_luminance(_chipDeco(tester).color!), lessThan(0.25));
     });
   });
 
@@ -225,20 +236,11 @@ void main() {
       await tester.pumpWidget(
         _themed(ink, OhosChip(label: const Text('标签'), onPressed: () {})),
       );
-      final Material chip = tester.widget<Material>(
-        find
-            .descendant(
-              of: find.byType(OhosChip),
-              matching: find.byType(Material),
-            )
-            .first,
-      );
-      final RoundedRectangleBorder chipShape =
-          chip.shape! as RoundedRectangleBorder;
+      final BoxDecoration chip = _chipDeco(tester);
 
       // 两边都走 policy.line(textTertiary, 0.3)，墨屏下同一颗实色 ——
       // 这条断言就是「同一件事不要在两处各写一遍」的可验证形式
-      expect(groupBorder.top.color, chipShape.side.color);
+      expect(groupBorder.top.color, (chip.border! as Border).top.color);
     });
 
     testWidgets('彩屏档：描边淡成发丝线，观感不被打断', (WidgetTester tester) async {

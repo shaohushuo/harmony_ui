@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 import 'ohos_responsive.dart';
 
 /// `CustomDialogControllerOptions` 里与本组件相关、且能追到明文默认值的几何。
@@ -552,25 +553,21 @@ class _OhosDialogActionButton extends StatelessWidget {
     final Color color = action.danger
         ? theme.dangerColor
         : theme.highlightColor;
-    return Material(
-      color: Colors.transparent,
+    return OhosPressFeedback(
+      onTap: action.onPressed,
       borderRadius: BorderRadius.circular(OhosGeometry.radiusMedium),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: action.onPressed,
-        highlightColor: color.withValues(alpha: 0.08),
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 44),
-          alignment: Alignment.center,
-          child: Text(
-            action.label,
-            style:
-                (action.textStyle ??
-                        theme.typography.labelLarge ??
-                        const TextStyle(fontSize: 16))
-                    .copyWith(color: color, fontWeight: FontWeight.w600),
-          ),
+      pressedColor: color.withValues(alpha: 0.08),
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 44),
+        alignment: Alignment.center,
+        child: Text(
+          action.label,
+          style:
+              (action.textStyle ??
+                      theme.typography.labelLarge ??
+                      const TextStyle(fontSize: 16))
+                  .copyWith(color: color, fontWeight: FontWeight.w600),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// An in-app multi-window entry (应用内多窗入口), the counterpart of
 /// `MultiWindowEntryInAPP`.
@@ -53,17 +54,18 @@ class OhosMultiWindowEntry extends StatelessWidget {
         backgroundColor ??
         (theme.compBackgroundGrayColor ??
             theme.textPrimaryColor.withValues(alpha: 0.06));
+    final BorderRadius radius = BorderRadius.circular(16);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Material(
-          color: enabled ? bg : bg.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: enabled ? bg : bg.withValues(alpha: 0.5),
+            borderRadius: radius,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
+          child: OhosPressFeedback(
             onTap: enabled ? onTap : null,
+            borderRadius: radius,
             child: SizedBox(
               width: size,
               height: size,

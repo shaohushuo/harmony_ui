@@ -5,6 +5,7 @@ import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
 import 'ohos_divider.dart';
 import 'ohos_light_material.dart';
+import 'ohos_press_feedback.dart';
 import 'ohos_sheet_type.dart';
 
 /// Shows a HarmonyOS half-sheet panel (半模态面板 in the guideline).
@@ -342,9 +343,9 @@ Widget _panelBody({
                   ),
                 ),
                 if (showCloseButton)
-                  InkWell(
+                  OhosPressFeedback(
                     onTap: () => Navigator.pop(context),
-                    customBorder: const CircleBorder(),
+                    borderRadius: BorderRadius.circular(15),
                     child: Padding(
                       padding: const EdgeInsets.all(6),
                       child: Icon(

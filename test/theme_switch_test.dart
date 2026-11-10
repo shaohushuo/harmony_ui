@@ -401,10 +401,17 @@ void main() {
           ),
         ),
       );
-      final Material material = tester.widget<Material>(
-        find.byType(Material).first,
+      // 0.6 起按钮的底板不再由 `Material` 提供（那层会带 Material 的水波纹），
+      // 改由 `Container` 的 `BoxDecoration` 画，读法跟着改。
+      final Container box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(OhosButton),
+              matching: find.byType(Container),
+            )
+            .first,
       );
-      final Color background = material.color!;
+      final Color background = (box.decoration! as BoxDecoration).color!;
       // 白 8% 铺在白页面上等于没有；基准必须是黑，才在浅底上留得下一块灰。
       expect(background.a, closeTo(0.08, 0.01));
       expect(

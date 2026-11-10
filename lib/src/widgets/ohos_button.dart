@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// 按钮的官方几何，来自设计规范《按钮》的响应式布局规则。
 class OhosButtonMetrics {
@@ -19,6 +22,46 @@ class OhosButtonMetrics {
   static const double sideMargin = 16;
 }
 
+/// 按钮尺寸档位，对应官方 `ControlSize`（API 11+，默认 [normal]）。
+///
+/// 几何全部取自系统资源表（`pattern.json`），不是自拟：
+///
+/// | 档位 | 高度 | 字号 | 水平内边距 | 圆角（rounded 形态） |
+/// | --- | --- | --- | --- | --- |
+/// | [normal] | `button_height` 36 | `button_font_size` 16 | `button_horizontal_padding` 16 | `button_border_radius_normal` 20 |
+/// | [small] | `small_button_height` 28 | `small_button_font_size` 12 | `small_button_horizontal_padding` 8 | `button_border_radius_small` 14 |
+enum OhosButtonSize {
+  /// 普通尺寸按钮（`ControlSize.NORMAL`）。
+  normal,
+
+  /// 小尺寸按钮（`ControlSize.SMALL`）。
+  small;
+
+  /// 按钮高度（vp）。
+  double get height => switch (this) {
+    OhosButtonSize.normal => 36,
+    OhosButtonSize.small => 28,
+  };
+
+  /// 文字字号（fp）。
+  double get fontSize => switch (this) {
+    OhosButtonSize.normal => 16,
+    OhosButtonSize.small => 12,
+  };
+
+  /// 水平内边距（vp）。
+  double get horizontalPadding => switch (this) {
+    OhosButtonSize.normal => 16,
+    OhosButtonSize.small => 8,
+  };
+
+  /// rounded 形态的圆角（vp）。
+  double get cornerRadius => switch (this) {
+    OhosButtonSize.normal => 20,
+    OhosButtonSize.small => 14,
+  };
+}
+
 /// Visual variants of [OhosButton], mirroring ArkUI's button shapes.
 enum OhosButtonShape {
   /// Fully rounded capsule (default).
@@ -28,6 +71,14 @@ enum OhosButtonShape {
   rounded,
 
   /// Perfect circle, typically for icon-only buttons.
+  ///
+  /// 直径取 [OhosButtonSize] 的高度（normal 36 / small 28），宽高相等、圆角为
+  /// 直径一半；被 [OhosButton.maxWidth] 更小的值收紧时按该值缩小。
+  ///
+  /// 只能承载**一个**元素：有 `icon` 时用 `icon`，否则用 `child`。同时传两者
+  /// 会在构造时断言失败 —— 圆形没有「图标 + 8vp 间距 + 文字」的横向排布，
+  /// 复用那条 Row 会把图标推离圆心。极短的纯文字（如单字「+」）可以塞进直径
+  /// 36 的圆里，2 字已接近上限（实测约 32.5×22），更长请改用其它形态。
   circle,
 }
 
@@ -66,11 +117,17 @@ class OhosButton extends StatelessWidget {
     this.icon,
     this.style = OhosButtonStyle.filled,
     this.shape = OhosButtonShape.capsule,
+    this.controlSize = OhosButtonSize.normal,
     this.loading = false,
-    this.minSize = const Size(48, 40),
-    this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+    this.minSize,
+    this.padding,
     this.maxWidth,
-  });
+  }) : assert(
+         !(shape == OhosButtonShape.circle && icon != null && child != null),
+         'circle 形态只承载单个元素：给了 icon 就用 icon、否则用 child。'
+         '两者同时传会让 child 不渲染（圆形按钮没有「图标 + 间距 + 文字」的'
+         '横向排布），请改用 capsule / rounded 形态承载图文按钮。',
+       );
 
   /// Called when the button is tapped. When null the button is disabled.
   final VoidCallback? onPressed;
@@ -85,16 +142,27 @@ class OhosButton extends StatelessWidget {
   final OhosButtonStyle style;
 
   /// Shape of the button.
+  ///
+  /// [OhosButtonShape.circle] 是**单元素**形态：只取 [icon]（没有 icon 时取
+  /// [child]），宽高都钉成直径，并忽略 [padding] 与 [minSize] 的宽度部分 ——
+  /// 图文并排请用 [OhosButtonShape.capsule] / [OhosButtonShape.rounded]。
   final OhosButtonShape shape;
+
+  /// 尺寸档位（官方 `controlSize`，默认 [OhosButtonSize.normal]）。
+  /// 决定高度、字号、内边距与 rounded 圆角；[minSize] / [padding] 显式传值时
+  /// 覆盖对应几何。
+  final OhosButtonSize controlSize;
 
   /// Shows an inline spinner in place of [icon] and disables taps.
   final bool loading;
 
-  /// Minimum size of the button.
-  final Size minSize;
+  /// Minimum size of the button; null 时宽度下限 48、高度取 [controlSize] 的
+  /// 官方高度（NORMAL 36 / SMALL 28）。
+  final Size? minSize;
 
-  /// Padding inside the button.
-  final EdgeInsetsGeometry padding;
+  /// Padding inside the button; null 时按 [controlSize] 给水平内边距
+  ///（NORMAL 16 / SMALL 8），垂直方向为 0（高度由 [minSize] 高度钉住）。
+  final EdgeInsetsGeometry? padding;
 
   /// 最大宽度。官方设计规范：「大屏上按钮最大 **448vp**」、窗口化场景「容器宽
   /// − 两侧 16vp，仍 ≤ 448」。老实现完全没有上限 —— 大屏上一颗「提交」按钮
@@ -108,11 +176,29 @@ class OhosButton extends StatelessWidget {
   /// 调用方的布局选择，本组件只负责「不限宽时别无限拉伸」。
   ///
   /// 传 `double.infinity` 关闭上限。
+  ///
+  /// [OhosButtonShape.circle] 下它只作为**直径上限**：直径取 [controlSize] 的
+  /// 高度，传了更小的 [maxWidth] 就按它缩小（仍是正圆），传更大值或 `null`
+  /// 则不影响 —— 与其它形态「限制横向拉伸」的语义不同，因为圆形的宽度就是
+  /// 高度，没有「变宽不变高」这一说。
   final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    // 几何推导：显式 minSize/padding 优先，否则按 controlSize 的官方令牌值。
+    final Size effectiveMinSize = minSize ?? Size(48, controlSize.height);
+    final EdgeInsetsGeometry effectivePadding =
+        padding ??
+        EdgeInsets.symmetric(horizontal: controlSize.horizontalPadding);
+    final double effectiveCorner = controlSize.cornerRadius;
+    // circle 形态：直径取按钮高度，强制宽高相等，否则只画 height/2 圆角得到的是
+    // 「两端半圆的药丸」（纯图标时实测 52×36），不是正圆。`maxWidth` 在这里是
+    // 直径上限（圆没有「变宽不变高」的形态），传更小的值就整体缩小。
+    final bool isCircle = shape == OhosButtonShape.circle;
+    final double circleDiameter = isCircle && maxWidth != null
+        ? math.min(effectiveMinSize.height, maxWidth!)
+        : effectiveMinSize.height;
     // loading 与「没有回调」是两件事：前者只是暂时不能点，视觉上仍是「正在
     // 干活」的主按钮；后者才是禁用。混在一个布尔里会让 filled + loading 落到
     // 禁用分支，而转圈的白色是写死的 —— 浅底白圈在 16 级灰上整块消失（真机：
@@ -178,18 +264,6 @@ class OhosButton extends StatelessWidget {
 
     // 三个形状共用同一条边：宽度换算与「画在盒内」都走 ohosBorderSide
     final BorderSide borderSide = ohosBorderSide(context, border);
-    OutlinedBorder shapeBorder;
-    switch (shape) {
-      case OhosButtonShape.capsule:
-        shapeBorder = StadiumBorder(side: borderSide);
-      case OhosButtonShape.rounded:
-        shapeBorder = RoundedRectangleBorder(
-          side: borderSide,
-          borderRadius: BorderRadius.circular(OhosGeometry.radiusLarge),
-        );
-      case OhosButtonShape.circle:
-        shapeBorder = CircleBorder(side: borderSide);
-    }
 
     // 无底色 + 无边框的文字按钮，在灰阶屏上与正文同色（ink 主题的
     // highlightColor 和 textPrimaryColor 都是纯黑），读者分不出哪个能点。
@@ -216,6 +290,9 @@ class OhosButton extends StatelessWidget {
         : DefaultTextStyle.merge(
             style: (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
                 .copyWith(
+                  // 字号跟随 controlSize：NORMAL 16 / SMALL 12（官方
+                  // button_font_size / small_button_font_size）。
+                  fontSize: controlSize.fontSize,
                   color: foreground,
                   // 两个分支都显式写 `decoration`：`DefaultTextStyle.merge`
                   // 只覆盖非 null 字段，写 null 等于把祖先的 decoration
@@ -266,30 +343,61 @@ class OhosButton extends StatelessWidget {
       ],
     );
 
-    // 墨水屏（`monochrome`）与 `NoSplash` 主题下不闪水波纹：前者每次点按都会
-    // 留一块半透明灰且刷新慢，后者是调用方显式关掉了 splash。
-    final bool noSplash =
-        !theme.policy.allowsRipple ||
-        Theme.of(context).splashFactory == NoSplash.splashFactory;
+    // circle 里没有「图标 + 间距 + 文字」的横向排布 —— 复用上面的 Row 会带上
+    // 那 8vp 间距，纯图标时图标被推偏 4vp、看上去不在圆心。这里只取一个元素。
+    final Widget circleContent = loading
+        ? label
+        : (icon != null
+              ? IconTheme.merge(
+                  data: IconThemeData(color: foreground, size: 20),
+                  child: icon!,
+                )
+              : label);
 
-    return Material(
-      color: background,
-      shape: shapeBorder,
+    // 按钮的按压反馈是整块底板换一档色，不是 Material 那种从触点扩散、再淡出
+    // 的圆形高光。官方的按钮按下态就是 `bg_color_clicked_blend` 压在整块底上，
+    // 形状与按钮自身一致 —— 涟漪那圈圆斑在 448vp 宽的药丸上尤其明显。
+    return Container(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: switch (shape) {
+          OhosButtonShape.capsule => BorderRadius.circular(
+            OhosGeometry.radiusCapsule,
+          ),
+          OhosButtonShape.rounded => BorderRadius.circular(effectiveCorner),
+          OhosButtonShape.circle => BorderRadius.circular(circleDiameter / 2),
+        },
+        // 判 `border` 而不是 `borderSide.width`：后者恒为 1，照它判会给每个
+        // 按钮都描一圈（`border` 是透明时那圈看不见，但会占掉 1vp 内容宽度）。
+        border: border.a > 0 ? Border.fromBorderSide(borderSide) : null,
+        boxShadow:
+            style == OhosButtonStyle.filled &&
+                !dimmed &&
+                theme.policy.allowsShadow
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: highlight.withValues(alpha: 0.25),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : null,
+      ),
       clipBehavior: Clip.antiAlias,
-      elevation:
-          style == OhosButtonStyle.filled &&
-              !dimmed &&
-              theme.policy.allowsShadow
-          ? 1
-          : 0,
-      shadowColor: highlight.withValues(alpha: 0.25),
-      child: InkWell(
+      child: OhosPressFeedback(
         onTap: interactive ? onPressed : null,
-        splashColor: noSplash
-            ? Colors.transparent
-            : Colors.white.withValues(
-                alpha: style == OhosButtonStyle.filled ? 0.25 : 0.20,
-              ),
+        borderRadius: switch (shape) {
+          OhosButtonShape.capsule => BorderRadius.circular(
+            OhosGeometry.radiusCapsule,
+          ),
+          OhosButtonShape.rounded => BorderRadius.circular(effectiveCorner),
+          OhosButtonShape.circle => BorderRadius.circular(circleDiameter / 2),
+        },
+        // 实心按钮的底是品牌色，官方按下态是**压亮**而不是压暗（`blend_white`
+        // 一档），所以这里用白而不是默认的 `interactive_click` 黑。
+        pressedColor: style == OhosButtonStyle.filled
+            ? Colors.white.withValues(alpha: 0.20)
+            : null,
         // `maxWidth` 是**上限**，不是必然值，也压不过父级的紧约束：
         // `SizedBox(width: 700)` / `stretch` / 铺满整行的 `Column` 会把
         // `minWidth` 和 `maxWidth` 同时钉到 700，这里写 448 一样是 700 ——
@@ -300,12 +408,25 @@ class OhosButton extends StatelessWidget {
         // 700。**没有 Widget 能在紧约束下变窄**，所以正确做法是：
         // 上限只负责「宽内容别撑成横幅」，容器铺满由调用方自己传宽度。
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: minSize.width,
-            minHeight: minSize.height,
-            maxWidth: maxWidth ?? OhosButtonMetrics.maxWidth,
+          constraints: isCircle
+              // 宽高都钉到直径：minWidth == maxWidth == 直径，content 无法再
+              // 把宽度撑大；图标靠 Center 落在圆心。
+              ? BoxConstraints(
+                  minWidth: circleDiameter,
+                  maxWidth: circleDiameter,
+                  minHeight: circleDiameter,
+                  maxHeight: circleDiameter,
+                )
+              : BoxConstraints(
+                  minWidth: effectiveMinSize.width,
+                  minHeight: effectiveMinSize.height,
+                  maxWidth: maxWidth ?? OhosButtonMetrics.maxWidth,
+                ),
+          child: Padding(
+            // circle 不吃水平文字内边距，只居中单个元素；其余形态保留官方 padding。
+            padding: isCircle ? EdgeInsets.zero : effectivePadding,
+            child: isCircle ? Center(child: circleContent) : content,
           ),
-          child: Padding(padding: padding, child: content),
         ),
       ),
     );

@@ -540,7 +540,16 @@ class _IndexerDemoState extends State<_IndexerDemo> {
                       controller: _scroller,
                       itemExtent: _rowExtent,
                       itemCount: _rows.length,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      // 左侧 16 是本库列表内容的既定内距（`OhosListTile`
+                      // 的 `horizontal: 16`）。不给的话文字直接贴住外框线，
+                      // 看起来像「没排版的草稿」。
+                      //
+                      // 右侧只留 4、不是对称的 16：这一侧已经有两段间隙 ——
+                      // 下面 `SizedBox(width: 6)` 加上 `OhosAlphabetIndexer`
+                      // 自身的默认 padding 4vp（`ts-container-alphabet-indexer.md`
+                      // 「padding 属性默认为 4vp」）。再给 16 会让城市名离索引条
+                      // 太远，整列看起来偏左。
+                      padding: const EdgeInsets.fromLTRB(16, 6, 4, 6),
                       itemBuilder: (BuildContext context, int index) {
                         final String text = _rows[index];
                         final bool header = _firstRow.containsKey(text);
@@ -548,6 +557,8 @@ class _IndexerDemoState extends State<_IndexerDemo> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.typography.bodySmall?.copyWith(
                               color: header
                                   ? theme.highlightColor
@@ -1043,19 +1054,24 @@ class _GaugeDemoState extends State<_GaugeDemo> {
                 ),
                 Column(
                   children: <Widget>[
-                    SizedBox.square(
-                      dimension: side,
-                      child: OhosGauge(
-                        value: _value,
-                        min: 0,
-                        max: 100,
-                        startAngle: 210,
-                        endAngle: 150,
-                        strokeWidth: 14,
-                        segments: _nineSegments,
-                        // 九段等分后每段都不到 24°，指针比环更抢眼；官方示例 6
-                        // 就是这一档用 `indicator(null)` 把指针关掉。
-                        showIndicator: false,
+                    // 九段配色是**官方示例的数据本身**（每段一组起止色，用来
+                    // 演示分段渐变）。量化成灰之后九段会并成一条深浅相近的环，
+                    // 「饱和度由暖到冷」这个演示意图就消失了。
+                    InkColorData(
+                      child: SizedBox.square(
+                        dimension: side,
+                        child: OhosGauge(
+                          value: _value,
+                          min: 0,
+                          max: 100,
+                          startAngle: 210,
+                          endAngle: 150,
+                          strokeWidth: 14,
+                          segments: _nineSegments,
+                          // 九段等分后每段都不到 24°，指针比环更抢眼；官方示例 6
+                          // 就是这一档用 `indicator(null)` 把指针关掉。
+                          showIndicator: false,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -1071,7 +1087,11 @@ class _GaugeDemoState extends State<_GaugeDemo> {
             );
           },
         ),
-        Slider(
+        // 这里原先是裸的 Material `Slider` —— 它带着 M3 的 primary 紫和
+        // 点按涟漪，在同一页里和上面那些 HDS 组件完全不是一套观感（墨屏
+        // 截图里它还是唯一一处彩色像素）。示例自己也不该留 Material 控件：
+        // 本库已经有 `OhosSlider`，换掉即可。
+        OhosSlider(
           value: _value,
           max: 100,
           onChanged: (double v) => setState(() => _value = v),

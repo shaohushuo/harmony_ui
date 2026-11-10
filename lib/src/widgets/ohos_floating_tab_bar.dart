@@ -5,6 +5,7 @@ import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_badge.dart';
 import 'ohos_light_material.dart';
+import 'ohos_press_feedback.dart';
 import 'ohos_tabs_width.dart';
 
 /// 悬浮页签栏里的一项。
@@ -469,9 +470,18 @@ class OhosFloatingTabBar extends StatelessWidget {
       );
     }
 
-    Widget tapTarget = InkWell(
+    // 反白项的药丸是内缩 4 的，按压层要跟着收成同样的曲率，否则按下时
+    // 四角会从药丸里探出来一个方角。
+    const double inset = 4;
+    Widget tapTarget = OhosPressFeedback(
       onTap: item.enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(style.radius),
+      borderRadius: BorderRadius.circular(
+        inverse
+            ? (style.radius - inset).clamp(0.0, double.infinity)
+            : style.radius,
+      ),
+      // 选中项本身已是 highlight 实底，再叠一层同色只会更糊；反白项用白罩。
+      pressedColor: inverse ? Colors.white.withValues(alpha: 0.16) : null,
       child: Center(child: content),
     );
 
@@ -487,7 +497,6 @@ class OhosFloatingTabBar extends StatelessWidget {
       // 内容区一收窄，`Icon(24) + 间距 2 + 单行标签` 在 `textScale ≳ 1.5` 时
       // 就撑破 48，而未选中项仍占满 56 —— 于是只有选中项溢出，偏偏大字号正是
       // 墨水屏阅读器的常用档。药丸退到 Stack 的背景层，内容继续用满高度。
-      const double inset = 4;
       final Widget pill = Positioned.fill(
         child: Padding(
           padding: const EdgeInsets.all(inset),

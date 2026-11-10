@@ -75,14 +75,8 @@ Map<String, Future<void> Function(BuildContext)> _openers() {
       title: '弹出框',
       content: '面板内容，用来把弹出框撑到有实际高度。长文本还会换行。',
       actions: <OhosDialogAction>[
-        OhosDialogAction(
-          label: '取消',
-          onPressed: () => Navigator.pop(c, false),
-        ),
-        OhosDialogAction(
-          label: '确定',
-          onPressed: () => Navigator.pop(c, true),
-        ),
+        OhosDialogAction(label: '取消', onPressed: () => Navigator.pop(c, false)),
+        OhosDialogAction(label: '确定', onPressed: () => Navigator.pop(c, true)),
       ],
     ),
     'menu': (BuildContext c) => showOhosMenu<String>(
@@ -108,9 +102,9 @@ Widget _host(double textScale, Future<void> Function(BuildContext) open) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     builder: (BuildContext context, Widget? child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: TextScaler.linear(textScale),
-      ),
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
       child: child!,
     ),
     home: OhosTheme(
@@ -173,20 +167,19 @@ void main() {
     for (final double textScale in _textScales) {
       for (final MapEntry<String, Future<void> Function(BuildContext)> e
           in openers.entries) {
-        testWidgets(
-          '${e.key} @ ${size.width.toInt()}vp ×${textScale}x 字号不溢出',
-          (WidgetTester tester) async {
-            await tester.binding.setSurfaceSize(size);
-            addTearDown(() => tester.binding.setSurfaceSize(null));
+        testWidgets('${e.key} @ ${size.width.toInt()}vp ×${textScale}x 字号不溢出', (
+          WidgetTester tester,
+        ) async {
+          await tester.binding.setSurfaceSize(size);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
 
-            final List<String> errors = <String>[];
-            await _scanOpener(tester, textScale, e.value, errors);
+          final List<String> errors = <String>[];
+          await _scanOpener(tester, textScale, e.value, errors);
 
-            if (errors.isNotEmpty) {
-              fail(errors.join('\n- - - - -\n'));
-            }
-          },
-        );
+          if (errors.isNotEmpty) {
+            fail(errors.join('\n- - - - -\n'));
+          }
+        });
       }
     }
   }

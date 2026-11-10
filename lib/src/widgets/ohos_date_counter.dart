@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// A calendar date, mirroring ArkUI's `DateData` (`advanced.Counter`).
 ///
@@ -608,20 +609,17 @@ class _OhosDateCounterState extends State<OhosDateCounter> {
     return Container(
       width: OhosDateCounter._buttonColumnWidth,
       decoration: BoxDecoration(border: border),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: enabled ? onTap : null,
-          child: Center(
-            child: Icon(
-              icon,
-              size: OhosDateCounter._iconSize,
-              color: enabled
-                  ? theme.textPrimaryColor
-                  : theme.textPrimaryColor.withValues(
-                      alpha: OhosDateCounter._disabledOpacity,
-                    ),
-            ),
+      child: OhosPressFeedback(
+        onTap: enabled ? onTap : null,
+        child: Center(
+          child: Icon(
+            icon,
+            size: OhosDateCounter._iconSize,
+            color: enabled
+                ? theme.textPrimaryColor
+                : theme.textPrimaryColor.withValues(
+                    alpha: OhosDateCounter._disabledOpacity,
+                  ),
           ),
         ),
       ),

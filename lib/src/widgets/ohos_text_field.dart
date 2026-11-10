@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 import 'ohos_selection_toolbar.dart';
 
 /// Visual variant of [OhosTextField].
@@ -277,7 +278,22 @@ class OhosTextField extends StatefulWidget {
   /// Hint shown when empty.
   final String? hintText;
 
-  /// Floats above the input when focused/not empty.
+  /// 输入框上方的静态标签（官方 `TextInput` 没有浮动标签这个形态）。
+  ///
+  /// **与 Flutter 的 `labelText` 同名但不同形态**：Material 的 label 会先坐在
+  /// 输入框里当占位符，聚焦 / 有内容时缩小上浮成一枚小字压在边框上。HarmonyOS
+  /// 的文本框没有这个动作 —— 标签是**框外上方那一行静态文字**（见设计规范
+  /// 配图：`Phone number` / `Password` 各占一行，输入框是它们下面的独立底板），
+  /// 它不参与命中区、不随聚焦变色、也不会把容器撑成两行。
+  ///
+  /// 因此这里**不再转给 `InputDecoration.labelText`**，而是在 [TextField] 之上
+  /// 自己画一行标签。早先直接透传，得到的是 Material 的浮动标签：聚焦时文字
+  /// 缩到 12fp 并往上跳，输入框高度会跟着从 40 涨到 56 —— 那是本库唯一一处
+  /// 「一聚焦就换高度」的控件，也正是用户看到的「和规范不一样」。
+  ///
+  /// 内联形态（[OhosTextFieldVariant.inline] 生效时）是「一行可点的文本」，
+  /// 框外没有标签的落位空间，此时传入的 [labelText] 不渲染；需要标签请在
+  /// 组件外部自己放一行 [Text]，或改用默认形态。
   final String? labelText;
 
   /// Leading icon inside the field.
@@ -524,7 +540,6 @@ class _OhosTextFieldState extends State<OhosTextField> {
         // 变 0，高度才由内容真正决定。
         isDense: true,
         hintText: widget.hintText,
-        labelText: widget.labelText,
         prefixIcon: widget.prefixIcon,
         suffixIcon: trailingIcon ?? widget.suffixIcon,
         suffixIconConstraints: const BoxConstraints(),
@@ -611,55 +626,89 @@ class _OhosTextFieldState extends State<OhosTextField> {
         suffix: trailingIcon ?? widget.suffixIcon,
       ),
     };
+    final Widget field = TextField(
+      controller: widget.controller ?? _controller,
+      focusNode: _focusNode,
+      enabled: widget.enabled,
+      // 密码模式下由 `_passwordVisible` 决定遮蔽：眼睛图标点一下就把内容
+      // 摊开，这是「密码模式」相对单纯 `obscureText` 的全部意义。
+      obscureText: widget._obscured && !_passwordVisible,
+      // 官方 `maxLength` 的行为是**硬截断**（输入到上限就输不进去），
+      // 与 Flutter 的 `maxLength` 一致 —— 但 Flutter 默认还会在右下角画
+      // 一个计数器（`decoration.counterText`），那是 Material 的观感，
+      // 本库的计数器自己画，所以这里固定传 `null`。
+      maxLength: widget.maxLength,
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
+      onChanged: widget.onChanged,
+      onSubmitted: widget.onSubmitted,
+      maxLines: widget._inlineEffective ? 1 : widget.maxLines,
+      style:
+          widget.style ??
+          (theme.typography.bodyLarge?.copyWith(
+            color: theme.textPrimaryColor,
+            fontSize: OhosTextFieldMetrics.fontSize,
+          )),
+      decoration: decoration.copyWith(
+        counterText: '',
+        // 密码形态容器高 **48**（`password_style_height` →
+        // `ohos_id_password_style_height`），比普通形态的 40 高 8。只在下
+        // 划线以外的形态上补，因为下划线形态本来就是 48（12+24+12），
+        // 再叠一层约束就等于没变、但会让「谁定的高度」变模糊。
+        constraints:
+            widget._obscured && effective != OhosTextFieldVariant.underline
+            ? const BoxConstraints(
+                minHeight: OhosTextFieldMetrics.passwordHeight,
+              )
+            : null,
+      ),
+      contextMenuBuilder:
+          widget.contextMenuBuilder ??
+          (BuildContext context, EditableTextState state) =>
+              OhosSelectionToolbar.editable(
+                context: context,
+                editableTextState: state,
+                items: widget.selectionMenuItems,
+              ),
+    );
+
+    // 标签是**框外上方的一行静态文字**，不是 Material 的浮动 label。
+    // 它不进 `InputDecoration`，所以既不会在聚焦时缩小上浮，也不会把 40 的
+    // 容器撑成 56；间距取 `padding_level4` = 8（与 `textfield_error_spacing`
+    // 同一个令牌，官方表单里「标签—控件」「控件—错误提示」都是这一档）。
+    // 内联形态是一行文本，框外标签无处落位，与计数器一样排除 _inlineEffective。
+    final bool labelVisible =
+        widget.labelText != null &&
+        widget.labelText!.isNotEmpty &&
+        !widget._inlineEffective;
+    final Widget? label = !labelVisible
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(
+              bottom: OhosTextFieldMetrics.errorSpacing,
+            ),
+            child: DefaultTextStyle.merge(
+              style:
+                  (theme.typography.bodyMedium ?? const TextStyle(fontSize: 15))
+                      .copyWith(
+                        color: hasError
+                            ? theme.dangerColor
+                            : theme.textSecondaryColor,
+                      ),
+              child: Text(
+                widget.labelText!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        TextField(
-          controller: widget.controller ?? _controller,
-          focusNode: _focusNode,
-          enabled: widget.enabled,
-          // 密码模式下由 `_passwordVisible` 决定遮蔽：眼睛图标点一下就把内容
-          // 摊开，这是「密码模式」相对单纯 `obscureText` 的全部意义。
-          obscureText: widget._obscured && !_passwordVisible,
-          // 官方 `maxLength` 的行为是**硬截断**（输入到上限就输不进去），
-          // 与 Flutter 的 `maxLength` 一致 —— 但 Flutter 默认还会在右下角画
-          // 一个计数器（`decoration.counterText`），那是 Material 的观感，
-          // 本库的计数器自己画，所以这里固定传 `null`。
-          maxLength: widget.maxLength,
-          keyboardType: widget.keyboardType,
-          textInputAction: widget.textInputAction,
-          onChanged: widget.onChanged,
-          onSubmitted: widget.onSubmitted,
-          maxLines: widget._inlineEffective ? 1 : widget.maxLines,
-          style:
-              widget.style ??
-              (theme.typography.bodyLarge?.copyWith(
-                color: theme.textPrimaryColor,
-                fontSize: OhosTextFieldMetrics.fontSize,
-              )),
-          decoration: decoration.copyWith(
-            counterText: '',
-            // 密码形态容器高 **48**（`password_style_height` →
-            // `ohos_id_password_style_height`），比普通形态的 40 高 8。只在下
-            // 划线以外的形态上补，因为下划线形态本来就是 48（12+24+12），
-            // 再叠一层约束就等于没变、但会让「谁定的高度」变模糊。
-            constraints:
-                widget._obscured && effective != OhosTextFieldVariant.underline
-                ? const BoxConstraints(
-                    minHeight: OhosTextFieldMetrics.passwordHeight,
-                  )
-                : null,
-          ),
-          contextMenuBuilder:
-              widget.contextMenuBuilder ??
-              (BuildContext context, EditableTextState state) =>
-                  OhosSelectionToolbar.editable(
-                    context: context,
-                    editableTextState: state,
-                    items: widget.selectionMenuItems,
-                  ),
-        ),
+        if (label != null) label,
+        field,
         if (_counterVisible) _buildCounter(theme),
       ],
     );
@@ -719,22 +768,21 @@ class _OhosTextFieldState extends State<OhosTextField> {
     final Color color =
         widget.passwordIconColor ??
         (widget.enabled ? theme.textSecondaryColor : theme.textTertiaryColor);
-    return Semantics(
-      button: true,
-      label: _passwordVisible ? '隐藏密码' : '显示密码',
-      child: InkResponse(
-        onTap: widget.enabled ? _togglePassword : null,
-        radius: OhosTextFieldMetrics.iconHotZone / 2,
-        child: SizedBox(
-          width: OhosTextFieldMetrics.iconHotZone,
-          height: OhosTextFieldMetrics.iconHotZone,
-          child: Icon(
-            _passwordVisible
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
-            size: OhosTextFieldMetrics.iconSize,
-            color: color,
-          ),
+    // 语义由 OhosPressFeedback 统一出一层：外层不再包 Semantics，
+    // 否则两层 button 节点在离屏时触发 invisible-node 断言。
+    return OhosPressFeedback(
+      onTap: widget.enabled ? _togglePassword : null,
+      semanticLabel: _passwordVisible ? '隐藏密码' : '显示密码',
+      borderRadius: BorderRadius.circular(OhosTextFieldMetrics.iconHotZone / 2),
+      child: SizedBox(
+        width: OhosTextFieldMetrics.iconHotZone,
+        height: OhosTextFieldMetrics.iconHotZone,
+        child: Icon(
+          _passwordVisible
+              ? Icons.visibility_outlined
+              : Icons.visibility_off_outlined,
+          size: OhosTextFieldMetrics.iconSize,
+          color: color,
         ),
       ),
     );
@@ -772,7 +820,6 @@ class _OhosTextFieldState extends State<OhosTextField> {
       // `contentPadding` + 内容高自己决定容器高，否则 8+24+8=40 会被撑到 48。
       isDense: true,
       hintText: widget.hintText,
-      labelText: widget.labelText,
       prefixIcon: widget.prefixIcon,
       // 内联形态没有浮起的 label 与错误提示的落位空间，label 会把它撑成两行，
       // 那就不是「一行文本」了。

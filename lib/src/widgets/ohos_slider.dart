@@ -32,9 +32,10 @@ enum OhosSliderStyle {
 /// | 轨道与两端距离 | **8**（=半径） | **6** | — | 文档「左右间距」段 |
 /// | 刻度点直径 | **4** | **4** | **4** | `stepSize` 默认 `4vp`，取值上限 = 轨道粗细 |
 ///
-/// **不做双值区间。** 官方 `slideRange` 是「设置**有效滑动区间**」（限制可达
-/// 范围），不是 `RangeSlider` —— 后者在 ArkUI 里根本不存在。这条纠正记在
-/// `ROADMAP-0.6.md` §0.1，本轮沿用。
+/// **不做双值 `RangeSlider`。** ArkUI 里根本没有 RangeSlider；官方 `slideRange`
+/// 是「设置**有效滑动区间**」（限制单滑块的可达范围），本库已通过
+/// [OhosSlider.slideRange] 支持，见 [OhosSlideRange]。这条区分记在
+/// `ROADMAP-0.6.md` §0.1。
 class OhosSlider extends StatefulWidget {
   const OhosSlider({
     super.key,
@@ -52,6 +53,7 @@ class OhosSlider extends StatefulWidget {
     this.stepSize = 4,
     this.prefix,
     this.suffix,
+    this.slideRange,
   });
 
   /// Current value.
@@ -66,7 +68,18 @@ class OhosSlider extends StatefulWidget {
   /// Maximum value.
   final double max;
 
-  /// Snap divisions; when set the value snaps to discrete steps.
+  /// 离散分段数：把 [min]..[max] 区间**等分**成多少段，滑动时取值吸附到最近的
+  /// 分点。
+  ///
+  /// 注意它是「段数」而不是步长：每段间隔 = `(max - min) / divisions`，
+  /// 分点共 `divisions + 1` 个（含两端）。例如 `min: 0, max: 100, divisions: 10`
+  /// 的可选值是 0、10、20 … 100。这与官方 `Slider` 的 `step` 参数互为换算：
+  /// `step = (max - min) / divisions` —— 这里沿用 Flutter `Slider.divisions` 的
+  /// 口径，没有直接搬 `step`，是为了让底层 `Slider` 原样吸附。
+  ///
+  /// 为 `null`（默认）时是连续滑条，取值不吸附、可停在任意位置。[showSteps]
+  /// 为 `true` 时，刻度点就画在这些分点上；没有 `divisions` 便不知道点落在哪，
+  /// 此时 `showSteps` 不生效。
   final int? divisions;
 
   /// Label shown in the bubble.
@@ -104,8 +117,52 @@ class OhosSlider extends StatefulWidget {
   /// 轨道终点后的自定义后缀（`suffix`，API 20+）。
   final Widget? suffix;
 
+  /// 有效滑动区间（官方 `slideRange`，API 12+）。
+  ///
+  /// 传入后滑块被限制在 [OhosSlideRange.from] / [OhosSlideRange.to] 之间，
+  /// 区间外的点击与手势不触发；初始 value 超出区间会夹到边界。null 表示不限制。
+  final OhosSlideRange? slideRange;
+
   @override
   State<OhosSlider> createState() => _OhosSliderState();
+}
+
+/// 有效滑动区间，对应官方 `SlideRange` 对象（API 12+）。
+///
+/// [from] / [to] 都可空：只设一个时另一个边界取 Slider 的 min/max。
+/// 仅当 `min <= from <= to <= max` 时整体生效，否则该区间被忽略 —— 与官方
+/// 「仅当 min<=from<=to<=max 时生效」一致。
+class OhosSlideRange {
+  const OhosSlideRange({this.from, this.to});
+
+  /// 区间起点；null 时取 Slider 的 min。
+  final double? from;
+
+  /// 区间终点；null 时取 Slider 的 max。
+  final double? to;
+
+  /// 在给定 [min]/[max] 下校验并返回生效的边界。
+  ///
+  /// 返回 `(double from, double to)`；不满足 `min <= from <= to <= max` 时
+  /// 返回 null（调用方按无区间处理）。
+  (double, double)? resolve(double min, double max) {
+    final double f = from ?? min;
+    final double t = to ?? max;
+    if (min <= f && f <= t && t <= max) {
+      return (f, t);
+    }
+    return null;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is OhosSlideRange && other.from == from && other.to == to;
+
+  @override
+  int get hashCode => Object.hash(from, to);
+
+  @override
+  String toString() => 'OhosSlideRange(from: $from, to: $to)';
 }
 
 class _OhosSliderState extends State<OhosSlider> {
@@ -154,6 +211,14 @@ class _OhosSliderState extends State<OhosSlider> {
     final OhosVisualPolicy policy = theme.policy;
     final Color active = widget.activeColor ?? theme.highlightColor;
     final bool showBubble = widget.showValueBubble && _dragValue != null;
+
+    // 有效滑动区间：不合法的 slideRange 被 resolve 判 null，按无区间处理。
+    final (double, double)? range = widget.slideRange?.resolve(
+      widget.min,
+      widget.max,
+    );
+    final double effectiveMin = range?.$1 ?? widget.min;
+    final double effectiveMax = range?.$2 ?? widget.max;
 
     // 刻度点要画在轨道上，所以轨道颜色与它同色时才需要一档反差 —— 直接
     // 用 `theme.popupColor`（与背景一致的那一层）：未走过的轨道是浅色，
@@ -218,9 +283,11 @@ class _OhosSliderState extends State<OhosSlider> {
             : ShowValueIndicator.onlyForDiscrete,
       ),
       child: Slider(
-        value: _display.clamp(widget.min, widget.max),
-        min: widget.min,
-        max: widget.max,
+        // 收窄到有效区间：Material Slider 自身的手势与点击就不会越过边界，
+        // 区间外的点按自然不触发。value 超出区间夹到边界。
+        value: _display.clamp(effectiveMin, effectiveMax),
+        min: effectiveMin,
+        max: effectiveMax,
         // `showSteps` 只决定画不画刻度点，吸附步长始终由 `divisions` 决定 ——
         // 官方把两件事也分开了：`step` 是步长、`showSteps` 只控制刻度可见性。
         divisions: widget.divisions,

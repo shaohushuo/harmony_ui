@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// A numeric stepper with minus/plus buttons (数字加减 in the HarmonyOS
 /// guideline).
@@ -134,7 +137,7 @@ class OhosCounter extends StatelessWidget {
   }
 }
 
-class _CounterButton extends StatelessWidget {
+class _CounterButton extends StatefulWidget {
   const _CounterButton({
     required this.size,
     required this.color,
@@ -150,22 +153,86 @@ class _CounterButton extends StatelessWidget {
   final String semanticLabel;
 
   @override
+  State<_CounterButton> createState() => _CounterButtonState();
+}
+
+class _CounterButtonState extends State<_CounterButton> {
+  /// 长按连续触发的间隔。
+  ///
+  /// 官方 `counter.ets` 用 `LongPressGesture({ repeat: true })`，repeat 节奏由
+  /// ArkUI 手势框架给（首次长按 500ms 触发，之后按固定间隔重复）。这里取
+  /// 250ms 一档，接近官方手感，保证连续加减既不太快也不拖沓。
+  static const Duration repeatInterval = Duration(milliseconds: 250);
+
+  Timer? _repeatTimer;
+
+  bool get _canRepeat => widget.onTap != null;
+
+  void _startRepeat() {
+    if (!_canRepeat) {
+      return;
+    }
+    // 长按成立先执行一次，随后按固定间隔重复。
+    widget.onTap!();
+    _repeatTimer?.cancel();
+    _repeatTimer = Timer.periodic(repeatInterval, (_) {
+      // 到达 min/max 后父级重建会把 onTap 置 null：停止重复而不是空转。
+      final VoidCallback? action = widget.onTap;
+      if (action == null) {
+        _stopRepeat();
+        return;
+      }
+      action();
+    });
+  }
+
+  void _stopRepeat() {
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+  }
+
+  @override
+  void didUpdateWidget(_CounterButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 长按中若按钮被禁用（到边界或整体 enabled 变 false），立刻停。
+    if (widget.onTap == null) {
+      _stopRepeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _repeatTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    return Material(
-      color: theme.textPrimaryColor.withValues(alpha: 0.06),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
+    final BorderRadius radius = BorderRadius.circular(widget.size / 2);
+    return DecoratedBox(
+      // 圆形底的材质由 `Material(shape: CircleBorder())` 换成自绘 —— 后者会
+      // 给按钮挂上水波纹，在一个 32vp 的加减按钮上那团高光几乎等于整块闪一下。
+      decoration: BoxDecoration(
+        color: theme.textPrimaryColor.withValues(alpha: 0.06),
+        borderRadius: radius,
+      ),
+      child: OhosPressFeedback(
+        onTap: widget.onTap,
+        onLongPress: _canRepeat ? _startRepeat : null,
+        onLongPressEnd: _canRepeat ? (_) => _stopRepeat() : null,
+        // 取消时框架不会再给 end 事件，这里同样要停掉重复定时器，
+        // 否则手指离开后仍在连续加减。
+        onLongPressCancel: _canRepeat ? _stopRepeat : null,
+        semanticLabel: widget.semanticLabel,
+        borderRadius: radius,
         child: SizedBox(
-          width: size,
-          height: size,
-          child: Semantics(
-            button: true,
-            label: semanticLabel,
-            child: Icon(icon, size: size * 0.5, color: color),
+          width: widget.size,
+          height: widget.size,
+          child: Icon(
+            widget.icon,
+            size: widget.size * 0.5,
+            color: widget.color,
           ),
         ),
       ),

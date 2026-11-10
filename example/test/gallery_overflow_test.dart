@@ -35,9 +35,9 @@ Widget _host(Widget page, double textScale) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     builder: (BuildContext context, Widget? child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: TextScaler.linear(textScale),
-      ),
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
       child: child!,
     ),
     home: OhosTheme(data: OhosThemeData.light(), child: page),
