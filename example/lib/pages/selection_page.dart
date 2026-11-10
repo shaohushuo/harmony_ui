@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../ink_color_data.dart';
 import 'demo_scaffold.dart';
 
 /// 选择类：勾选框 / 单选按钮 / 开关 / 评分条 / 滑动条 / 分段按钮 / 颜色选择器 / 选择器
@@ -228,25 +229,34 @@ class _SelectionPageState extends State<SelectionPage> {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: OhosColorPicker(
-                    colors: _palette,
-                    selectedColor: _color,
-                    onChanged: (Color c) => setState(() => _color = c),
+                  // 色板上的颜色**就是被演示的数据** —— 它不是在表达品牌色或
+                  // 状态。量化成灰之后，旁边那行 `#0a59f7` 会显示成灰色，
+                  // 「点色块选强调色」这件事就没有对照物了。
+                  child: InkColorData(
+                    child: OhosColorPicker(
+                      colors: _palette,
+                      selectedColor: _color,
+                      onChanged: (Color c) => setState(() => _color = c),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _color,
-                        borderRadius: BorderRadius.circular(14),
-                        // 选到白 / 浅色时，色块自身在白卡片上会消失
-                        border: Border.fromBorderSide(
-                          ohosSwatchOutline(context, theme, _color),
+                    // 这个色块显示的**就是选中的那个色值本身**，和下面那行十六进制
+                    // 同属数据：量化成灰之后会出现「灰块 + 0a59f7」，自相矛盾。
+                    InkColorData(
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: _color,
+                          borderRadius: BorderRadius.circular(14),
+                          // 选到白 / 浅色时，色块自身在白卡片上会消失
+                          border: Border.fromBorderSide(
+                            ohosSwatchOutline(context, theme, _color),
+                          ),
                         ),
                       ),
                     ),
@@ -304,7 +314,16 @@ class _SegmentDemo extends StatefulWidget {
 }
 
 class _SegmentDemoState extends State<_SegmentDemo> {
+  // 两个独立状态，**不是**一个。
+  //
+  // 早先三处分段按钮共用一个 `_selected`：tab 型的 `selected` 写成
+  // `_selected == 'day' ? 'all' : 'image'`（从 capsule 的取值算出来），
+  // 于是「点 capsule 的『周』，下面 tab 型跟着从『全部』跳到『图片』」。
+  // 四个示例段是四个互不相干的控件，各自的状态必须各自持有 —— 共用一份
+  // 除了制造这种假联动，还会让每个演示都得写成「从别人的值反推自己的值」
+  // 这种不可维护的形状。
   String _selected = 'day';
+  String _tabSelected = 'all';
   final Set<String> _multi = <String>{'wifi', 'bt'};
 
   @override
@@ -337,8 +356,8 @@ class _SegmentDemoState extends State<_SegmentDemo> {
             OhosSegment(label: '图片', value: 'image'),
             OhosSegment(label: '视频', value: 'video'),
           ],
-          selected: _selected == 'day' ? 'all' : 'image',
-          onSelected: (String v) => setState(() {}),
+          selected: _tabSelected,
+          onSelected: (String v) => setState(() => _tabSelected = v),
         ),
         const SizedBox(height: 16),
         Text(

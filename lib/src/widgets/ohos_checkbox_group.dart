@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 import 'ohos_checkbox.dart';
 
 /// 群组的选中状态，对应官方 `SelectStatus` 枚举。
@@ -230,7 +231,12 @@ class OhosCheckboxGroup extends StatelessWidget {
                   // 半选是一横，不是勾。16 级灰上「浅一点的勾」与勾分不开。
                   partial ? Icons.remove_rounded : Icons.check_rounded,
                   size: size * 0.72,
-                  color: enabled ? Colors.white : theme.textTertiaryColor,
+                  // 与 OhosCheckbox 同一条规则：反白勾走 onHighlightColor
+                  // （对应 ohos_id_color_foreground_contrary），不写死白——
+                  // 自定义高亮色或非标准背景下，纯白会失去对比度。
+                  color: enabled
+                      ? theme.onHighlightColor
+                      : theme.textTertiaryColor,
                 )
               : null,
         ),
@@ -529,12 +535,12 @@ class OhosCheckboxGroupTile extends StatelessWidget {
 
 /// 群组头与成员共用的整行点击区域。
 ///
-/// 用 `GestureDetector` 自绘按压态而不是 `InkWell`：`InkWell` 要求祖先里有
+/// 用 `OhosPressFeedback` 而不是 `InkWell`：`InkWell` 要求祖先里有
 /// `Material`，而这两个组件最常见的落点是 `Column` / `ListView` —— 一个裸
 /// 的 `Column` 里放 `InkWell` 会在真机上直接抛 `No Material widget found`。
-/// 本库其它列表项（如 `OhosListTile`）自带 `Material` 包裹，这里为了不给调用
-/// 方加约束，走同一条自绘路线。
-class _GroupRow extends StatefulWidget {
+/// `OhosPressFeedback` 自带手势与自绘按压层，没有这个约束，也不需要为了
+/// 「不留水波纹」把 splash 一个个涂透明。
+class _GroupRow extends StatelessWidget {
   const _GroupRow({
     required this.onTap,
     required this.padding,
@@ -546,40 +552,16 @@ class _GroupRow extends StatefulWidget {
   final List<Widget> children;
 
   @override
-  State<_GroupRow> createState() => _GroupRowState();
-}
-
-class _GroupRowState extends State<_GroupRow> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    final bool enabled = widget.onTap != null;
-    final Color overlay = theme.policy.tint(theme.textPrimaryColor, 0.06);
-    final bool showsOverlay =
-        _pressed && enabled && overlay != Colors.transparent;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: enabled ? (TapDownDetails _) => _setPressed(true) : null,
-      onTapUp: enabled ? (TapUpDetails _) => _setPressed(false) : null,
-      onTapCancel: enabled ? () => _setPressed(false) : null,
-      child: ColoredBox(
-        // 只有按下去并且策略允许时才铺色。墨水屏上 `tint` 返回透明，那一档
-        // 的反馈由勾选框自己的描边切换承担。
-        color: showsOverlay ? overlay : Colors.transparent,
-        child: Padding(
-          padding: widget.padding,
-          child: Row(children: widget.children),
-        ),
+    return OhosPressFeedback(
+      onTap: onTap,
+      // 墨水屏上 `tint` 返回透明，那一档的反馈由勾选框自己的描边切换承担。
+      pressedColor: theme.policy.tint(theme.textPrimaryColor, 0.06),
+      child: Padding(
+        padding: padding,
+        child: Row(children: children),
       ),
     );
-  }
-
-  void _setPressed(bool value) {
-    if (_pressed != value) {
-      setState(() => _pressed = value);
-    }
   }
 }

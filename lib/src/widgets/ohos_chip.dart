@@ -4,6 +4,7 @@ import '../theme/ohos_chip_metrics.dart';
 import '../theme/ohos_contrast.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// A HarmonyOS filter chip used for tags and multi-select filters, the
 /// counterpart of Material's [FilterChip] / [ActionChip].
@@ -213,92 +214,104 @@ class OhosChip extends StatelessWidget {
     // 「选中」只剩颜色一条线索 —— 墨屏上颜色失效后就看不出选中了。
     final FontWeight weight = selected ? FontWeight.w500 : FontWeight.w400;
     final double fontSize = labelFontSize ?? metrics.fontSize;
-    return Material(
-      color: bg,
-      shape: RoundedRectangleBorder(
-        // 官方给的是显式圆角（18 / 14），不是「高度折半」。当前两档恰好等于
-        // 折半值，但一旦有人调高 [OhosChipMetrics.height]，`height / 2` 就会
-        // 悄悄偏离官方规格 —— 胶囊观感是结果，不是来源。
-        borderRadius: BorderRadius.circular(metrics.radius),
-        side: ohosBorderSide(context, borderColor),
+    final BorderRadius radius = BorderRadius.circular(metrics.radius);
+    return DecoratedBox(
+      // 原来这块底色由 `Material(color: bg)` 提供。芯片是可点控件，而 Material
+      // 会顺手带上水波纹 —— 那是从触点扩散的圆形高光，在胶囊形状上按下去会
+      // 露出一圈与圆角对不上的弧边。底色改用 `DecoratedBox` 自己画，按压反馈
+      // 交给 `OhosPressFeedback`（整块换一档色）。
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: radius,
+        border: Border.fromBorderSide(ohosBorderSide(context, borderColor)),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onPressed : null,
-        child: SizedBox(
-          // 高度由令牌钉死（36 / 28），不靠 padding + 字阶撑出来：
-          // 原来用 `vertical: 7` 配 14fp×1.4 行高只有 33.6，比官方矮 2.4，
-          // 而且字阶一改高度就跟着漂。
-          height: metrics.height,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: metrics.horizontalPadding,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                // 双态前图标与 ArkUI 的 `hasPrefix()` 同义：只要任一侧有图标就
-                // 占位，激活态优先取 selectedIcon。回落规则见上面的 [leading]。
-                if (leading != null) ...<Widget>[
-                  IconTheme.merge(
-                    data: IconThemeData(color: iconFg, size: metrics.iconSize),
-                    child: leading,
-                  ),
-                  SizedBox(width: metrics.iconGap),
-                ],
-                DefaultTextStyle.merge(
-                  style:
-                      (theme.typography.labelMedium ??
-                              TextStyle(fontSize: fontSize))
-                          .copyWith(
-                            color: labelFg,
-                            fontSize: fontSize,
-                            fontWeight: weight,
-                            // 两个分支都显式给 fontFamily：`merge` 只覆盖非
-                            // null 字段，写 null 等于把祖先的家族放行下来。
-                            fontFamily:
-                                labelFontFamily ?? theme.typography.fontFamily,
-                          ),
-                  child: label,
-                ),
-                // 后缀优先级与 ArkUI 一致：自己给的后缀图标压过内置关闭按钮。
-                // `chip.ets` 的 `hasSuffix()` / `isNeedShowCloseIconMargin()`
-                // 就是这个次序，且两者共用同一个文字侧边距（6 / 4），所以
-                // 间距一律用 metrics.iconGap，不另取一个整数。
-                //
-                // 判据用 [trailing]（已按 selected 选好双态）而不是原字段：
-                // 只看 `suffixIcon != null` 会让「只给了 activated 后缀」的
-                // 芯片在选中态什么也不画 —— 那正好是「选中后掉了图标」。
-                if (trailing != null) ...<Widget>[
-                  SizedBox(width: metrics.iconGap),
-                  IconTheme.merge(
-                    data: IconThemeData(color: iconFg, size: metrics.iconSize),
-                    child: trailing,
-                  ),
-                ] else if (allowClose) ...<Widget>[
-                  SizedBox(width: metrics.iconGap),
-                  // 关闭图标本身没有独立的尺寸令牌，ArkUI 用的是
-                  // `defaultSymbolFontsize()`，即 `chip_normal_icon_size` /
-                  // `chip_small_icon_size`（两档都是 16），所以这里复用
-                  // metrics.iconSize。
-                  //
-                  // 命中区就是图标本身（16×16）：`chip.ets` 的关闭按钮显式
-                  // `padding(0)` + `stateEffect(false)`，没有 `hot_zone` 可查。
-                  // 需要更大命中区时传 [suffixIcon] 自带一块 40×40 的按钮，
-                  // 而不是在这里自拟一个数字。
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: enabled ? onClose : null,
-                    child: IconTheme.merge(
+      child: ClipRRect(
+        borderRadius: radius,
+        child: OhosPressFeedback(
+          onTap: enabled ? onPressed : null,
+          borderRadius: radius,
+          child: SizedBox(
+            // 高度由令牌钉死（36 / 28），不靠 padding + 字阶撑出来：
+            // 原来用 `vertical: 7` 配 14fp×1.4 行高只有 33.6，比官方矮 2.4，
+            // 而且字阶一改高度就跟着漂。
+            height: metrics.height,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: metrics.horizontalPadding,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  // 双态前图标与 ArkUI 的 `hasPrefix()` 同义：只要任一侧有图标就
+                  // 占位，激活态优先取 selectedIcon。回落规则见上面的 [leading]。
+                  if (leading != null) ...<Widget>[
+                    IconTheme.merge(
                       data: IconThemeData(
                         color: iconFg,
                         size: metrics.iconSize,
                       ),
-                      child: const Icon(Icons.close_rounded),
+                      child: leading,
                     ),
+                    SizedBox(width: metrics.iconGap),
+                  ],
+                  DefaultTextStyle.merge(
+                    style:
+                        (theme.typography.labelMedium ??
+                                TextStyle(fontSize: fontSize))
+                            .copyWith(
+                              color: labelFg,
+                              fontSize: fontSize,
+                              fontWeight: weight,
+                              // 两个分支都显式给 fontFamily：`merge` 只覆盖非
+                              // null 字段，写 null 等于把祖先的家族放行下来。
+                              fontFamily:
+                                  labelFontFamily ??
+                                  theme.typography.fontFamily,
+                            ),
+                    child: label,
                   ),
+                  // 后缀优先级与 ArkUI 一致：自己给的后缀图标压过内置关闭按钮。
+                  // `chip.ets` 的 `hasSuffix()` / `isNeedShowCloseIconMargin()`
+                  // 就是这个次序，且两者共用同一个文字侧边距（6 / 4），所以
+                  // 间距一律用 metrics.iconGap，不另取一个整数。
+                  //
+                  // 判据用 [trailing]（已按 selected 选好双态）而不是原字段：
+                  // 只看 `suffixIcon != null` 会让「只给了 activated 后缀」的
+                  // 芯片在选中态什么也不画 —— 那正好是「选中后掉了图标」。
+                  if (trailing != null) ...<Widget>[
+                    SizedBox(width: metrics.iconGap),
+                    IconTheme.merge(
+                      data: IconThemeData(
+                        color: iconFg,
+                        size: metrics.iconSize,
+                      ),
+                      child: trailing,
+                    ),
+                  ] else if (allowClose) ...<Widget>[
+                    SizedBox(width: metrics.iconGap),
+                    // 关闭图标本身没有独立的尺寸令牌，ArkUI 用的是
+                    // `defaultSymbolFontsize()`，即 `chip_normal_icon_size` /
+                    // `chip_small_icon_size`（两档都是 16），所以这里复用
+                    // metrics.iconSize。
+                    //
+                    // 命中区就是图标本身（16×16）：`chip.ets` 的关闭按钮显式
+                    // `padding(0)` + `stateEffect(false)`，没有 `hot_zone` 可查。
+                    // 需要更大命中区时传 [suffixIcon] 自带一块 40×40 的按钮，
+                    // 而不是在这里自拟一个数字。
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: enabled ? onClose : null,
+                      child: IconTheme.merge(
+                        data: IconThemeData(
+                          color: iconFg,
+                          size: metrics.iconSize,
+                        ),
+                        child: const Icon(Icons.close_rounded),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

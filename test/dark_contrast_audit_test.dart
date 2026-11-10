@@ -170,19 +170,25 @@ void _widgetChecks() {
       ),
     );
 
-    final Material material = tester.widget<Material>(
-      find
-          .descendant(
-            of: find.byType(OhosChip),
-            matching: find.byType(Material),
-          )
-          .first,
-    );
+    // 0.6 起 chip 不再套 `Material(color: bg)`（那层会带 Material 的水波纹），
+    // 底色改由 `DecoratedBox` 的 `BoxDecoration` 画，断言跟着读装饰。
+    final BoxDecoration deco =
+        tester
+                .widget<DecoratedBox>(
+                  find
+                      .descendant(
+                        of: find.byType(OhosChip),
+                        matching: find.byType(DecoratedBox),
+                      )
+                      .first,
+                )
+                .decoration
+            as BoxDecoration;
     expect(
-      _luminance(material.color!),
+      _luminance(deco.color!),
       lessThan(0.25),
       reason:
-          '深色档未选中 chip 的底色亮度 ${_luminance(material.color!).toStringAsFixed(3)} 偏高',
+          '深色档未选中 chip 的底色亮度 ${_luminance(deco.color!).toStringAsFixed(3)} 偏高',
     );
   });
 }

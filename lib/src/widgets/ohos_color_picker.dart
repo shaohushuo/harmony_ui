@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// Tab / mode of the [OhosColorPicker], mirroring `HdsColorPickerTabType`.
 enum OhosColorPickerTab {
@@ -137,9 +138,9 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
                 ),
               ),
             ),
-            InkWell(
+            OhosPressFeedback(
               onTap: _toggleFavorite,
-              customBorder: const CircleBorder(),
+              borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.all(6),
                 child: Icon(
@@ -227,7 +228,7 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
       OhosColorPickerTab.spectrum => '光谱',
       OhosColorPickerTab.sliders => '滑块',
     };
-    return InkWell(
+    return OhosPressFeedback(
       onTap: () => setState(() => _activeTab = tab),
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -286,9 +287,9 @@ class _OhosColorPickerState extends State<OhosColorPicker> {
           runSpacing: 14,
           children: <Widget>[
             for (final Color color in widget.colors)
-              InkWell(
+              OhosPressFeedback(
                 onTap: () => _select(color),
-                customBorder: const CircleBorder(),
+                borderRadius: BorderRadius.circular(size / 2),
                 child: Container(
                   width: size,
                   height: size,

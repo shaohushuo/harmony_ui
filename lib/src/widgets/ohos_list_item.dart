@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// A swipe action button of an [OhosListItem] (横滑动效按钮).
 class OhosSwipeAction {
@@ -49,6 +50,7 @@ class OhosListItem extends StatefulWidget {
     this.onFullDelete,
     this.borderRadius = BorderRadius.zero,
     this.deleteThreshold = 0.65,
+    this.isSelected = false,
   });
 
   /// The row content (usually an [OhosListTile] or a custom row).
@@ -68,6 +70,12 @@ class OhosListItem extends StatefulWidget {
 
   /// Fraction of the total action width that counts as a full delete.
   final double deleteThreshold;
+
+  /// 是否处于选中态（官方 `HdsListItem.isSelected`，6.1.0+）。
+  ///
+  /// true 时在整行铺一层强调色 10% 背板（令牌 `item_selected_alpha = 0.1`），
+  /// 与设计图里的浅蓝选中背板一致；背板跟着内容一起横滑，露出后面的动作。
+  final bool isSelected;
 
   @override
   State<OhosListItem> createState() => _OhosListItemState();
@@ -141,6 +149,8 @@ class _OhosListItemState extends State<OhosListItem>
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final OhosVisualPolicy policy = theme.policy;
+    final Color highlight = theme.highlightColor;
     final Color fg = theme.textPrimaryColor;
     final List<OhosSwipeAction> actions = widget.actions;
     final bool hasActions = actions.isNotEmpty;
@@ -178,7 +188,15 @@ class _OhosListItemState extends State<OhosListItem>
                   : null,
               onHorizontalDragEnd: hasActions ? _onHorizontalDragEnd : null,
               behavior: HitTestBehavior.opaque,
-              child: widget.child,
+              child: DecoratedBox(
+                // 选中背板：强调色 10%（item_selected_alpha）。墨屏下 tint
+                // 判透明时 policy 会换成可读实色，不会整块消失。
+                decoration: BoxDecoration(
+                  color: widget.isSelected ? policy.tint(highlight, 0.1) : null,
+                  borderRadius: widget.borderRadius,
+                ),
+                child: widget.child,
+              ),
             ),
           ),
         ],
@@ -192,9 +210,9 @@ class _OhosListItemState extends State<OhosListItem>
     OhosThemeData theme,
   ) {
     final Color color = action.foregroundColor ?? defaultFg;
-    return Material(
+    return ColoredBox(
       color: action.backgroundColor,
-      child: InkWell(
+      child: OhosPressFeedback(
         onTap: () {
           _controller.reverse();
           action.onTap?.call();

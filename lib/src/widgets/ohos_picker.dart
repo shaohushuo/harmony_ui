@@ -6,6 +6,7 @@ import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_button.dart';
+import 'ohos_press_feedback.dart';
 
 /// Option model of [showOhosPicker].
 class OhosPickerItem<T> {
@@ -764,7 +765,7 @@ Future<T?> showOhosPicker<T>({
                 shrinkWrap: true,
                 children: <Widget>[
                   for (final OhosPickerItem<T> item in items)
-                    InkWell(
+                    OhosPressFeedback(
                       onTap: () => Navigator.pop(context, item.value),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(

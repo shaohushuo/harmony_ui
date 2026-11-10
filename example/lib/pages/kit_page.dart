@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
+import '../ink_color_data.dart';
 import 'demo_scaffold.dart';
 
 /// UI Design Kit 增强：点光源 / 按压阴影 / 侧边栏 / 横滑列表项 / 常驻通知 /
@@ -102,8 +103,14 @@ class _PointLightDemoState extends State<_PointLightDemo> {
     'BORDER_CONTENT',
     'DEFAULT_FEATHERING_BORDER',
   ];
-  int _index = 1;
+  int _index = 3;
   double _intensity = 10;
+
+  /// 网格是 5×5，正中间那格留给光源（官方示例也是「中间一个 Button，四周
+  /// 一圈受光面」）。光源本身也受光 —— 官方的光源组件可以同时配
+  /// `sourceType` 与 `illuminatedType`。
+  static const int _grid = 5;
+  static const int _center = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -115,22 +122,21 @@ class _PointLightDemoState extends State<_PointLightDemo> {
           padding: const EdgeInsets.all(14),
           child: Container(
             decoration: BoxDecoration(
-              // 这块深底是**点光源的画布**（白点要压在上面才看得见），
-              // 不是品牌色。彩屏固定 #101418；墨屏没有中间调，量化后会
-              // 落成接近纯黑 —— 比「留一块带蓝的深色」更接近这块屏上
-              // 「暗色画布」该有的样子。
+              // 这块深底是**点光源的画布** —— 光要压在暗底上才看得见，这是
+              // 官方示例把整个容器设成 `Color.Black` 的原因，不是装饰。
+              // 墨屏没有中间调，量化后会落成接近纯黑。
               color: theme.policy.quantize(const Color(0xFF101418)),
               borderRadius: BorderRadius.circular(20),
             ),
-            padding: const EdgeInsets.all(14),
-            child: Stack(
-              children: <Widget>[
-                Column(
-                  children: <Widget>[
-                    for (int row = 0; row < 4; row++) _gridRow(row),
-                  ],
-                ),
-              ],
+            padding: const EdgeInsets.all(10),
+            // 光源与受光面在同一个作用域里：受光面据此解析出「光离我多远、
+            // 在哪一侧」。官方没有「光从哪个方向来」这种参数，位置是已知量。
+            child: OhosPointLightScope(
+              child: Column(
+                children: <Widget>[
+                  for (int row = 0; row < _grid; row++) _gridRow(row),
+                ],
+              ),
             ),
           ),
         ),
@@ -150,7 +156,7 @@ class _PointLightDemoState extends State<_PointLightDemo> {
               child: _toneChip(
                 label: '强度: ${_intensity.round()}',
                 onTap: () => setState(() {
-                  _intensity = _intensity >= 20 ? 10 : _intensity + 5;
+                  _intensity = _intensity >= 30 ? 0 : _intensity + 10;
                 }),
               ),
             ),
@@ -163,10 +169,10 @@ class _PointLightDemoState extends State<_PointLightDemo> {
   Widget _gridRow(int row) {
     return Row(
       children: <Widget>[
-        for (int col = 0; col < 4; col++)
+        for (int col = 0; col < _grid; col++)
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(5),
+              padding: const EdgeInsets.all(4),
               child: _lightCell(row, col),
             ),
           ),
@@ -175,43 +181,60 @@ class _PointLightDemoState extends State<_PointLightDemo> {
   }
 
   Widget _lightCell(int row, int col) {
-    final bool isCenter = row == 1 && col == 1;
-    if (isCenter) {
-      // 发光源：点击切换受光类型（ArkUI 示例语义）。
+    final OhosThemeData theme = OhosTheme.of(context);
+    final OhosPointLightOptions options = OhosPointLightOptions(
+      color: Colors.white,
+      intensity: _intensity,
+      height: 150,
+    );
+
+    // 中心那格是光源本体：官方示例里它是一个 Button，点击轮换受光类型。
+    if (row == _center && col == _center) {
+      final Widget button = Container(
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          // 光源按钮是**受光画布上的一个深色块**（官方示例的 Button 就是压在
+          // 黑底上的），不是品牌色。墨屏没有中间调，量化成接近纯黑。
+          color: theme.policy.quantize(const Color(0xFF3A4148)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          '点击发光',
+          style: TextStyle(
+            inherit: false,
+            fontSize: 12,
+            // 淡蓝在这块深底上读得清；量化后是浅灰，同样有对比。
+            color: theme.policy.quantize(const Color(0xFFADD8E6)),
+          ),
+        ),
+      );
       return GestureDetector(
         onTap: () => setState(() {
           _index = (_index + 1) % _types.length;
         }),
-        child: const SizedBox(
-          height: 44,
-          child: Center(
-            child: OhosLightSource(
-              size: 34,
-              options: OhosPointLightOptions(intensity: 10, height: 150),
-            ),
-          ),
+        child: OhosLightSource(
+          options: options,
+          sourceType: _intensity > 0
+              ? OhosPointLightSourceType.bright
+              : OhosPointLightSourceType.none,
+          child: button,
         ),
       );
     }
-    final double dx = ((col - 1.5) / 1.5).clamp(-1.0, 1.0);
-    final double dy = ((row - 1.5) / 1.5).clamp(-1.0, 1.0);
+
+    // 其余每格都是受光面。没有 `lightAlignment` —— 亮在哪由光源位置决定。
     return SizedBox(
       height: 44,
       child: OhosIlluminated(
         illuminatedType: _types[_index],
-        lightAlignment: Alignment(dx, dy),
-        options: OhosPointLightOptions(
-          color: Colors.white,
-          intensity: _intensity,
-          height: 150,
-        ),
         borderRadius: BorderRadius.circular(22),
-        clipContent: false,
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF808080),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: Color(0xFF808080),
             shape: BoxShape.circle,
           ),
+          child: const SizedBox.expand(),
         ),
       ),
     );
@@ -710,36 +733,52 @@ class _ColorPickerKitDemoState extends State<_ColorPickerKitDemo> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: _color,
-                  borderRadius: BorderRadius.circular(12),
+              // 当前色块显示的**就是那个色值本身**，和右边那行十六进制同属
+              // 数据：量化成灰之后会出现「灰块 + #0a59f7」，自相矛盾。
+              InkColorData(
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _color,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                '当前: ${_color.toARGB32().toRadixString(16).padLeft(8, '0')}',
-                style: theme.typography.bodyMedium,
+              // 色值是 8 位十六进制（`#AARRGGBB`），在 320vp × 1.3 字号下会
+              // 超出卡片宽度 —— `Expanded` + 省略号是这类「定宽容器里放变长
+              // 文本」的既定写法（见 OhosListTile 的说明）。
+              Expanded(
+                child: Text(
+                  '当前: ${_color.toARGB32().toRadixString(16).padLeft(8, '0')}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.typography.bodyMedium,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          OhosColorPicker(
-            colors: _palette,
-            selectedColor: _color,
-            onChanged: (Color c) => setState(() => _color = c),
-            tabs: const <OhosColorPickerTab>[
-              OhosColorPickerTab.grid,
-              OhosColorPickerTab.spectrum,
-              OhosColorPickerTab.sliders,
-            ],
-            favoriteColors: _favorites,
-            onFavoritesChanged: (List<Color> c) => setState(
-              () => _favorites
-                ..clear()
-                ..addAll(c),
+          // 色板与收藏夹里的颜色**就是被演示的数据**：取色器报出的
+          // `#0a59f7` 必须真的显示成蓝。量化成灰之后，上面的色值与下面的
+          // 色块会自相矛盾。
+          InkColorData(
+            child: OhosColorPicker(
+              colors: _palette,
+              selectedColor: _color,
+              onChanged: (Color c) => setState(() => _color = c),
+              tabs: const <OhosColorPickerTab>[
+                OhosColorPickerTab.grid,
+                OhosColorPickerTab.spectrum,
+                OhosColorPickerTab.sliders,
+              ],
+              favoriteColors: _favorites,
+              onFavoritesChanged: (List<Color> c) => setState(
+                () => _favorites
+                  ..clear()
+                  ..addAll(c),
+              ),
             ),
           ),
         ],
@@ -790,9 +829,13 @@ class _BlurAppBarDemoState extends State<_BlurAppBarDemo> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(
-                          0xFF0A59F7,
-                        ).withValues(alpha: 0.10 + (i % 3) * 0.06),
+                        // 这些底块是**滚动内容的替身** —— 它们的作用是让
+                        // 标题栏滚过去时有东西可模糊，不是在演示品牌色。
+                        // 量化后仍是三档明度，模糊效果照样看得见；留原色
+                        // 则墨屏上是一串淡蓝条。
+                        color: theme.policy
+                            .quantize(const Color(0xFF0A59F7))
+                            .withValues(alpha: 0.10 + (i % 3) * 0.06),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       alignment: Alignment.centerLeft,
@@ -912,25 +955,37 @@ class _LayeredIconDemo extends StatelessWidget {
         ),
         OhosLayeredIcon(
           size: 56,
-          background: const Color(0xFF27B440).withValues(alpha: 0.12),
-          foreground: const Icon(
+          // 分层图标的底板与前景**都跟主题走**：这四个是演示「分层」这件事，
+          // 不是在演示四个品牌色。量化后仍能看出「描边 + 前景 + 底色」三层，
+          // 而留原色会在墨屏上留四个彩点。
+          background: theme.policy
+              .quantize(const Color(0xFF27B440))
+              .withValues(alpha: 0.12),
+          foreground: Icon(
             Icons.videocam_outlined,
-            color: Color(0xFF27B440),
+            color: theme.policy.quantize(const Color(0xFF27B440)),
           ),
         ),
         OhosLayeredIcon(
           size: 56,
-          background: const Color(0xFFED6F21).withValues(alpha: 0.12),
-          foreground: const Icon(
+          background: theme.policy
+              .quantize(const Color(0xFFED6F21))
+              .withValues(alpha: 0.12),
+          foreground: Icon(
             Icons.music_note_rounded,
-            color: Color(0xFFED6F21),
+            color: theme.policy.quantize(const Color(0xFFED6F21)),
           ),
           borderColor: theme.dividerColor,
         ),
         OhosLayeredIcon(
           size: 56,
-          background: const Color(0xFFAA2ED1).withValues(alpha: 0.12),
-          foreground: const Icon(Icons.star_rounded, color: Color(0xFFAA2ED1)),
+          background: theme.policy
+              .quantize(const Color(0xFFAA2ED1))
+              .withValues(alpha: 0.12),
+          foreground: Icon(
+            Icons.star_rounded,
+            color: theme.policy.quantize(const Color(0xFFAA2ED1)),
+          ),
           padding: 8,
         ),
       ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
 import 'ohos_divider.dart';
+import 'ohos_press_feedback.dart';
 
 /// Vertical rhythm of [OhosListTile].
 enum OhosListTileDensity {
@@ -170,15 +171,8 @@ class OhosListTile extends StatelessWidget {
         if (onTap == null)
           content
         else
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              splashColor: theme.highlightColor.withValues(alpha: 0.08),
-              highlightColor: theme.highlightColor.withValues(alpha: 0.06),
-              child: content,
-            ),
-          ),
+          // 列表行的按压态是「整行换一档底色」，不是从触点扩散的水波纹。
+          OhosPressFeedback(onTap: onTap, child: content),
         if (drawDivider) OhosDivider(indent: dividerIndent, endIndent: 16),
       ],
     );

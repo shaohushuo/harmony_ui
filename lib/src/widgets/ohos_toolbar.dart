@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_menu.dart';
+import 'ohos_press_feedback.dart';
 
 /// 工具栏子项的状态，对应 ArkUI 的 `ItemState`。
 ///
@@ -263,13 +264,16 @@ class _ToolbarTile extends StatelessWidget {
       enabled: enabled,
       selected: active,
       label: item.label,
-      child: Material(
-        // 反白要自己给实底；tint / emphasis 用透明，页面底色透上来。
-        color: inverse ? theme.highlightColor : Colors.transparent,
+      child: OhosPressFeedback(
+        onTap: enabled ? item.onPressed : null,
         borderRadius: BorderRadius.circular(OhosToolbar._radius),
-        child: InkWell(
-          onTap: enabled ? item.onPressed : null,
-          borderRadius: BorderRadius.circular(OhosToolbar._radius),
+        // 反白要自己给实底；tint / emphasis 用透明，页面底色透上来。
+        pressedColor: inverse ? Colors.white.withValues(alpha: 0.16) : null,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: inverse ? theme.highlightColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(OhosToolbar._radius),
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -328,40 +332,37 @@ class _MoreTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(OhosToolbar._radius),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              IconTheme.merge(
-                data: IconThemeData(
-                  size: OhosToolbar._iconSize,
-                  color: theme.textPrimaryColor,
-                ),
-                child: Icon(icon ?? Icons.grid_view_rounded),
+      child: OhosPressFeedback(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(OhosToolbar._radius),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            IconTheme.merge(
+              data: IconThemeData(
+                size: OhosToolbar._iconSize,
+                color: theme.textPrimaryColor,
               ),
-              const SizedBox(height: OhosToolbar._iconLabelGap),
-              DefaultTextStyle.merge(
-                style:
-                    (theme.typography.labelSmall ??
-                            const TextStyle(fontSize: OhosToolbar._labelSize))
-                        .copyWith(
-                          fontSize: OhosToolbar._labelSize,
-                          fontWeight: FontWeight.w500,
-                          color: theme.textPrimaryColor,
-                        ),
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
+              child: Icon(icon ?? Icons.grid_view_rounded),
+            ),
+            const SizedBox(height: OhosToolbar._iconLabelGap),
+            DefaultTextStyle.merge(
+              style:
+                  (theme.typography.labelSmall ??
+                          const TextStyle(fontSize: OhosToolbar._labelSize))
+                      .copyWith(
+                        fontSize: OhosToolbar._labelSize,
+                        fontWeight: FontWeight.w500,
+                        color: theme.textPrimaryColor,
+                      ),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

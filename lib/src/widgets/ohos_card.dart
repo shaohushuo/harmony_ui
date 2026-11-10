@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// A HarmonyOS card surface with a 24vp corner radius, the counterpart of
 /// Flutter's Material [Card].
@@ -90,16 +91,12 @@ class OhosCard extends StatelessWidget {
       decoration: decoration,
       foregroundDecoration: outline,
       clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: theme.highlightColor.withValues(alpha: 0.10),
-          highlightColor: theme.highlightColor.withValues(alpha: 0.08),
-          // 墨水屏上点按反馈会留一块半透明灰且刷新慢，策略直接关掉
-          splashFactory: policy.allowsRipple ? null : NoSplash.splashFactory,
-          child: content,
-        ),
+      // 卡片的按压反馈是整块换一档底色，不是从触点扩散的水波纹 —— 后者的圆斑
+      // 在大圆角卡片上会露出与圆角不一致的弧边。
+      child: OhosPressFeedback(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: content,
       ),
     );
   }

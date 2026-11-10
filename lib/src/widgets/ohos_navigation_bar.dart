@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_light_material.dart';
+import 'ohos_press_feedback.dart';
 
 /// Destination model of an [OhosNavigationBar].
 class OhosNavigationDestination {
@@ -463,9 +464,9 @@ class _OhosNavItem extends StatelessWidget {
       ],
     );
     if (inline) {
-      return InkWell(
+      return OhosPressFeedback(
         onTap: onTap,
-        customBorder: const StadiumBorder(),
+        borderRadius: BorderRadius.circular(22),
         child: AnimatedContainer(
           duration: OhosGeometry.durationShort,
           curve: OhosGeometry.spring,
@@ -485,7 +486,7 @@ class _OhosNavItem extends StatelessWidget {
     // 装不下（1.3x 时溢出 1vp）。默认限制最大放大倍数，并让标签在极端情况下
     // 可被压缩，避免 RenderFlex 溢出；调用方也可以传 maxTextScaleFactor: null
     // 关掉钳制（同时抬高 height），而不是被无声地固定在 1.15x。
-    final Widget tile = InkWell(
+    final Widget tile = OhosPressFeedback(
       onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

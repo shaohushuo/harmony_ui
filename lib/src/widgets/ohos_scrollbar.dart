@@ -83,7 +83,7 @@ class OhosScrollbar extends StatelessWidget {
   const OhosScrollbar({
     super.key,
     required this.controller,
-    required this.child,
+    this.child,
     this.thumbColor,
     this.thickness = OhosScrollbarMetrics.width,
     this.minThumbLength = OhosScrollbarMetrics.minThumbLength,
@@ -96,7 +96,11 @@ class OhosScrollbar extends StatelessWidget {
   final ScrollController controller;
 
   /// The scrollable widget.
-  final Widget child;
+  ///
+  /// 可空：官方 `ScrollBar` 允许**无子节点**单独存在 —— 只绑定 [controller]
+  /// 画一条滚动条（拇指位置由 controller 的可滚动内容决定），用于自定义布局里
+  /// 滚动条与内容分离的场景。
+  final Widget? child;
 
   /// Thumb color; defaults to a 30% primary-text tint.
   final Color? thumbColor;
@@ -133,7 +137,9 @@ class OhosScrollbar extends StatelessWidget {
       // 与窗口右沿的间距。`padding` 而不是 `crossAxisMargin`：后者把轨道一起
       // 撑宽（`thickness + 2 * crossAxisMargin`），会在拇指两侧多画两条灰底。
       padding: EdgeInsets.only(right: edgeMargin),
-      child: child,
+      // 3.35.7 的 RawScrollbar 仍要求非空 child：无子节点时给零尺寸占位，
+      // 拇指由 controller 关联的（外部）可滚动内容驱动，不影响渲染。
+      child: child ?? const SizedBox.shrink(),
     );
   }
 }

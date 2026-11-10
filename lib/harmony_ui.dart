@@ -84,6 +84,7 @@ export 'src/widgets/ohos_swiper.dart';
 export 'src/widgets/ohos_side_menu.dart';
 export 'src/widgets/ohos_side_bar.dart';
 export 'src/widgets/ohos_press_shadow.dart';
+export 'src/widgets/ohos_press_feedback.dart';
 export 'src/widgets/ohos_point_light.dart';
 export 'src/widgets/ohos_multi_window_entry.dart';
 export 'src/widgets/ohos_list_item.dart';

@@ -259,7 +259,20 @@ class OhosDataPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
     final List<double> data = effectiveValues;
-    final List<OhosDataPanelColor> palette = _resolvedColors(data.length);
+    // 分段色同样要过 policy：`track` 一直走了 `quantize`，而这里漏了 ——
+    // 于是墨屏上环是「灰底 + 九段彩色」，整块图形比彩屏还刺眼。这是库的缺陷，
+    // 不是调用方该自己处理的事：调用方传进来的是一份**配色**，不是「这台屏
+    // 上就该显示这些 RGB」。
+    final List<OhosDataPanelColor> palette = <OhosDataPanelColor>[
+      for (final OhosDataPanelColor c in _resolvedColors(data.length))
+        if (c.endColor == null)
+          OhosDataPanelColor.solid(theme.policy.quantize(c.color))
+        else
+          OhosDataPanelColor.gradient(
+            theme.policy.quantize(c.color),
+            theme.policy.quantize(c.endColor!),
+          ),
+    ];
     final Color track =
         trackBackgroundColor ?? theme.policy.quantize(defaultTrackColor);
     final bool animate =
@@ -276,7 +289,11 @@ class OhosDataPanel extends StatelessWidget {
         strokeWidth: strokeWidth,
         trackColor: track,
         colors: palette,
-        shadow: trackShadow,
+        // 投影默认取「分段色」的副本。它必须跟着分段色一起过 policy ——
+        // 上面把 `colors` 量化了、这里仍用未处理的副本的话，墨屏上会看到
+        // 「灰环 + 一圈彩色投影」，比不量化还怪（而且投影是 `saveLayer` 模糊
+        // 出来的大块，像素判据里它比环本身更显眼）。
+        shadow: _quantizedShadow(trackShadow, theme),
         showsShadow: !closeEffect,
         outlines: theme.usesOutlines,
         outlineColor: theme.outlineColor,
@@ -342,6 +359,35 @@ class OhosDataPanel extends StatelessWidget {
     return <OhosDataPanelColor>[
       for (int i = 0; i < count; i++) source[i % source.length],
     ];
+  }
+
+  /// 把投影的配色也过一遍 [OhosVisualPolicy.quantize]。
+  ///
+  /// `colors` 为 null 时投影直接复用分段色（见 [_OhosDataPanelPainter]），
+  /// 那种情况交给 painter 用已经量化过的 `colors`，这里无需再动。
+  OhosDataPanelShadow? _quantizedShadow(
+    OhosDataPanelShadow? source,
+    OhosThemeData theme,
+  ) {
+    final List<OhosDataPanelColor>? own = source?.colors;
+    if (source == null || own == null) {
+      return source;
+    }
+    return OhosDataPanelShadow(
+      radius: source.radius,
+      offsetX: source.offsetX,
+      offsetY: source.offsetY,
+      colors: <OhosDataPanelColor>[
+        for (final OhosDataPanelColor c in own)
+          if (c.endColor == null)
+            OhosDataPanelColor.solid(theme.policy.quantize(c.color))
+          else
+            OhosDataPanelColor.gradient(
+              theme.policy.quantize(c.color),
+              theme.policy.quantize(c.endColor!),
+            ),
+      ],
+    );
   }
 }
 

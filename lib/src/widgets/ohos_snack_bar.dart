@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/ohos_geometry.dart';
 import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// 即时操作（HdsSnackBar）: a snack bar with an optional action and a
 /// resident mode.
@@ -113,9 +114,9 @@ void showOhosSnackBar(
                   ),
           ),
           if (resident)
-            InkWell(
+            OhosPressFeedback(
               onTap: () => messenger.hideCurrentSnackBar(),
-              customBorder: const CircleBorder(),
+              borderRadius: BorderRadius.circular(15),
               child: Padding(
                 padding: const EdgeInsets.all(6),
                 child: Icon(
@@ -126,16 +127,27 @@ void showOhosSnackBar(
               ),
             )
           else if (actionLabel != null)
-            TextButton(
-              onPressed: () {
+            // 不用 `TextButton`：它自带 Material 的 splash、`overlayColor`
+            // 与最小的 8vp 内边距，浮条里那一小块按下去会闪一圈圆光。
+            OhosPressFeedback(
+              onTap: () {
                 messenger.hideCurrentSnackBar();
                 onAction?.call();
               },
-              style: TextButton.styleFrom(
-                foregroundColor: theme.highlightColor,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  actionLabel,
+                  style:
+                      (theme.typography.labelMedium ??
+                              const TextStyle(fontSize: 14))
+                          .copyWith(
+                            color: theme.highlightColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                ),
               ),
-              child: Text(actionLabel),
             ),
         ],
       ),

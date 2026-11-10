@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
+import 'ohos_press_feedback.dart';
 
 /// 子标题的两种形态。
 ///
@@ -383,7 +384,7 @@ class OhosSubheader extends StatelessWidget {
         top: _contentPadding,
         bottom: _trailingExtraBottom,
       ),
-      child: InkWell(
+      child: OhosPressFeedback(
         onTap: onTrailingTap,
         borderRadius: BorderRadius.circular(4),
         child: Row(

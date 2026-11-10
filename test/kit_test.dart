@@ -144,6 +144,40 @@ void main() {
       await tester.pumpAndSettle();
       expect(deletes, 1);
     });
+
+    testWidgets('isSelected 铺强调色 10% 背板，未选中不铺', (WidgetTester tester) async {
+      Widget frame(bool selected) => wrap(
+        SizedBox(
+          width: 320,
+          height: 64,
+          child: OhosListItem(
+            isSelected: selected,
+            child: Container(height: 64, color: Colors.white),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(frame(true));
+      final DecoratedBox box = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byType(OhosListItem),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      final Color expected = OhosThemeData.light().highlightColor.withValues(
+        alpha: 0.1,
+      );
+      expect((box.decoration as BoxDecoration).color, expected);
+
+      await tester.pumpWidget(frame(false));
+      final DecoratedBox box2 = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byType(OhosListItem),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      expect((box2.decoration as BoxDecoration).color, isNull);
+    });
   });
 
   group('OhosColorPicker', () {

@@ -5,6 +5,7 @@ import '../theme/ohos_stroke.dart';
 import '../theme/ohos_theme.dart';
 import 'ohos_divider.dart';
 import 'ohos_loading_indicator.dart';
+import 'ohos_press_feedback.dart';
 
 /// A 区（列表左侧）元素的图形尺寸，对应 ArkUI 的 `IconSize`。
 ///
@@ -455,19 +456,13 @@ class OhosListItemCard extends StatelessWidget {
     final Widget surface = SizedBox(
       height: height,
       width: width,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: tappable ? onTap : null,
-          borderRadius: BorderRadius.circular(borderRadius),
-          splashColor: policy.allowsRipple
-              ? theme.highlightColor.withValues(alpha: 0.08)
-              : Colors.transparent,
-          highlightColor: policy.allowsRipple
-              ? theme.highlightColor.withValues(alpha: 0.06)
-              : Colors.transparent,
-          child: body,
-        ),
+      child: OhosPressFeedback(
+        onTap: tappable ? onTap : null,
+        borderRadius: BorderRadius.circular(borderRadius),
+        pressedColor: policy.allowsRipple
+            ? theme.highlightColor.withValues(alpha: 0.08)
+            : Colors.transparent,
+        child: body,
       ),
     );
 

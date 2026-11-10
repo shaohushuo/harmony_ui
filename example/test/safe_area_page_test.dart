@@ -13,9 +13,7 @@ void main() {
     );
   }
 
-  testWidgets('对照页：两栏「顶」「底」条齐平，栏内 padding 四边为 0', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('对照页：两栏「顶」「底」条齐平，栏内 padding 四边为 0', (WidgetTester tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
@@ -39,9 +37,7 @@ void main() {
     expect(find.textContaining('top 0  bottom 0'), findsNWidgets(2));
   });
 
-  testWidgets('关掉模拟：改用系统内边距（此处为 0），两栏依旧齐平', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('关掉模拟：改用系统内边距（此处为 0），两栏依旧齐平', (WidgetTester tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
     await tester.tap(find.byType(OhosSwitch));
