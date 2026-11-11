@@ -315,6 +315,7 @@ class _OhosNavigationBarState extends State<OhosNavigationBar>
                   selected: i == widget.currentIndex,
                   onTap: () => widget.onDestinationSelected(i),
                   inline: widget.type == OhosNavigationBarType.float,
+                  barHeight: _effectiveHeight,
                   iconSize: widget.iconSize,
                   maxTextScaleFactor: widget.maxTextScaleFactor,
                 ),
@@ -493,6 +494,7 @@ class _OhosNavItem extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.inline,
+    required this.barHeight,
     required this.iconSize,
     required this.maxTextScaleFactor,
   });
@@ -504,6 +506,12 @@ class _OhosNavItem extends StatelessWidget {
   /// 是否为悬浮式。**只影响字号与间距，不影响排布方向** —— 两种形态都是
   /// 「图标在上、文字在下」，见 [OhosNavigationBar] 的类注释。
   final bool inline;
+
+  /// 栏体的实际高度（含调用方自定义的 [OhosNavigationBar.height]）。
+  ///
+  /// 运营位的可绘制上限由它推出来（[OhosNavigationBar.bleedExtentOf]），
+  /// **不能写死 56 / 48** —— 那是默认栏高，调用方改高栏体后出血余量要跟着动。
+  final double barHeight;
   final double iconSize;
   final double? maxTextScaleFactor;
 
@@ -643,21 +651,23 @@ class _OhosNavItem extends StatelessWidget {
 
   /// 运营位（官方「自定义运营页签样式」）。
   ///
-  /// 布局意图只有一句：**给资源一块定尺寸的框，并保证这块框能画到框外**。
+  /// 布局意图只有一句：**给资源一块带上限的框，并保证这块框能画到框外**。
   ///
-  /// - 框的边长见 [OhosNavigationBar.bleedSizeOf]（悬浮 48 / 平铺 40）。
-  /// - 框**不裁剪**（`Stack(clipBehavior: none)` + 定尺寸中心对齐），所以内容
-  ///   只要画得比框高就会溢出到框外 —— 悬浮式那 4vp 的上余量正是官方标注图里
-  ///   「出血 4vp」的位置。
+  /// - 框的边长上限见 [OhosNavigationBar.bleedExtentOf]：默认栏高下悬浮 64
+  ///   （56 + 上下各 4vp）、平铺 40（48 − 上下各 4vp）；栏高被调用方改过时
+  ///   上限跟着 [barHeight] 走，不是写死的 64 / 40。
+  /// - 框**不裁剪**（`OverflowBox` + `Clip.none`），所以内容只要画得比框高就会
+  ///   溢出到框外 —— 悬浮式那 4vp 的上余量正是官方标注图里「出血 4vp」的位置。
   /// - **不要在这里画圆底。** 官方的 `bleedIconStyle` 交给开发者的是一个 builder，
   ///   示例内容是 `Image().width(48).height(48).borderRadius(24)` —— 圆底属于
   ///   资源内容本身（`borderRadius` 裁的是那张图），不是组件提供的底板。早先
   ///   想过「组件画圆 + 资源叠在上面」，那样调用方放正方形插画时圆底会露出来
   ///   一圈，而官方配图里没有那一圈。
   Widget _buildBleed(BuildContext context, OhosThemeData theme) {
-    // 悬浮式 64（56 + 上下各 4vp），平铺式 40（48 − 上下各 4vp）。
+    // 用实际栏高推上限：默认悬浮 64（56 + 上下各 4vp）、平铺 40（48 − 上下各
+    // 4vp）；调用方自定义了 `height` 时余量仍按官方 4vp，但基数跟着栏体走。
     final double extent = OhosNavigationBar.bleedExtentOf(
-      inline ? 56 : 48,
+      barHeight,
       inline ? OhosNavigationBarType.float : OhosNavigationBarType.tile,
     );
     // **`OverflowBox` 是出血能真的画出去的前提。** 页签格只有 `栏高` 这么高，

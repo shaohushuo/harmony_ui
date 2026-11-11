@@ -4429,10 +4429,12 @@ void main() {
     Widget bleedHost({
       required OhosNavigationBarType type,
       required double art,
+      double? height,
     }) {
       return wrap(
         OhosNavigationBar(
           type: type,
+          height: height,
           currentIndex: 0,
           onDestinationSelected: (_) {},
           destinations: <OhosNavigationDestination>[
@@ -4516,6 +4518,30 @@ void main() {
       expect(
         bar.bottom - art.bottom,
         moreOrLessEquals(OhosNavigationBar.bleedOverflow, epsilon: 0.01),
+      );
+    });
+
+    // 出血上限的基数是**实际栏高**，不是写死的 56 / 48。调用方把栏体改高到
+    // 72vp，悬浮式上限就该是 72 + 2×4 = 80，而不是默认的 64。早先 `_buildBleed`
+    // 里写死 `inline ? 56 : 48`，自定义 height 完全被忽略 —— 这条专门拦它。
+    testWidgets('自定义栏高：出血上限跟着实际栏高走', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        bleedHost(type: OhosNavigationBarType.float, art: 80, height: 72),
+      );
+      final Rect bar = barRectOf(tester);
+      final Rect art = tester.getRect(
+        find.byKey(const ValueKey<String>('art')),
+      );
+      expect(bar.height, 72, reason: '栏体按调用方给的 72vp 布局');
+      expect(
+        OhosNavigationBar.bleedExtentOf(72, OhosNavigationBarType.float),
+        80,
+      );
+      expect(art.height, 80, reason: '上限 = 72 + 2×4，不是默认的 64');
+      expect(
+        bar.top - art.top,
+        moreOrLessEquals(OhosNavigationBar.bleedOverflow, epsilon: 0.01),
+        reason: '栏高变了，上下出血余量仍是官方 4vp',
       );
     });
 
@@ -18609,6 +18635,124 @@ void main() {
       expect(tester.getSize(bleed).width, OhosVerticalTabBar.bleedSize);
       expect(tester.getSize(bleed).height, OhosVerticalTabBar.bleedSize);
     });
+
+    // **`num.clamp` 在下限 > 上限时抛 `ArgumentError`，不是「两值取大」。**
+    // 6 项 × 56 = 336 > 容器 320，旧写法 `(320/4).clamp(336, 320)` 在 build
+    // 期间当场红屏。现有「5 项 × 320」（280 ≤ 320）刚好躲过，没有任何用例拦得住。
+    testWidgets('半屏居中：项数 × 保底高 > 容器高时不抛 ArgumentError', (
+      WidgetTester tester,
+    ) async {
+      final List<OhosVerticalTabItem> six = List<OhosVerticalTabItem>.generate(
+        6,
+        (int i) => OhosVerticalTabItem(
+          icon: const Icon(Icons.circle_outlined),
+          label: '项$i',
+        ),
+      );
+      await tester.pumpWidget(
+        host(height: 320, items: six, halfScreenFixed: true),
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: '336 > 320，clamp 会抛 ArgumentError；手写上下界才安全',
+      );
+    });
+
+    // 容器高度为 0（LayoutBuilder 某一帧 maxHeight=0）同样不能让 clamp 抛。
+    testWidgets('半屏居中：容器高 0 不抛 ArgumentError', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(height: 0, items: fiveItems(), halfScreenFixed: true),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    // 固定项高 + SafeArea 会溢出：孩子总高恒等于 listHeight，而 SafeArea 按
+    // 状态栏 / 导航条把可用高度向内缩 ⇒ RenderFlex overflowed（溢出量 = 上下
+    // inset 之和）。改用 Expanded 分「扣掉安全区之后」的高度就不溢出。
+    //
+    // **参数要让单项内容放得下，只留 SafeArea 这一个溢出源。** 2 项、容器
+    // 600 ⇒ listHeight = 150；上下各 20 inset ⇒ 可用 110，每项 55vp，装得下
+    // 「图标 24 + 间距 4 + 文字 13 ≈ 43」。旧写法孩子总高 150 > 110，溢出 40；
+    // 新写法每项 55，不溢出。若把 inset 给得太大（每项 < 43），单项内容自己
+    // 就会溢出，那是另一个问题，验不到这条回归。
+    //
+    // **不能用 `wrap()`**：它内部的 OhosScaffold 会把安全区摘掉，等于把证据
+    // 删了再验。自建宿主，MediaQuery 直接给 padding。
+    testWidgets('半屏居中：SafeArea 上下 inset 不引起溢出', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                padding: EdgeInsets.only(top: 20, bottom: 20),
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 400,
+                  height: 600,
+                  child: Row(
+                    children: <Widget>[
+                      OhosVerticalTabBar(
+                        items: const <OhosVerticalTabItem>[
+                          OhosVerticalTabItem(
+                            icon: Icon(Icons.home_outlined),
+                            label: '首页',
+                          ),
+                          OhosVerticalTabItem(
+                            icon: Icon(Icons.person_outline),
+                            label: '我的',
+                          ),
+                        ],
+                        selectedIndex: 0,
+                        onSelected: (_) {},
+                        halfScreenFixed: true,
+                      ),
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: '固定项高 + SafeArea 会溢出上下 inset 之和；Expanded 才不溢出',
+      );
+      // 2 项均分「600/4 = 150 扣掉上下 40」= 110，每项 55vp。
+      final Finder taps = find.descendant(
+        of: find.byType(OhosVerticalTabBar),
+        matching: find.byType(OhosPressFeedback),
+      );
+      expect(
+        tester.getSize(taps.first).height,
+        moreOrLessEquals(55, epsilon: 0.01),
+      );
+    });
+
+    // 默认形态栏底色 + 右侧分割线要铺满父级高度。旧写法 Column(min) 让栏体
+    // 只有「项数 × 64」高，放在 500vp 的 Row 里时下半屏成了无背景无分界的裸区。
+    testWidgets('默认形态：栏体铺满父级高度（底色与分割线不断）', (WidgetTester tester) async {
+      await tester.pumpWidget(host(height: 500, items: fiveItems()));
+      // **量栏内那个 `Column`，不是 `OhosVerticalTabBar` 本身。** 后者是
+      // StatelessWidget，`getSize` 会向上取到 host 的 `SizedBox(height: 500)`
+      // —— 那是父级给的紧约束，改回 `MainAxisSize.min` 也照样是 500（自指）。
+      // 真正决定栏体高度的是 SafeArea 里的 Column：max ⇒ 铺满 500，min ⇒ 只有
+      // 5 × 64 = 320。两者分得开，这条才验得红。
+      final Finder column = find.descendant(
+        of: find.byType(OhosVerticalTabBar),
+        matching: find.byType(Column),
+      );
+      expect(
+        tester.getSize(column.first).height,
+        500,
+        reason: '栏内 Column 必须 max 铺满 500vp，min 只会到 320',
+      );
+    });
   });
 
   group('OhosNavigationScaffold', () {
@@ -19011,6 +19155,98 @@ void main() {
           matching: find.byType(AnimatedSize),
         ),
         findsWidgets,
+      );
+    });
+
+    // **auto 是默认值，没有 splitPlaceholder 时不能把既有调用方挤进 240vp。**
+    // 官方：「内容区没有 HdsNavDestination 时遵从首页设置」—— child 应铺满。
+    // 旧写法只看宽度，≥600vp 就分栏，child 被塞进 240vp 左列、右边一片空白。
+    testWidgets('Auto 无 splitPlaceholder：宽屏也单栏，child 铺满', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          OhosNavigationScaffold(
+            title: '标题',
+            automaticallyImplyLeading: false,
+            child: const Text('body'),
+          ),
+          width: 800,
+        ),
+      );
+      // 没有右侧占位页。
+      expect(find.text('pane'), findsNothing);
+      // **量 child 所在 Expanded 的宽度**，这是单 / 双栏真正分得开的地方：
+      // 单栏内容区铺满 800；双栏时 child 被塞进导航栏列，只有 240。不要量
+      // body.left —— 两种排布下它都贴着各自列的左缘，差值都小于 240（自指）。
+      //
+      // 两个限定缺一不可：`of` 收进 scaffold 子树（否则 MaterialApp 内部也有
+      // Expanded，实测命中一个 192 宽的无关节点）；`last` 取最靠近 child 的
+      // 祖先（`_singleColumn` 里包 child 的那个），而不是更外层的。
+      final Rect scaffold = tester.getRect(find.byType(OhosNavigationScaffold));
+      final Rect title = tester.getRect(find.text('标题'));
+      // **用标题的水平中心判单 / 双栏**，比量 child 的 Expanded 更稳：MINI
+      // 标题在栏内居中。单栏时栏宽 = 组件宽 800 ⇒ 标题中心 ≈ 400；双栏时标题
+      // 被塞进 240vp 导航栏列 ⇒ 中心 ≈ 120。两者差 280，远大于误差。
+      expect(
+        title.center.dx - scaffold.left,
+        moreOrLessEquals(scaffold.width / 2, epsilon: 1),
+        reason: '单栏标题应居中于整个组件宽（≈400），双栏只会居中于 240 列（≈120）',
+      );
+    });
+
+    // hideToolBar 的隐藏必须走 _visibility，animated 时工具栏才有过渡。旧写法
+    // 把 !hideToolBar 并进 _hasToolbar，隐藏时连 AnimatedSize 节点都不生成。
+    testWidgets('hideToolBar + animated：工具栏仍走 AnimatedSize 过渡', (
+      WidgetTester tester,
+    ) async {
+      final List<OhosNavToolbarItem> items = <OhosNavToolbarItem>[
+        OhosNavToolbarItem(icon: const Icon(Icons.edit), label: '编辑'),
+      ];
+      await tester.pumpWidget(
+        host(scaffold(toolbarItems: items, hideToolBar: true, animated: true)),
+      );
+      // 标题栏 + 工具栏各一个 AnimatedSize。旧写法工具栏节点整个消失，只剩 1 个。
+      expect(
+        find.descendant(
+          of: find.byType(OhosNavigationScaffold),
+          matching: find.byType(AnimatedSize),
+        ),
+        findsNWidgets(2),
+        reason: '工具栏隐藏时仍要保留 AnimatedSize 节点，过渡才生效',
+      );
+      // 隐藏态工具栏高度收成 0（内容不可见）。
+      expect(find.text('编辑'), findsNothing);
+    });
+
+    // 分割线必须 foreground：background 会被不透明的标题栏 / 工具栏背景盖住，
+    // showDivider 默认 true 却几乎看不见。
+    testWidgets('双栏分割线画在前景（不被栏背景盖住）', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          OhosNavigationScaffold(
+            title: '标题',
+            mode: OhosNavMode.split,
+            automaticallyImplyLeading: false,
+            splitPlaceholder: const Text('pane'),
+            child: const Text('body'),
+          ),
+          width: 800,
+        ),
+      );
+      final Finder divider = find.descendant(
+        of: find.byType(OhosNavigationScaffold),
+        matching: find.byWidgetPredicate(
+          (Widget w) =>
+              w is DecoratedBox &&
+              w.position == DecorationPosition.foreground &&
+              (w.decoration as BoxDecoration?)?.border != null,
+        ),
+      );
+      expect(
+        divider,
+        findsOneWidget,
+        reason: '分割线必须 foreground，background 会被不透明栏背景覆盖',
       );
     });
   });

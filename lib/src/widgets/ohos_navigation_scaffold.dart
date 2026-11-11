@@ -41,6 +41,11 @@ enum OhosNavTitleMode {
 /// 双栏模式 —— 对应官方 `NavigationMode`。
 enum OhosNavMode {
   /// 自适应（官方 `Auto`，默认值）：按组件宽度在单栏与双栏之间自动切换。
+  ///
+  /// **只有给了 [OhosNavigationScaffold.splitPlaceholder] 才会真的分栏。**
+  /// 没有右侧占位内容时，官方让首页内容铺满整个组件（见
+  /// [OhosNavigationScaffold.resolvesToSplit]），所以此时保持单栏 —— 避免
+  /// 既有调用方在宽屏上被默认值挤进 240vp 导航栏列。
   auto,
 
   /// 强制单栏（官方 `Stack`）：导航栏的内容区占满整个宽度。
@@ -145,6 +150,10 @@ class OhosNavigationScaffold extends StatelessWidget {
        );
 
   /// 内容区。
+  ///
+  /// 单栏（含 [OhosNavMode.auto] 未给 [splitPlaceholder] 的情形）下铺满标题栏
+  /// 与工具栏之间的整个宽度；双栏下它是**左侧导航栏列**的内容，右侧由
+  /// [splitPlaceholder] 承担。
   final Widget child;
 
   /// 主标题（官方 `mainTitle`）。
@@ -237,6 +246,10 @@ class OhosNavigationScaffold extends StatelessWidget {
   ///
   /// 为空时右侧是一块空白（官方示例的「分栏模式占位页」也是调用方自己给的，
   /// 组件本身不画任何装饰）。
+  ///
+  /// **它同时是 [OhosNavMode.auto] 的开关**：为空时 `auto` 不分栏（[child]
+  /// 铺满）；给了它，`auto` 才在宽度 ≥ `navBarMinWidth + minContentWidth` 时
+  /// 切双栏。强制 [OhosNavMode.split] 不受此限制 —— 那是调用方明确要双栏。
   final Widget? splitPlaceholder;
 
   /// 双栏时两列之间是否画分割线（官方 `divider`，传 null 即隐藏）。
@@ -302,7 +315,17 @@ class OhosNavigationScaffold extends StatelessWidget {
       case OhosNavMode.split:
         return true;
       case OhosNavMode.auto:
-        return width >= navBarMinWidth + minContentWidth;
+        // **没有 `splitPlaceholder` 就不分栏。** 官方：「如果内容区没有
+        // HdsNavDestination，则遵从 HdsNavigation 首页的设置」—— 右侧没有
+        // 被 push 出来的 destination 时，首页内容（[child]）应当铺满整个组件，
+        // 而不是被挤进 240vp 的导航栏列、右边留一大片空白。所以 `auto` 只在
+        // 调用方真的给了右侧占位内容时才按宽度切双栏；否则保持单栏。
+        //
+        // 这一条同时是向后兼容的护栏：`auto` 是默认值，若只看宽度，任何既有
+        // 的 `OhosNavigationScaffold(child: ...)` 在平板 / 横屏（≥600vp）上
+        // 都会突然只剩 240vp 宽 —— 那是默认参数变化带来的功能回归。
+        return splitPlaceholder != null &&
+            width >= navBarMinWidth + minContentWidth;
     }
   }
 
@@ -364,10 +387,11 @@ class OhosNavigationScaffold extends StatelessWidget {
           child: _titleBar(context, theme, background),
         ),
         Expanded(child: child),
-        // **不要在这里无条件构造 `_toolbar()`。** `_visibility` 的 `child`
-        // 是普通参数，即使 `visible` 为 false 也会被求值 —— 而 `_toolbar`
-        // 内部读 `toolbarItems!`，没有工具栏时直接抛空指针。传 `null` 让
-        // `_visibility` 自己决定要不要建。
+        // **没有工具栏内容时整段不建。** `_visibility` 的 `child` 是普通
+        // 参数，即使 `visible` 为 false 也会被求值 —— 而 `_toolbar` 内部读
+        // `toolbarItems!`，没有工具栏时直接抛空指针。所以用 `_hasToolbar`
+        // 守住「有没有内容」；至于「显不显示」由下面的 `visible: !hideToolBar`
+        // 决定，隐藏时仍保留节点，`animated` 才有可插值的高度。
         if (_hasToolbar)
           _visibility(
             context,
@@ -408,6 +432,11 @@ class OhosNavigationScaffold extends StatelessWidget {
     // 分割线宽度不能参与 `Row` 的分配：1px 的分隔线若写成第三个 flex 孩子，
     // 两列的比例会随它变（尤其是 `Expanded` 之外混进固定宽度时）。用
     // `DecoratedBox` 的 `Border` 画在导航栏自己身上，宽度就不占位。
+    //
+    // **必须 `foreground`。** 默认的 `background` 先画装饰再画 child，而导航栏
+    // 的标题栏 / 工具栏都是不透明 `cardColor` 且撑满栏宽 —— 那条 1px 线在它们
+    // 的高度范围内会被整个盖住，`showDivider` 默认 true 却几乎看不见。画在
+    // 内容之上（foreground）才真的可见，仍不占 Row 宽度。
     final bool dividerOnRight = navBarPosition == OhosNavBarPosition.start;
     return Row(
       children: <Widget>[
@@ -417,6 +446,7 @@ class OhosNavigationScaffold extends StatelessWidget {
             columns[i]
           else
             DecoratedBox(
+              position: DecorationPosition.foreground,
               decoration: BoxDecoration(
                 border: Border(
                   right: dividerOnRight
@@ -441,8 +471,11 @@ class OhosNavigationScaffold extends StatelessWidget {
     );
   }
 
-  bool get _hasToolbar =>
-      !hideToolBar && toolbarItems != null && toolbarItems!.isNotEmpty;
+  /// 是否有工具栏**内容**。注意这里**不含** `!hideToolBar` —— 隐藏与否交给
+  /// `_visibility(visible: !hideToolBar)` 承担。早先把 `!hideToolBar` 并进
+  /// 这个判据，`hideToolBar` 一为 true 连 `_visibility` 节点都不再生成，工具栏
+  /// 直接从树里消失，`animated` 的过渡对工具栏完全不起作用（只有标题栏能动）。
+  bool get _hasToolbar => toolbarItems != null && toolbarItems!.isNotEmpty;
 
   /// 按 [animated] 决定显隐是否走过渡。
   ///

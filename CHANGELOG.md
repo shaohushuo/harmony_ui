@@ -41,6 +41,17 @@ Release date: 2026-11-11
 - 测试：库 **840 → 860 条**、example 保持 **187 条**（新增 4 条运营位 + 5 条组件导航断言）。破坏性复验 9 处全部确认变红。其中「运营位出血」**必须验像素**：`getRect` 量的是布局矩形，与裁剪无关，把 `ClipRRect` 包回栏体后那几条照样通过（自指）——最终改为把栏渲染成位图、在栏顶之上采样运营图颜色
 - 测试基础设施修正：`ink_no_color_test.dart` 的渐变判据原先「见到 `gradient != null` 就报错」，灰→灰的合法渐变也会被抓，属于「判据在检查类型而不是颜色」。改为逐个色标走 `_describeColorValue`，并把违规色标打进报告
 
+**PR #27 评审修复轮（1 阻塞 + 6 建议，逐条对应代码行）**
+
+- 修复（阻塞）：`OhosVerticalTabBar` 半屏居中的 `listHeight` 用 `num.clamp(项数×56, 容器高)`——**`clamp` 在下限 > 上限时直接抛 `ArgumentError`**，不是「两值取大」。容器比 `项数×56` 还矮时（6 项放进 320vp：336 > 320，或 LayoutBuilder 某帧 `maxHeight=0`）`build` 期间当场红屏。现有「5 项×320」（280 ≤ 320）刚好躲过。改手写上下界：先 `max(容器高/4, 项数×56)` 再与容器高取小
+- 修复：`OhosVerticalTabBar` 半屏居中栏内改用 `Expanded` 均分。早先固定 `SizedBox(height: listHeight/项数)`，孩子总高恒等于 `listHeight`，而 `SafeArea` 按状态栏/导航条把可用高度向内缩 ⇒ `RenderFlex` 溢出（溢出量 = 上下 inset 之和）。`Expanded` 分的是「扣掉安全区之后」的高度，安全区只压缩每项、不溢出；保底仍由外层 `listHeight` 负责
+- 修复：`OhosVerticalTabBar` 默认形态 `Column` 改回 `MainAxisSize.max`。早先统一写 `min`，栏体只有「项数×64」高，放在 800vp 的 `Row` 里时栏底色与右侧 1px 分割线只画到最后一项底部就断，下半屏成裸区
+- 修复：`OhosNavigationBar` 运营位出血上限改用**实际栏高** `_effectiveHeight`（经新增的 `_OhosNavItem.barHeight` 传入），不再写死 `inline ? 56 : 48`。调用方自定义 `height` 后上限跟着动（72vp 栏 ⇒ 悬浮上限 80），4vp 余量仍按官方
+- 修复：`OhosNavigationScaffold` 的 `auto` 模式**只在给了 `splitPlaceholder` 时才分栏**。官方「内容区没有 HdsNavDestination 时遵从首页设置」——没有右侧占位内容时 `child` 应铺满。早先只看宽度，`auto` 又是默认值，任何既有 `OhosNavigationScaffold(child: ...)` 在平板/横屏（≥600vp）上都会被挤进 240vp 导航栏列、右边留一大片空白（默认参数变化带来的功能回归）。`child` / `splitPlaceholder` / `OhosNavMode.auto` 的 dartdoc 一并写清
+- 修复：`OhosNavigationScaffold` 的 `_hasToolbar` 去掉 `!hideToolBar`。早先把它并进判据，`hideToolBar` 一为 true 连 `_visibility` 节点都不生成，工具栏直接从树里消失，`animated` 过渡对工具栏完全不起作用（只有标题栏能动）。隐藏与否交给 `_visibility(visible: !hideToolBar)` 承担
+- 修复：`OhosNavigationScaffold` 双栏分割线 `DecoratedBox` 加 `position: DecorationPosition.foreground`。默认 `background` 先画装饰再画 child，而标题栏/工具栏都是不透明 `cardColor` 且撑满栏宽，那条 1px 线在它们高度范围内被整个盖住，`showDivider` 默认 true 却几乎看不见
+- 测试：库 **860 → 868 条**（+8：clamp 两个边界、SafeArea inset 不溢出、默认形态栏体铺满、自定义栏高出血上限、auto 无占位单栏、hideToolBar 过渡、分割线前景），example 保持 **187 条**，两端全绿。**破坏性复验 7 处全部确认变红**（clamp 旧写法实测抛 `ArgumentError: 336.0`、固定项高+SafeArea 实测溢出 40px、Column min 实测只到 320、写死 56/48、auto 只看宽度、_hasToolbar 含 hideToolBar、去掉 foreground）。两处自指断言一并修正：「栏体铺满」改量栏内 `Column` 而非 StatelessWidget 本身（后者向上取到父级紧约束，改回 min 也照样绿）；「auto 单栏」改量标题水平中心（单栏 ≈400 / 双栏 ≈120），不量 child 的 `Expanded`（祖先查找会命中 MaterialApp 内部无关节点）
+
 > 0.6.1 之后的**评审修复轮**，对应 GitCode PR #24 的代码评审意见（1 个阻塞项 + 5 个建议项 + 3 个细节项）。主线是把「无障碍语义」与「墨水屏形体」两类此前靠巧合通过的问题补齐：`OhosPressFeedback` 统一接管按钮语义，消除嵌套 button 节点导致的离屏断言；墨屏下托不住形体的浅底一律改画 1px 实色线。**没有破坏性 API 变更**，新增的 `OhosPressFeedback.semanticLabel` / `onLongPressCancel` 都是可选参数。
 >
 > **行为变更（需留意）**：`OhosTextField.labelText` 从 Material 的**浮动标签**改为框外上方的**静态文字**——聚焦时文字不再缩放、输入框高度不再从 40 涨到 56；内联形态（`variant: inline`）下传入的 `labelText` 不渲染，需要标签请在组件外部放一行 `Text`。该视觉变更在 0.6.1 之后的开发提交中已落地，本版补上记录与迁移说明。

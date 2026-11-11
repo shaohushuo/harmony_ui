@@ -290,9 +290,9 @@
 
 - `OhosNavTitleMode` | enum | `lib/src/widgets/ohos_navigation_scaffold.dart:17`
 - `OhosNavMode` | enum | `lib/src/widgets/ohos_navigation_scaffold.dart:42`
-- `OhosNavBarPosition` | enum | `lib/src/widgets/ohos_navigation_scaffold.dart:54`
-- `OhosNavToolbarItem` | class | (required icon, required label, onTap, enabled=true) | `lib/src/widgets/ohos_navigation_scaffold.dart:63`
-- `OhosNavigationScaffold` | class | extends StatelessWidget | (key, required child, title, subtitle, subtitleTrailing, leading, actions, onClose, toolbarItems, titleMode=OhosNavTitleMode.mini, automaticallyImplyLeading=true, hideTitleBar=false, hideToolBar=false, hideBackButton=false, +11) | `lib/src/widgets/ohos_navigation_scaffold.dart:113`
+- `OhosNavBarPosition` | enum | `lib/src/widgets/ohos_navigation_scaffold.dart:59`
+- `OhosNavToolbarItem` | class | (required icon, required label, onTap, enabled=true) | `lib/src/widgets/ohos_navigation_scaffold.dart:68`
+- `OhosNavigationScaffold` | class | extends StatelessWidget | (key, required child, title, subtitle, subtitleTrailing, leading, actions, onClose, toolbarItems, titleMode=OhosNavTitleMode.mini, automaticallyImplyLeading=true, hideTitleBar=false, hideToolBar=false, hideBackButton=false, +11) | `lib/src/widgets/ohos_navigation_scaffold.dart:118`
 
 ## `lib/src/widgets/ohos_pattern_lock.dart`
 

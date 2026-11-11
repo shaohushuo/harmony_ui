@@ -108,16 +108,23 @@ class OhosVerticalTabBar extends StatelessWidget {
     final OhosThemeData theme = OhosTheme.of(context);
     final bool threeQuarter = halfScreenFixed;
 
-    Widget panel(double? listHeight) {
+    Widget panel() {
+      // 半屏居中：外层已把 `listHeight` 算好（含保底），栏内用 `Expanded`
+      // 均分。早先用固定 `SizedBox(height: listHeight / items.length)`，各项
+      // 之和恒等于 `listHeight`，而 `SafeArea` 会按状态栏 / 导航条把可用高度
+      // 向内缩 —— 孩子总高没变、可用高度变小，`RenderFlex` 当场溢出（溢出量
+      // 正好是上下 inset 之和）。`Expanded` 分的是「扣掉安全区之后」的高度，
+      // 安全区只压缩每项、不产生溢出。保底仍由外层 `listHeight` 负责，所以
+      // 「5 项各 16vp 装不下图标」那个老问题不会回来。
+      //
+      // 默认形态：每项固定 64vp，但 `Column` 用 `MainAxisSize.max` 铺满父级
+      // 高度 —— 栏底色与右侧 1px 分割线要一直画到栏底，不能只到最后一项就断。
+      // 早先统一写成 `min`，默认形态下整块栏体只有 `项数 × 64` 高，放在 800vp
+      // 的 `Row` 里时下半屏成了无背景无分界的裸区。
       final List<Widget> children = <Widget>[
         for (int i = 0; i < items.length; i++)
           if (threeQuarter)
-            // 高度已被外层算好（含保底），这里直接均分，不再用 `Expanded`
-            // 让每个孩子去分那 1/4 —— `Expanded` 分到 16vp 时连图标都放不下。
-            SizedBox(
-              height: (listHeight ?? itemHeight) / items.length,
-              child: _item(context, theme, i),
-            )
+            Expanded(child: _item(context, theme, i))
           else
             SizedBox(height: itemHeight, child: _item(context, theme, i)),
       ];
@@ -140,14 +147,17 @@ class OhosVerticalTabBar extends StatelessWidget {
           // 左侧栏：左边不做安全区，避免与屏幕左缘凭空多出竖缝。
           child: SafeArea(
             left: false,
-            child: Column(mainAxisSize: MainAxisSize.min, children: children),
+            child: Column(
+              mainAxisSize: threeQuarter ? MainAxisSize.min : MainAxisSize.max,
+              children: children,
+            ),
           ),
         ),
       );
     }
 
     if (!halfScreenFixed) {
-      return SizedBox(width: width, child: panel(null));
+      return SizedBox(width: width, child: panel());
     }
 
     // 半屏居中：页签组整体垂直居中，总高度 = 容器高度的 1/4（带保底）。
@@ -156,18 +166,25 @@ class OhosVerticalTabBar extends StatelessWidget {
         final double fullHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : MediaQuery.sizeOf(context).height;
-        // 1/4 是官方比例，`items.length × 56` 是「塞得下」的下限，取较大者。
-        final double listHeight = (fullHeight / 4).clamp(
-          items.length * minHalfScreenItemHeight,
-          fullHeight,
-        );
+        // 1/4 是官方比例，`items.length × 56` 是「塞得下」的下限，取较大者，
+        // 再不超过容器本身。
+        //
+        // **不能用 `num.clamp`。** 它在「下限 > 上限」时直接抛 `ArgumentError`
+        // （源码 `if (lowerLimit.compareTo(upperLimit) > 0) throw ...`），不是
+        // 「两值取大」。容器比 `项数 × 56` 还矮时（6 项放进 320vp：336 > 320，
+        // 或 LayoutBuilder 某一帧 `maxHeight` 为 0）下限就大于上限，`build`
+        // 期间当场红屏。手写上下界，边界条件再极端也只是把栏压到容器高。
+        final double quarter = fullHeight / 4;
+        final double floor = items.length * minHalfScreenItemHeight;
+        final double wanted = quarter > floor ? quarter : floor;
+        final double listHeight = wanted < fullHeight ? wanted : fullHeight;
         return SizedBox(
           width: width,
           height: fullHeight,
           child: Align(
             // 官方：处在二分之一屏的居中位置 —— 居中，不是贴顶。
             alignment: Alignment.centerLeft,
-            child: SizedBox(height: listHeight, child: panel(listHeight)),
+            child: SizedBox(height: listHeight, child: panel()),
           ),
         );
       },
