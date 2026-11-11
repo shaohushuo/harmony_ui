@@ -955,21 +955,34 @@ class _VerticalTabBarDemo extends StatefulWidget {
 }
 
 class _VerticalTabBarDemoState extends State<_VerticalTabBarDemo> {
-  static const List<OhosVerticalTabItem> _items = <OhosVerticalTabItem>[
-    OhosVerticalTabItem(icon: Icon(Icons.home_outlined), label: '首页'),
-    OhosVerticalTabItem(icon: Icon(Icons.explore_outlined), label: '发现'),
-    OhosVerticalTabItem(
-      icon: Icon(Icons.notifications_none_rounded),
-      label: '消息',
-      badge: CircleAvatar(radius: 4, backgroundColor: Color(0xFFE84026)),
-    ),
-    // 无 label：出血图标项（48x48 圆形纯图标），模拟运营位。
-    OhosVerticalTabItem(
-      icon: Icon(Icons.add_circle_outline_rounded, size: 28),
-      activeIcon: Icon(Icons.add_circle_rounded, size: 28),
-    ),
-    OhosVerticalTabItem(icon: Icon(Icons.person_outline_rounded), label: '我的'),
-  ];
+  /// 页签项要读主题色（角标色），所以不能再是 `static const`：墨水屏下
+  /// 硬编码的 `#E84026` 会原样画出来，红点在一张白纸上是最扎眼的彩色残留
+  /// （`ink_no_color_test` 会报「不是灰阶」）。红点表达的是「有未读」这个
+  /// 状态，不是被展示的数据，因此必须跟着主题退化 —— 走 `theme.dangerColor`，
+  /// 墨屏预设已把它压成纯黑。
+  List<OhosVerticalTabItem> _buildItems(OhosThemeData theme) {
+    return <OhosVerticalTabItem>[
+      const OhosVerticalTabItem(icon: Icon(Icons.home_outlined), label: '首页'),
+      const OhosVerticalTabItem(
+        icon: Icon(Icons.explore_outlined),
+        label: '发现',
+      ),
+      OhosVerticalTabItem(
+        icon: const Icon(Icons.notifications_none_rounded),
+        label: '消息',
+        badge: CircleAvatar(radius: 4, backgroundColor: theme.dangerColor),
+      ),
+      // 无 label：出血图标项（48x48 圆形纯图标），模拟运营位。
+      const OhosVerticalTabItem(
+        icon: Icon(Icons.add_circle_outline_rounded, size: 28),
+        activeIcon: Icon(Icons.add_circle_rounded, size: 28),
+      ),
+      const OhosVerticalTabItem(
+        icon: Icon(Icons.person_outline_rounded),
+        label: '我的',
+      ),
+    ];
+  }
 
   int _selected = 0;
   bool _halfScreen = false;
@@ -977,6 +990,7 @@ class _VerticalTabBarDemoState extends State<_VerticalTabBarDemo> {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final List<OhosVerticalTabItem> items = _buildItems(theme);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -987,7 +1001,7 @@ class _VerticalTabBarDemoState extends State<_VerticalTabBarDemo> {
             child: Row(
               children: <Widget>[
                 OhosVerticalTabBar(
-                  items: _items,
+                  items: items,
                   selectedIndex: _selected,
                   onSelected: (int i) => setState(() => _selected = i),
                   halfScreenFixed: _halfScreen,
@@ -997,7 +1011,7 @@ class _VerticalTabBarDemoState extends State<_VerticalTabBarDemo> {
                     color: theme.backgroundColor,
                     child: Center(
                       child: Text(
-                        '内容区\n当前选中：${_items[_selected].label ?? '出血运营位'}',
+                        '内容区\n当前选中：${items[_selected].label ?? '出血运营位'}',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: theme.textSecondaryColor),
                       ),
@@ -1009,14 +1023,20 @@ class _VerticalTabBarDemoState extends State<_VerticalTabBarDemo> {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: <Widget>[
-            OhosChip(
-              label: const Text('半屏居中 HALF_SCREEN_FIXED'),
-              selected: _halfScreen,
-              onPressed: () => setState(() => _halfScreen = !_halfScreen),
-            ),
-          ],
+        // 单枚 chip 不要包在裸 `Row` 里：`OhosChip` 的宽度由内容撑开（`Row`
+        // 是 `mainAxisSize.min`），窄屏 / 大字号下会撑破父约束、报
+        // 「RenderFlex overflowed」。这里去掉 `Row`，第 1012 行原来那层包裹
+        // 只是为一枚 chip 做左对齐，用 `Align` 表达同一件事即可。
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OhosChip(
+            // 文案里不再带 `HALF_SCREEN_FIXED`：4 个中文字在 320vp×1.3x 下
+            // 已经接近可用宽度，英文标识塞在标签里必然溢出。标识属于语义说明，
+            // 放在上面的 `description` 里（那里本来就有）。
+            label: const Text('半屏居中'),
+            selected: _halfScreen,
+            onPressed: () => setState(() => _halfScreen = !_halfScreen),
+          ),
         ),
       ],
     );
