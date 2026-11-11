@@ -43,6 +43,7 @@ class OhosPressFeedback extends StatefulWidget {
     this.pressedColor,
     this.enabled = true,
     this.containedInkWell,
+    this.clipBehavior = Clip.hardEdge,
   });
 
   /// 被包装的可点内容。
@@ -77,6 +78,16 @@ class OhosPressFeedback extends StatefulWidget {
   /// 只要提供了标签，即使当前禁用（[onTap] 为 null），节点仍保持按钮角色，
   /// 只是 `enabled` 为 false —— 读屏会念出「按钮，已停用」。
   final String? semanticLabel;
+
+  /// 内部 `Stack` 的裁剪方式。
+  ///
+  /// 默认 [Clip.hardEdge]。当 [child] 里有**故意画到自己盒子之外**的内容
+  /// （例如底部页签的运营位：官方「运营资源可向上出血 4 vp」）时传
+  /// [Clip.none]，否则那部分会被裁掉，看起来就是被削平了顶。
+  ///
+  /// 注意这**只影响本组件这一层**：外面若还有 `ClipRRect` / `ClipRect`
+  /// （例如给栏体加圆角裁切的父级），照样会裁。
+  final Clip clipBehavior;
 
   /// 按压层的圆角，默认直角。
   ///
@@ -200,6 +211,10 @@ class _OhosPressFeedbackState extends State<OhosPressFeedback>
             : null,
         child: Stack(
           fit: StackFit.passthrough,
+          // 默认裁到自己的盒子：`Positioned.fill` 的按压色块本该只覆盖自身，
+          // 不需要溢出。运营位（出血图标）这类**内容要画到框外**的场景显式
+          // 传 `Clip.none`，否则外面那一圈越界绘制先被这里削掉。
+          clipBehavior: widget.clipBehavior,
           children: <Widget>[
             widget.child,
             if (showOverlay)

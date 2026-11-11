@@ -335,8 +335,15 @@ Widget _panelBody({
 }) {
   final bool withChrome = OhosSheetSpec.hasTitleAndClose(type);
   return SafeArea(
+    // 底部不再写 0：面板贴着窗口底边时，`SafeArea` 只让出系统导航条的高度，
+    // 内容自己那一圈 16vp 留白会整个丢失，图标行直接压在下边缘上。
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        dismissLabel != null ? 0 : OhosSheetSpec.contentBottomGap,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

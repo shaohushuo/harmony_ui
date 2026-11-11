@@ -515,10 +515,11 @@ class OhosFloatingTabBar extends StatelessWidget {
         children: <Widget>[pill, tapTarget],
       );
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: tapTarget,
-    );
+    // 彩屏（`selectionMark == tint`）：**不画任何背板**，与官方默认态配图
+    // 一致 —— `float_default.png` 里选中项只是图标和文字转成品牌蓝，其下没有
+    // 药丸、其后没有色块。此处早先也给反白以外的分支留过 `Padding(horizontal:
+    // 4)`，那 4vp 会让选中与未选中的内容宽度不同，肉眼像是整排没对齐。
+    return tapTarget;
   }
 }
 

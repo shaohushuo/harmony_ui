@@ -70,6 +70,127 @@ void main() {
       await tester.tap(find.text('短信'));
       expect(selected, '短信');
     });
+
+    // 选中背板只能有一块，且必须只在选中行上。
+    //
+    // 这条守的是一个真实踩过的坑：`emphasizeSecondaryColor` 本身就是 **20%
+    // alpha 的品牌色**（不是「强调色的不透明版」），早先的判据只看了「墨屏
+    // 是否透明」，漏掉 `selected`，于是同一块背板被铺到每一行上 —— 渲染出来
+    // 整列全亮，反而看不出选的是哪一项。
+    testWidgets('选中背板只有一块，且只在选中行', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 240,
+            height: 320,
+            child: OhosSideMenu(
+              items: const <OhosSideMenuItem>[
+                OhosSideMenuItem(label: '收件箱'),
+                OhosSideMenuItem(label: '消息'),
+                OhosSideMenuItem(label: '日程'),
+              ],
+              selectedValue: '消息',
+            ),
+          ),
+        ),
+      );
+      final OhosThemeData theme = OhosThemeData.light();
+      final Finder pills = find.byWidgetPredicate(
+        (Widget w) =>
+            w is DecoratedBox &&
+            (w.decoration as BoxDecoration?)?.color ==
+                theme.emphasizeSecondaryColor,
+      );
+      expect(pills, findsOneWidget, reason: '三行里只该有一块选中背板');
+      // 背板必须落在「消息」那一行上
+      final Rect pill = tester.getRect(pills);
+      final Rect label = tester.getRect(find.text('消息'));
+      expect(pill.top, lessThanOrEqualTo(label.top));
+      expect(pill.bottom, greaterThanOrEqualTo(label.bottom));
+    });
+
+    // 药丸的左右内缩是官方 `pattern.sidebar_sidemenu_menuitem_padding_level8`
+    // = 16vp。断「列表 padding 的实际值」，因为那才是内缩的来源 —— 曾经
+    // `itemInset` 这个常量声明了 16 却没人用，实际走的是 `spaceSm = 12`，
+    // 常量与生效值对不上。
+    testWidgets('药丸左右内缩 = 官方 16vp', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 240,
+            height: 320,
+            child: OhosSideMenu(
+              items: const <OhosSideMenuItem>[OhosSideMenuItem(label: '消息')],
+              // 没有选中项就没有背板，几何断言无从下手
+              selectedValue: '消息',
+            ),
+          ),
+        ),
+      );
+      final ListView list = tester.widget<ListView>(find.byType(ListView));
+      expect(
+        list.padding,
+        const EdgeInsets.symmetric(
+          vertical: 8,
+          horizontal: OhosSideMenu.itemInset,
+        ),
+      );
+      expect(OhosSideMenu.itemInset, 16);
+      // 实际几何：背板左右各内缩 16 ⇒ 宽 240 − 32 = 208。
+      //
+      // **不能用 `pill.left` 直接比 16**：`wrap` 外面套着 `Center`，屏幕
+      // 800 宽时 240 的面板从 x=280 起，`getRect` 给的是全局坐标，算出来
+      // 296。宽度与父级无关，是这里唯一稳的量。
+      final OhosThemeData theme = OhosThemeData.light();
+      final Rect pill = tester.getRect(
+        find.byWidgetPredicate(
+          (Widget w) =>
+              w is DecoratedBox &&
+              (w.decoration as BoxDecoration?)?.color ==
+                  theme.emphasizeSecondaryColor,
+        ),
+      );
+      expect(pill.width, moreOrLessEquals(240 - 16 * 2, epsilon: 0.01));
+    });
+
+    // 展开 / 折叠必须有过渡：一级项下方的兄弟会在同一帧整体位移，没有动画
+    // 就是内容瞬移。这里在动画中途取高度，它必须**严格介于** 0 与终值之间。
+    testWidgets('展开有过渡：中途高度介于 0 与终值之间', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        wrap(
+          SizedBox(
+            width: 240,
+            height: 320,
+            child: OhosSideMenu(
+              items: const <OhosSideMenuItem>[
+                OhosSideMenuItem(
+                  label: '消息',
+                  subItems: <OhosSideMenuSubItem>[
+                    OhosSideMenuSubItem(label: '短信'),
+                    OhosSideMenuSubItem(label: '通知'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final Finder animated = find.byType(AnimatedSize);
+      expect(animated, findsOneWidget);
+      final double collapsed = tester.getSize(animated).height;
+      expect(collapsed, 0);
+
+      await tester.tap(find.text('消息'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      final double mid = tester.getSize(animated).height;
+
+      await tester.pumpAndSettle();
+      final double expanded = tester.getSize(animated).height;
+      expect(expanded, greaterThan(0));
+      expect(mid, greaterThan(collapsed), reason: '动画中途必须已经开始长高');
+      expect(mid, lessThan(expanded), reason: '中途不该已经是终值（那就没有动画）');
+    });
   });
 
   group('OhosListItem', () {
