@@ -366,20 +366,21 @@ class _SideBarDemoState extends State<_SideBarDemo> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
+        // 用 `Wrap` 而不是 `Row`：这一行有三块内容（状态文字 + 两枚 tonal 按钮），
+        // 320vp ×1.15x 字号下两枚按钮就撑破了行宽（实测溢出 7.7vp，1.3x 时 37vp）。
+        // 按钮不能塞 `Expanded`（会把胶囊拉成长条、丢官方的最小宽度），所以让
+        // 它们整体换行是唯一不改变组件内边距的写法。
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            Expanded(
-              child: Text(
-                '当前选中: $_selected',
-                style: theme.typography.bodyMedium,
-              ),
-            ),
+            Text('当前选中: $_selected', style: theme.typography.bodyMedium),
             OhosButton(
               onPressed: () => setState(() => _overlay = !_overlay),
               style: OhosButtonStyle.tonal,
               child: Text(_overlay ? '模式：Overlay' : '模式：Embed'),
             ),
-            const SizedBox(width: 8),
             OhosButton(
               onPressed: () => setState(() => _showSideBar = !_showSideBar),
               style: OhosButtonStyle.tonal,
