@@ -25,8 +25,17 @@ void main() {
     await tester.tap(find.text('关注').first);
     await tester.pumpAndSettle();
 
-    // 确认真的切到了第二页（只切成功时才会滚出「第 1 页」的条目），
-    // 否则下面的「无异常」会因为压根没触发切换而假通过。
+    // 这一条**不**是「共用 controller」的判据。
+    //
+    // 变异验证：把示例里三个页面都改回 `_scrollers[0]`（即共用一份
+    // controller），本条依然全绿 —— 点按切页时第二页在动画期间并没有
+    // attach 到那个 controller，`ScrollPosition` 的重复 attach 断言因此
+    // 不触发。真正能变红的是下面那条「横滑」（横滑时 `TabBarView` 会把
+    // 相邻两页同时铺开并按视口宽度 layout，两个 `ListView` 才会真的同时
+    // attach）。
+    //
+    // 留在这里的价值是另一个方向：它断言「点页签真的切到了第二页」。
+    // 没有它，下面那条即使在示例彻底坏掉时也可能因为「压根没切页」而假绿。
     expect(find.textContaining('第 1 页'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -45,8 +54,10 @@ void main() {
 
     await _scrollIntoView(tester, '关注');
 
-    // 横滑时 TabBarView 会同时挂着相邻两页 —— 三页共用一份 ScrollController
-    // 就会在这里抛 "attached to multiple scroll views"。
+    // 横滑时 `TabBarView` 会把相邻两页同时铺开（各自按视口宽度 layout），
+    // 三页共用一份 `ScrollController` 就会在这里抛
+    // "attached to multiple scroll views"。这一条是「共用 controller」的
+    // 真判据 —— 已做变异验证：把示例改回全用 `_scrollers[0]`，本条变红。
     await tester.drag(find.byType(TabBarView), const Offset(-320, 0));
     await tester.pumpAndSettle();
 
