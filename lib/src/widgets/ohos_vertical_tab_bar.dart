@@ -90,58 +90,101 @@ class OhosVerticalTabBar extends StatelessWidget {
   /// 出血图标的圆形尺寸（官方示例 48x48、圆角 24）。
   static const double bleedSize = 48;
 
+  /// 半屏居中时每一项允许被压到的最小高度。
+  ///
+  /// **自拟，而且这个保底是必要的。** 官方原文是「所有页签总高度之和为
+  /// HdsTabs 组件高度的四分之一，且处在二分之一屏的居中位置」—— 只给总高
+  /// 比例，没给单项下限。按比例硬算会撞上一个物理事实：320vp 高的容器里
+  /// 1/4 是 80vp，5 个页签各分 16vp，而单项内容是 `图标 24 + 间距 4 + 文字
+  /// 13`，怎么塞都溢出（实测渲染图满是 `RenderFlex overflowed` 条纹）。
+  ///
+  /// 所以取 `max(容器高/4, 项数 × 本值)`：页签少时严格遵守官方比例，页签多
+  /// 到比例算不下时以「读得出来」为先，仍然是垂直居中。取 56vp 是因为它
+  /// 正好等于官方悬浮式页签的栏高，单项在这个高度下面图标与文字都不局促。
+  static const double minHalfScreenItemHeight = 56;
+
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final bool threeQuarter = halfScreenFixed;
 
-    final List<Widget> children = <Widget>[
-      for (int i = 0; i < items.length; i++)
-        if (halfScreenFixed)
-          Expanded(child: _item(context, theme, i))
-        else
-          SizedBox(height: itemHeight, child: _item(context, theme, i)),
-    ];
-
-    final Widget column = Column(
-      mainAxisSize: halfScreenFixed ? MainAxisSize.min : MainAxisSize.max,
-      children: children,
-    );
-
-    final Widget panel = DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor ?? theme.cardColor,
-        // 纵向栏固定在左侧，右侧 1px 分割线与内容分界；墨水屏用实色。
-        border: Border(
-          right: theme.usesOutlines
-              ? ohosBorderSide(
-                  context,
-                  theme.dividerColor,
-                  width: theme.outlineWidth,
-                )
-              : BorderSide.none,
+    Widget panel() {
+      // 半屏居中：外层已把 `listHeight` 算好（含保底），栏内用 `Expanded`
+      // 均分。早先用固定 `SizedBox(height: listHeight / items.length)`，各项
+      // 之和恒等于 `listHeight`，而 `SafeArea` 会按状态栏 / 导航条把可用高度
+      // 向内缩 —— 孩子总高没变、可用高度变小，`RenderFlex` 当场溢出（溢出量
+      // 正好是上下 inset 之和）。`Expanded` 分的是「扣掉安全区之后」的高度，
+      // 安全区只压缩每项、不产生溢出。保底仍由外层 `listHeight` 负责，所以
+      // 「5 项各 16vp 装不下图标」那个老问题不会回来。
+      //
+      // 默认形态：每项固定 64vp，但 `Column` 用 `MainAxisSize.max` 铺满父级
+      // 高度 —— 栏底色与右侧 1px 分割线要一直画到栏底，不能只到最后一项就断。
+      // 早先统一写成 `min`，默认形态下整块栏体只有 `项数 × 64` 高，放在 800vp
+      // 的 `Row` 里时下半屏成了无背景无分界的裸区。
+      final List<Widget> children = <Widget>[
+        for (int i = 0; i < items.length; i++)
+          if (threeQuarter)
+            Expanded(child: _item(context, theme, i))
+          else
+            SizedBox(height: itemHeight, child: _item(context, theme, i)),
+      ];
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor ?? theme.cardColor,
+          // 纵向栏固定在左侧，右侧 1px 分割线与内容分界；墨水屏用实色。
+          border: Border(
+            right: theme.usesOutlines
+                ? ohosBorderSide(
+                    context,
+                    theme.dividerColor,
+                    width: theme.outlineWidth,
+                  )
+                : BorderSide.none,
+          ),
         ),
-      ),
-      child: SizedBox(
-        width: width,
-        // 左侧栏：左边不做安全区，避免与屏幕左缘凭空多出竖缝。
-        child: SafeArea(left: false, child: column),
-      ),
-    );
-
-    if (!halfScreenFixed) {
-      return panel;
+        child: SizedBox(
+          width: width,
+          // 左侧栏：左边不做安全区，避免与屏幕左缘凭空多出竖缝。
+          child: SafeArea(
+            left: false,
+            child: Column(
+              mainAxisSize: threeQuarter ? MainAxisSize.min : MainAxisSize.max,
+              children: children,
+            ),
+          ),
+        ),
+      );
     }
 
-    // 半屏居中：页签栏整体垂直居中，总高度 = 容器高度的 1/4。
+    if (!halfScreenFixed) {
+      return SizedBox(width: width, child: panel());
+    }
+
+    // 半屏居中：页签组整体垂直居中，总高度 = 容器高度的 1/4（带保底）。
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double fullHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : MediaQuery.sizeOf(context).height;
+        // 1/4 是官方比例，`items.length × 56` 是「塞得下」的下限，取较大者，
+        // 再不超过容器本身。
+        //
+        // **不能用 `num.clamp`。** 它在「下限 > 上限」时直接抛 `ArgumentError`
+        // （源码 `if (lowerLimit.compareTo(upperLimit) > 0) throw ...`），不是
+        // 「两值取大」。容器比 `项数 × 56` 还矮时（6 项放进 320vp：336 > 320，
+        // 或 LayoutBuilder 某一帧 `maxHeight` 为 0）下限就大于上限，`build`
+        // 期间当场红屏。手写上下界，边界条件再极端也只是把栏压到容器高。
+        final double quarter = fullHeight / 4;
+        final double floor = items.length * minHalfScreenItemHeight;
+        final double wanted = quarter > floor ? quarter : floor;
+        final double listHeight = wanted < fullHeight ? wanted : fullHeight;
         return SizedBox(
+          width: width,
           height: fullHeight,
-          child: Center(
-            child: SizedBox(height: fullHeight / 4, child: panel),
+          child: Align(
+            // 官方：处在二分之一屏的居中位置 —— 居中，不是贴顶。
+            alignment: Alignment.centerLeft,
+            child: SizedBox(height: listHeight, child: panel()),
           ),
         );
       },

@@ -113,6 +113,18 @@ abstract final class OhosSheetSpec {
   /// 控制条高度。**官方**：16vp（资源表 `sheet_drag_bar_height = 16.0vp`）。
   static const double dragBarHeight = 16;
 
+  /// 面板内容与面板下边缘之间的留白。
+  ///
+  /// **自拟**：三张资源表里都没有「内容底部留白」这一项（`sheet_operation_height`
+  /// 是底部按钮行的高度，`sheet_drag_bar_height` 是控制条，都不是它），文档也只
+  /// 描述结构、不给数值。
+  ///
+  /// 取 16vp 的理由：与面板自身的左右留白（`fromLTRB(16, 16, 16, 0)` 里的 16）
+  /// 同值，内容四周才是一个闭合的 16vp 呼吸圈。此前底部写 0，分享面板的图标行
+  /// 会**直接压在面板下边缘上**，视觉上像是被裁掉了一半 —— 圆形图标贴着圆角边缘
+  /// 时尤其明显。
+  static const double contentBottomGap = 16;
+
   /// 操作区（底部按钮行）高度。**官方**：56vp（资源表 `sheet_operation_height = 56.0vp`）。
   static const double operationHeight = 56;
 

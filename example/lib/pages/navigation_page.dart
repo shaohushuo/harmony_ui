@@ -71,12 +71,18 @@ class NavigationPage extends StatelessWidget {
         ),
         const DemoSection(
           title: '底部页签 OhosNavigationBar（平铺式 48vp）',
-          description: '激活项 20% 品牌色高亮胶囊，图标 24vp，未激活文字置于图标下方。',
+          description:
+              '图标 24vp 在上、文字 10vp 在下，每个页签都带文字。激活项**只换色**'
+              '（图标与文字转品牌高亮色），不画药丸背板——官方规范原文是「被激活的页签'
+              '应有明确的视觉反馈，如使用品牌高亮色显示」，配图里也确实只有换色。',
           child: _NavigationBarDemo(type: OhosNavigationBarType.tile),
         ),
         const DemoSection(
           title: '底部页签 OhosNavigationBar（悬浮式 56vp）',
-          description: '悬浮胶囊 + 沉浸光感：光池跟随选中项，按压出现指尖光晕与彩色焦散。',
+          description:
+              '排布与平铺式完全一致（图标在上、文字在下、每项都带文字），只是栏高 56vp、'
+              '浮在内容之上并带沉浸光感：光池跟随选中项，按压出现指尖光晕与彩色焦散。'
+              '选中态同样只换色。',
           child: _NavigationBarDemo(type: OhosNavigationBarType.float),
         ),
         const DemoSection(
@@ -103,15 +109,43 @@ class NavigationPage extends StatelessWidget {
           description:
               '平板/横屏把页签栏挪到左侧纵向排列（vertical，栏宽 96vp）。带文字的是标准「图标+文字」项；'
               '文字留空的项渲染成 48x48 圆形出血图标（bleedIconStyle）。可切换半屏居中（HALF_SCREEN_FIXED）：'
-              '栏整体垂直居中、总高为容器的 1/4，各页签在其中均分。',
+              '页签组整体垂直居中、高度为容器的 1/4（页签过多时按每项 56vp 保底，否则 16vp 的项装不下图标）。',
           child: _VerticalTabBarDemo(),
         ),
         const DemoSection(
           title: '组件导航 OhosNavigationScaffold（HdsNavigation）',
           description:
-              'HdsNavigation 根容器的视觉外壳：标题栏（MINI 56vp / FULL 大标题 112/138vp）+ 内容区 + '
-              '底部工具栏；路由仍由 Flutter Navigator 承担。可切换大标题、动态模糊背景板与工具栏。',
+              'HdsNavigation 根容器的视觉外壳：标题栏 + 内容区 + 底部工具栏；路由仍由 Flutter Navigator 承担。'
+              '三种标题栏模式：MINI 小标题 56vp、FULL 大标题 112/138vp、MODAL 半模态背板 64/80vp'
+              '（背板 64 − 标题栏 56 = 上 padding 8vp）。标题栏 / 工具栏可显隐（带过渡），'
+              '返回键可隐藏（官方限定只在 MINI 下生效）。',
           child: _NavigationScaffoldDemo(),
+        ),
+        const DemoSection(
+          title: '组件导航 · 双栏 OhosNavigationScaffold（Split）',
+          description:
+              '官方 Auto 模式的判据是「组件宽度 ≥ navBarWidth 下限 + minContentWidth」，'
+              '默认值正好 240 + 360 = 600vp —— 这就是 ArkUI 文档里那句「宽度 ≥ 600vp 走 Split」'
+              '的来源，不是另一个魔数。下面固定成 Split，可切换导航栏宽度 240/320 与左右位置，'
+              '并观察右侧占位页（splitPlaceholder）。',
+          child: _NavigationSplitDemo(),
+        ),
+        const DemoSection(
+          title: '底部页签 · 运营位出血（4+1 形态）',
+          description:
+              '官方「自定义运营页签样式」：4 个基础页签 + 1 个运营页签（4+1）。运营图由调用方'
+              '自己画 —— 组件只给一个**上限**并居中，不裁内容。两条官方原文方向相反：悬浮式'
+              '「运营资源可向上出血 4 vp」，所以上限是 56 + 4×2 = 64，画满时上下各越界 4vp；'
+              '平铺式「保证上下安全间距为 4vp」，上限是 48 − 4×2 = 40，必须留在栏内。'
+              '下面的运营图故意按上限画满，看「活动」那一格的顶是不是探出了栏体。',
+          child: _BleedDemo(type: OhosNavigationBarType.float),
+        ),
+        const DemoSection(
+          title: '底部页签 · 运营位出血（平铺式）',
+          description:
+              '同一个运营位换到平铺式：上限收到 40vp，上下各留 4vp 安全间距，不再越界。'
+              '两栏并排看差别最直观 —— 悬浮式的运营图比栏高还高，平铺式的比栏高矮一圈。',
+          child: _BleedDemo(type: OhosNavigationBarType.tile),
         ),
         const DemoSection(
           title: '导航点 OhosPageIndicator',
@@ -847,6 +881,120 @@ class _NavigationBarDemoState extends State<_NavigationBarDemo> {
   }
 }
 
+/// 官方「自定义运营页签样式」：4 个基础页签 + 1 个运营页签（4+1）。
+///
+/// 运营图**故意按上限画满**，这样才能看见两种形态的差别：
+///
+/// - 悬浮式：上限 64（56 + 4×2），画满时上下各越界 4vp —— 官方「可向上出血 4vp」；
+/// - 平铺式：上限 40（48 − 4×2），画满时上下各留 4vp —— 官方「保证上下安全间距 4vp」。
+///
+/// **底板不能裁剪。** 早先 `_NavigationBarDemo` 的底板用了 `Clip.antiAlias`
+/// 去保圆角，那个 clip 同样会削掉运营位探出栏体的部分。这里的底板改成
+/// 「只有背景、不裁」，出血才看得见。
+class _BleedDemo extends StatefulWidget {
+  const _BleedDemo({required this.type});
+
+  final OhosNavigationBarType type;
+
+  @override
+  State<_BleedDemo> createState() => _BleedDemoState();
+}
+
+class _BleedDemoState extends State<_BleedDemo> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final bool float = widget.type == OhosNavigationBarType.float;
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.compBackgroundGrayColor ?? OhosColors.compBackgroundGray,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      // **不裁剪** —— 悬浮式的运营位要画到栏体之外，见类注释。
+      padding: EdgeInsets.symmetric(vertical: float ? 12 : 8, horizontal: 4),
+      child: OhosNavigationBar(
+        type: widget.type,
+        lightMaterial: float,
+        glow: float,
+        backgroundColor: theme.cardColor,
+        currentIndex: _index,
+        onDestinationSelected: (int i) => setState(() => _index = i),
+        destinations: <OhosNavigationDestination>[
+          const OhosNavigationDestination(
+            icon: Icon(OhosIcons.square_grid_2x2),
+            label: '首页',
+          ),
+          const OhosNavigationDestination(
+            icon: Icon(OhosIcons.message_fill),
+            label: '消息',
+          ),
+          const OhosNavigationDestination(
+            icon: Icon(OhosIcons.star_fill),
+            label: '收藏',
+          ),
+          const OhosNavigationDestination(
+            icon: Icon(OhosIcons.person),
+            label: '我的',
+          ),
+          OhosNavigationDestination(
+            icon: const Icon(OhosIcons.bolt_fill),
+            label: '活动',
+            // 官方示例就是一张 `borderRadius` 圆角图（`Image().width(48)
+            // .height(48).borderRadius(24)`），这里用渐变 + 图标代替，形状一致。
+            bleedIcon: const _OperationArtwork(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 运营图占位：圆形渐变底 + 闪电图标，按官方示例的 48 圆角处理。
+///
+/// **颜色必须跟着主题退化。** 运营图是「装饰」而不是「数据」—— 灰阶屏上没有
+/// 色相可看，紫色渐变合成到纸上就是一块脏灰，压在页签里反而糊成一片。所以
+/// 两个色标都过一遍 `theme.policy.quantize`，墨屏下自动变成深浅两档灰。
+class _OperationArtwork extends StatelessWidget {
+  const _OperationArtwork();
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final double side = <double>[
+          c.maxWidth,
+          c.maxHeight,
+          64,
+        ].reduce((double a, double b) => a < b ? a : b);
+        return Container(
+          width: side,
+          height: side,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[
+                theme.policy.quantize(const Color(0xFF7C5CFF)),
+                theme.policy.quantize(const Color(0xFFE55392)),
+              ],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            OhosIcons.bolt_fill,
+            size: side * .5,
+            color: theme.policy.quantize(Colors.white),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SwiperDemo extends StatelessWidget {
   const _SwiperDemo();
 
@@ -1056,13 +1204,17 @@ class _NavigationScaffoldDemo extends StatefulWidget {
 }
 
 class _NavigationScaffoldDemoState extends State<_NavigationScaffoldDemo> {
-  bool _full = false;
+  OhosNavTitleMode _mode = OhosNavTitleMode.mini;
   bool _blur = false;
   bool _toolbar = true;
+  bool _hideTitle = false;
+  bool _hideBack = false;
 
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
+    final bool modal = _mode == OhosNavTitleMode.modal;
+    final bool full = _mode == OhosNavTitleMode.full;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -1076,17 +1228,23 @@ class _NavigationScaffoldDemoState extends State<_NavigationScaffoldDemo> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: OhosNavigationScaffold(
-                title: _full ? '大标题' : '设置',
-                subtitle: _full ? '副标题 / 页面说明文字' : null,
-                titleMode: _full
-                    ? OhosNavTitleMode.full
-                    : OhosNavTitleMode.mini,
+                title: modal ? 'MainTitle' : (full ? '大标题' : '设置'),
+                subtitle: modal ? 'SubTitle' : (full ? '副标题 / 页面说明文字' : null),
+                titleMode: _mode,
                 blurredBackground: _blur,
-                automaticallyImplyLeading: false,
-                actions: <Widget>[
-                  _barIcon(theme, Icons.search_rounded),
-                  _barIcon(theme, Icons.more_vert_rounded),
-                ],
+                automaticallyImplyLeading: !modal,
+                hideBackButton: _hideBack,
+                hideTitleBar: _hideTitle,
+                animated: true,
+                onClose: () {},
+                // 半模态的右侧默认就是关闭按钮，再塞两个菜单图标就成了三个圆，
+                // 与官方配图（右侧只有一个 ×）不符 —— 这一项按模式分开给。
+                actions: modal
+                    ? null
+                    : <Widget>[
+                        _barIcon(theme, Icons.search_rounded),
+                        _barIcon(theme, Icons.more_vert_rounded),
+                      ],
                 toolbarItems: _toolbar
                     ? <OhosNavToolbarItem>[
                         OhosNavToolbarItem(
@@ -1136,11 +1294,22 @@ class _NavigationScaffoldDemoState extends State<_NavigationScaffoldDemo> {
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
+          runSpacing: 8,
           children: <Widget>[
             OhosChip(
-              label: const Text('大标题 FULL'),
-              selected: _full,
-              onPressed: () => setState(() => _full = !_full),
+              label: const Text('MINI 小标题'),
+              selected: _mode == OhosNavTitleMode.mini,
+              onPressed: () => setState(() => _mode = OhosNavTitleMode.mini),
+            ),
+            OhosChip(
+              label: const Text('FULL 大标题'),
+              selected: full,
+              onPressed: () => setState(() => _mode = OhosNavTitleMode.full),
+            ),
+            OhosChip(
+              label: const Text('MODAL 半模态'),
+              selected: modal,
+              onPressed: () => setState(() => _mode = OhosNavTitleMode.modal),
             ),
             OhosChip(
               label: const Text('动态模糊背景板'),
@@ -1152,6 +1321,16 @@ class _NavigationScaffoldDemoState extends State<_NavigationScaffoldDemo> {
               selected: _toolbar,
               onPressed: () => setState(() => _toolbar = !_toolbar),
             ),
+            OhosChip(
+              label: const Text('隐藏标题栏'),
+              selected: _hideTitle,
+              onPressed: () => setState(() => _hideTitle = !_hideTitle),
+            ),
+            OhosChip(
+              label: const Text('隐藏返回键'),
+              selected: _hideBack,
+              onPressed: () => setState(() => _hideBack = !_hideBack),
+            ),
           ],
         ),
       ],
@@ -1159,6 +1338,161 @@ class _NavigationScaffoldDemoState extends State<_NavigationScaffoldDemo> {
   }
 
   /// 标题栏右侧的圆形图标按钮（无 Material 水波纹）。
+  Widget _barIcon(OhosThemeData theme, IconData icon) {
+    return OhosPressFeedback(
+      onTap: () {},
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Icon(icon, size: 22, color: theme.textPrimaryColor),
+      ),
+    );
+  }
+}
+
+/// 双栏模式：左导航栏（标题栏 + 列表 + 工具栏）与右侧占位页。
+class _NavigationSplitDemo extends StatefulWidget {
+  const _NavigationSplitDemo();
+
+  @override
+  State<_NavigationSplitDemo> createState() => _NavigationSplitDemoState();
+}
+
+class _NavigationSplitDemoState extends State<_NavigationSplitDemo> {
+  int _selected = 0;
+  bool _wide = false;
+  bool _end = false;
+
+  static const List<String> _labels = <String>['收件箱', '星标', '已发送', '草稿'];
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // 双栏要够宽才有意义：640 宽下 `240 + 360 = 600` 刚过断点，导航栏
+        // 一加宽到 320 就只剩 320 内容区 —— 正好能看出「内容区至少留
+        // minContentWidth」这条规则在起作用。
+        SizedBox(
+          height: 400,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: OhosNavigationScaffold(
+                mode: OhosNavMode.split,
+                navBarWidth: _wide
+                    ? 320
+                    : OhosNavigationScaffold.defaultNavBarWidth,
+                navBarPosition: _end
+                    ? OhosNavBarPosition.end
+                    : OhosNavBarPosition.start,
+                title: '邮件',
+                titleMode: OhosNavTitleMode.mini,
+                automaticallyImplyLeading: false,
+                actions: <Widget>[_barIcon(theme, Icons.more_vert_rounded)],
+                splitPlaceholder: _placeholder(theme),
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: <Widget>[
+                    for (int i = 0; i < _labels.length; i++) _row(theme, i),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            OhosChip(
+              label: const Text('导航栏 320'),
+              selected: _wide,
+              onPressed: () => setState(() => _wide = !_wide),
+            ),
+            OhosChip(
+              label: const Text('导航栏在右侧'),
+              selected: _end,
+              onPressed: () => setState(() => _end = !_end),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _placeholder(OhosThemeData theme) {
+    return ColoredBox(
+      color: theme.backgroundColor,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.mail_outline_rounded,
+                size: 48,
+                color: theme.textTertiaryColor,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${_labels[_selected]} · 分栏占位页',
+                textAlign: TextAlign.center,
+                style: theme.typography.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '官方 splitPlaceholder：双栏时右侧在没有任何 HdsNavDestination 页面时'
+                '显示的占位内容。',
+                textAlign: TextAlign.center,
+                style: theme.typography.bodySmall?.copyWith(
+                  color: theme.textSecondaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _row(OhosThemeData theme, int index) {
+    final bool selected = index == _selected;
+    final Color fg = selected ? theme.highlightColor : theme.textPrimaryColor;
+    return OhosPressFeedback(
+      onTap: () => setState(() => _selected = index),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.inbox_rounded, size: 22, color: fg),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _labels[index],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.typography.bodyMedium?.copyWith(
+                  color: fg,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _barIcon(OhosThemeData theme, IconData icon) {
     return OhosPressFeedback(
       onTap: () {},

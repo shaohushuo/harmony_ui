@@ -1,6 +1,56 @@
-## 0.6.2
+## 0.6.3
 
-Release date: 2026-11-10
+Release date: 2026-11-11
+
+> 0.6.2 之后的**示例界面整改轮**，起因是 5 条观感问题（底部弹窗贴底、侧边栏折叠无动画、底部页签选中态怪异、半屏居中挤压、侧边栏 Material 味）。逐条回溯到官方文档与配图后，发现其中 4 条的根因都是**实现偏离了官方默认态**，而不是参数没调好。**没有破坏性 API 变更**；`OhosSideMenu.itemInset` 从死常量变成真正生效的值（`padding` 默认水平部分由 12 改为 16），是唯一可观察到几何变化的点。
+
+同一版本后半程补齐 **HDS「组件导航」大栏目**与**底部页签运营位（出血图标）**——用户第 5 条原话「UI Design Kit 很多还没有实现，例如组件导航这一大栏目，例如底部页签，包括图标出血样式，页签纵向布局等等」。`OhosNavigationScaffold` 从「只有 MINI 标题栏 + 内容区」扩到官方 15 项能力中的主要部分；`OhosNavigationBar` 新增 4+1 形态的运营位。**仍是纯新增参数**，默认值保持旧行为。
+
+**官方口径（本轮的判据，都可在文档/配图里核对）**
+
+- 底部页签两种形态的排布**完全一致**：图标 24vp 在上、文字 10vp 在下，**每一项都带文字**。横排是 `LayoutMode.HORIZONTAL`（横屏 / 短高）的独立形态，不是悬浮式默认排布。
+- 激活态**只有换色，没有药丸背板**。规范原文：「被激活的页签应有明确的视觉反馈，如使用品牌高亮色显示，或增加激活动效」；配图里选中项只是图标与文字转成品牌蓝。
+- 悬浮栏的 `56` 是**栏高**，图标与文字在其中垂直居中，页签占满全高。
+- `HALF_SCREEN_FIXED` 的语义是「所有页签总高 = 组件高 1/4，且处于二分之一屏居中位置」，只给比例、**没给单项下限**。
+
+- 修复：`OhosNavigationBar` 悬浮式此前按「图标 + 文字横排」实现、且**只给选中项渲染文字**——同一栏里选中项是横向一组、其余是单个图标，两侧留白天然不等，这就是「两侧的图标不对称」的真正来源。两种形态现统一为「图标在上、文字在下、每项都带文字」，且**内容宽度与选中态无关**（早先还按 `selected ? 14 : 10` 改水平内边距，选中项被撑宽，图标相对栏中心就偏了）
+- 修复：`OhosNavigationBar` 去掉选中项的 `borderRadius: 22` 高亮块（平铺式是 `56×32/26` 的药丸圈），改为纯换色。原先选中块占满整项高度，矩形四角必然探到胶囊栏的圆弧之外，只能靠外层 `clip` 硬切，切出的直边正好压在那道圆角边缘上 —— 这正是「背景色直接和边框连在一起」。现在**不再往栏内加竖向内边距**：早先为了让选中块离边远一点给过 `Padding(vertical: 4)`，结果页签只剩 48vp，把「选中块该内缩」错当成「所有页签都该内缩」；真正内缩的只有选中块那一层
+- 修复：`OhosNavigationBar` 平铺式的标签钳制逻辑保留（1.3x 时 48vp 装不下会溢出 1vp），但钳制不再顺带改变排布；`emphasis` 策略下选中文字才加粗，彩屏不再多一档 `w600`
+- 修复：`OhosFloatingTabBar` 彩屏分支的 `Padding(horizontal: 4)` 去掉——那 4vp 让选中与未选中的内容宽度不同，整排看起来没对齐。现在彩屏（`selectionMark == tint`）**完全不画背板**，只有墨屏 `inverse` 才画内缩 4vp 的实底胶囊（那条路径有独立理由，见代码注释）
+- 修复：`OhosVerticalTabBar` 半屏居中的**确定溢出**。原实现照字面写 `SizedBox(height: fullHeight / 4)` 再塞 5 个 `Expanded`：320vp 容器里每项只分到 16vp，而单项内容是「图标 24 + 间距 + 文字 13」，渲染图满是 `RenderFlex overflowed` 条纹。改为 `listHeight = max(容器高/4, 项数 × 56)`：页签少时严格遵守官方 1/4 比例（2 项 / 480 高 ⇒ 每项 60，比例生效），页签多到比例算不下时以「读得出来」为先，仍保持垂直居中。新增 `minHalfScreenItemHeight = 56`（自拟，理由与官方没给下限这件事一并写进 dartdoc）
+- 修复：`OhosSideMenu` **每一行都铺了选中背板**。`emphasizeSecondaryColor` 本身就是 20% alpha 的品牌色（不是「强调色的不透明版」），旧判据只看了「墨屏是否透明」、漏掉 `selected`，于是同一块背板铺满整列 —— 反而看不出选的是谁。修好后渲染图里只剩选中的那一行有药丸
+- 修复：`OhosSideMenu` 的 `itemInset` 是**从未被引用的死常量**：声明 16，实际 `padding` 走的是 `OhosGeometry.spaceSm = 12`。现将其作为默认 `padding` 的水平值接入，与合并状态下的官方 16vp 对齐，背板左右缩进实测 240 − 32 = 208
+- 修复：`OhosSideMenu` 二级菜单展开 / 折叠**没有任何过渡**——一级项下方的兄弟会在同一帧整体位移，肉眼看到的是内容瞬移。改用 `AnimatedSize`（时长经 `policy.scaleMotion`，墨屏归零），`clipBehavior` 默认 `hardEdge` 把动画中途溢出的子项裁掉
+- 修复：`OhosSideMenu` 按官方形态重写（上一版是 Material 抽屉外观）：48vp 行高、16vp 内缩圆角药丸、移出品牌色高亮（改读 `icon_primary` / `icon_secondary`）、移除展开箭头、移除二级项小圆点、角标改为行尾纯灰数字（0 隐藏、>99 显示 `99+`、等宽数字对齐）
+- 修复：`OhosSideBar` 默认宽度 280 → **240**（官方 `sideBarWidth`），补 `minWidth 200` / `maxWidth 280` / `minContentWidth 360` 常量；三处动效（`AnimatedContainer` / `AnimatedPositioned` / `AnimatedOpacity`）统一走 `policy.scaleMotion`
+- 修复：`OhosSheetSpec.contentBottomGap = 16`（**自拟**：三张资源表都没有「内容底部留白」这一项，文档只描述结构不给数值；取 16 是为了与面板自身左右留白同值）。`OhosBottomSheet` 的 `_panelBody` 底部此前写死 0，BOTTOM 形态贴窗口底边时内容会直接压在面板下边缘上，圆形图标贴着圆角边缘时尤其像被裁掉一半
+- 示例：`navigation_page.dart` 两处描述与官方冲突，一并改正（「激活项 20% 品牌色高亮胶囊」→ 只换色；「未激活文字置于图标下方」→ 每项都带文字）
+- 测试：库 **826 → 840 条**、example 保持 **187 条**，两端全绿。其中 6 条做过**破坏性复验**（把实现改回去，确认断言真的会红）：`if (selected)` 只给选中项渲染文字、`if (inverse || selected)` 把药丸加回去、`duration: Duration.zero` 去掉展开动画、`fill = useOutline` 让背板铺满整列、`listHeight = fullHeight/4` 退回字面值、底部留白改回 0。首版「选中态只换色」这条**验不红**——判据查的是 `emphasizeSecondaryColor` 而实现用的是 `highlightColor`，已改为两者都排除
+- 已知限制：`OhosNavigationScaffold`（对应 `HdsNavigation`）已覆盖 `titleMode`（MINI / FULL / MODAL 半模态）、`hideTitleBar` / `hideToolBar` / `hideBackButton`（含官方「返回键仅 MINI 生效」限制）、`animated` 显隐过渡、`blurredBackground`、双栏（`mode` / `navBarWidth` / `navBarPosition` / `navBarWidthRange` / `minContentWidth` / `splitPlaceholder` / `showDivider`）。仍缺 `dynamicHideTitleBar` / `bindToScrollable` 这类与滚动联动的能力，以及 `HdsNavigationTitleMode.FREE` 形态——后者是滚动联动的半边，故意不提供半吊子枚举值
+
+**本轮补齐的官方规格（逐条可在文档 / 配图里核对）**
+
+- `OhosNavTitleMode`：`MINI` 56vp；`FULL` 主标题 112vp / 带副标题 138vp；`MODAL` **背板** 64 / 80vp（`6.0.0(20)+`）。背板与标题栏差的 8vp 是**上 padding**，写成 `modalTopPadding` 让这层关系在代码里显式成立，而不是两个独立魔数
+- 半模态**不套 `SafeArea`**：它挂在 `bindSheet` 里根本没有状态栏，套了就凭空多一整条状态栏高（破坏性复验实测 88 ≠ 64）
+- 双栏断点不是魔数：ArkUI 文档那句「宽度 ≥ 600vp 走 Split」= `navBarMinWidth(240) + minContentWidth(360)`。`resolvesToSplit` 按参数现算，改默认值断点跟着动；`navBarWidthRange` 上限是「组件宽 40% 且不大于 432」，`minContentWidth` 保底会咬过 `navBarWidth` 的请求值
+- 半模态标题栏按官方配图 `nav_modal.jpg` 525×384 逐像素核对：左侧 40vp 浅灰圆背板 + 24vp 图标（`subIcon`），右侧 40vp 圆 + 关闭按钮，主标题 20vp 加粗在上、副标题 14vp 次色在下，**同一个横向块内上下两行**，背板宽比内容两侧各多约 16vp、底部无分割线
+- 运营位（`OhosNavigationDestination.bleedIcon`，对应官方 `bleedIconStyle(builder)`）：两条官方原文**方向相反**，官方两张标注图逐像素核对印证：`bleed_float.png` 里书顶比栏顶高 8px ≈ 4vp（56vp 标注线 114px，DPR 2.036），`bleed_tile.png` 里资源图上下各留 7px ≈ 4vp（48vp 标注线 112px，DPR 2.333）。所以悬浮式可绘制范围是 `栏高 + 2×4 = 64`、平铺式是 `栏高 − 2×4 = 40`，见 `bleedExtentOf`
+- `4vp` 是**上限不是必然值**：组件只给 `maxWidth/maxHeight` 并居中，24 的小图保持 24，不会被撑成 64（破坏性复验：换成 `SizedBox` 后实测 64）
+- 出血要能画出去，**一路都不能裁**：`OhosPressFeedback` 新增 `clipBehavior`（默认 `Clip.hardEdge` 不变），运营位传 `Clip.none`；悬浮栏体原先那个 `Container(clipBehavior: Clip.antiAlias)` 被拆成「材质背板（自己按 borderRadius 画）+ 内容层（`Clip.none`）」两层。**宿主也要允许溢出**——栏被 `ClipRRect` 包住时出血会被削平，example 的运营位 demo 底板因此去掉了 `clipBehavior`
+- 新增公开符号：`OhosNavTitleMode`（`mini` / `full` / `modal`）、`OhosNavMode`（`auto` / `stack` / `split`）、`OhosNavBarPosition`；`OhosNavigationScaffold` 的 `titleMode` / `subtitle` / `subtitleTrailing` / `onClose` / `hideTitleBar` / `hideToolBar` / `hideBackButton` / `animated` / `mode` / `navBarWidth` / `navBarPosition` / `navBarMinWidth` / `navBarMaxWidth` / `minContentWidth` / `splitPlaceholder` / `showDivider` 与 8 个静态常量；`OhosNavigationDestination.bleedIcon` + `isBleed`；`OhosNavigationBar.bleedOverflow` / `bleedExtentOf`
+- 测试：库 **840 → 860 条**、example 保持 **187 条**（新增 4 条运营位 + 5 条组件导航断言）。破坏性复验 9 处全部确认变红。其中「运营位出血」**必须验像素**：`getRect` 量的是布局矩形，与裁剪无关，把 `ClipRRect` 包回栏体后那几条照样通过（自指）——最终改为把栏渲染成位图、在栏顶之上采样运营图颜色
+- 测试基础设施修正：`ink_no_color_test.dart` 的渐变判据原先「见到 `gradient != null` 就报错」，灰→灰的合法渐变也会被抓，属于「判据在检查类型而不是颜色」。改为逐个色标走 `_describeColorValue`，并把违规色标打进报告
+
+**PR #27 评审修复轮（1 阻塞 + 6 建议，逐条对应代码行）**
+
+- 修复（阻塞）：`OhosVerticalTabBar` 半屏居中的 `listHeight` 用 `num.clamp(项数×56, 容器高)`——**`clamp` 在下限 > 上限时直接抛 `ArgumentError`**，不是「两值取大」。容器比 `项数×56` 还矮时（6 项放进 320vp：336 > 320，或 LayoutBuilder 某帧 `maxHeight=0`）`build` 期间当场红屏。现有「5 项×320」（280 ≤ 320）刚好躲过。改手写上下界：先 `max(容器高/4, 项数×56)` 再与容器高取小
+- 修复：`OhosVerticalTabBar` 半屏居中栏内改用 `Expanded` 均分。早先固定 `SizedBox(height: listHeight/项数)`，孩子总高恒等于 `listHeight`，而 `SafeArea` 按状态栏/导航条把可用高度向内缩 ⇒ `RenderFlex` 溢出（溢出量 = 上下 inset 之和）。`Expanded` 分的是「扣掉安全区之后」的高度，安全区只压缩每项、不溢出；保底仍由外层 `listHeight` 负责
+- 修复：`OhosVerticalTabBar` 默认形态 `Column` 改回 `MainAxisSize.max`。早先统一写 `min`，栏体只有「项数×64」高，放在 800vp 的 `Row` 里时栏底色与右侧 1px 分割线只画到最后一项底部就断，下半屏成裸区
+- 修复：`OhosNavigationBar` 运营位出血上限改用**实际栏高** `_effectiveHeight`（经新增的 `_OhosNavItem.barHeight` 传入），不再写死 `inline ? 56 : 48`。调用方自定义 `height` 后上限跟着动（72vp 栏 ⇒ 悬浮上限 80），4vp 余量仍按官方
+- 修复：`OhosNavigationScaffold` 的 `auto` 模式**只在给了 `splitPlaceholder` 时才分栏**。官方「内容区没有 HdsNavDestination 时遵从首页设置」——没有右侧占位内容时 `child` 应铺满。早先只看宽度，`auto` 又是默认值，任何既有 `OhosNavigationScaffold(child: ...)` 在平板/横屏（≥600vp）上都会被挤进 240vp 导航栏列、右边留一大片空白（默认参数变化带来的功能回归）。`child` / `splitPlaceholder` / `OhosNavMode.auto` 的 dartdoc 一并写清
+- 修复：`OhosNavigationScaffold` 的 `_hasToolbar` 去掉 `!hideToolBar`。早先把它并进判据，`hideToolBar` 一为 true 连 `_visibility` 节点都不生成，工具栏直接从树里消失，`animated` 过渡对工具栏完全不起作用（只有标题栏能动）。隐藏与否交给 `_visibility(visible: !hideToolBar)` 承担
+- 修复：`OhosNavigationScaffold` 双栏分割线 `DecoratedBox` 加 `position: DecorationPosition.foreground`。默认 `background` 先画装饰再画 child，而标题栏/工具栏都是不透明 `cardColor` 且撑满栏宽，那条 1px 线在它们高度范围内被整个盖住，`showDivider` 默认 true 却几乎看不见
+- 测试：库 **860 → 868 条**（+8：clamp 两个边界、SafeArea inset 不溢出、默认形态栏体铺满、自定义栏高出血上限、auto 无占位单栏、hideToolBar 过渡、分割线前景），example 保持 **187 条**，两端全绿。**破坏性复验 7 处全部确认变红**（clamp 旧写法实测抛 `ArgumentError: 336.0`、固定项高+SafeArea 实测溢出 40px、Column min 实测只到 320、写死 56/48、auto 只看宽度、_hasToolbar 含 hideToolBar、去掉 foreground）。两处自指断言一并修正：「栏体铺满」改量栏内 `Column` 而非 StatelessWidget 本身（后者向上取到父级紧约束，改回 min 也照样绿）；「auto 单栏」改量标题水平中心（单栏 ≈400 / 双栏 ≈120），不量 child 的 `Expanded`（祖先查找会命中 MaterialApp 内部无关节点）
 
 > 0.6.1 之后的**评审修复轮**，对应 GitCode PR #24 的代码评审意见（1 个阻塞项 + 5 个建议项 + 3 个细节项）。主线是把「无障碍语义」与「墨水屏形体」两类此前靠巧合通过的问题补齐：`OhosPressFeedback` 统一接管按钮语义，消除嵌套 button 节点导致的离屏断言；墨屏下托不住形体的浅底一律改画 1px 实色线。**没有破坏性 API 变更**，新增的 `OhosPressFeedback.semanticLabel` / `onLongPressCancel` 都是可选参数。
 >

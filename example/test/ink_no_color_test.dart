@@ -350,9 +350,23 @@ bool _insideColorData(Element element) {
 }
 
 /// 返回问题描述；灰阶或看不见时返回 null。
+///
+/// **渐变要逐个色标看，不能一见到 `gradient != null` 就报错。** 早先这里的
+/// 判据是「有渐变 ⇒ 有彩色」，于是「两个灰阶色标的渐变」也会被抓 —— 那说明
+/// 判据本身在检查类型而不是颜色。灰阶屏上灰→灰的渐变是完全合法的（一档明度
+/// 过渡），真要拦的是「色标里还有色相」。
 String? _describeColor(BoxDecoration decoration) {
-  if (decoration.gradient != null) {
-    return 'GRADIENT ${decoration.gradient.runtimeType} 渐变不是灰阶';
+  final Gradient? gradient = decoration.gradient;
+  if (gradient != null) {
+    // 所有色标都必须过 `_describeColorValue`（它只放行 null / 全透明 / 灰阶）。
+    // 返回第一个带色相的色标，方便定位。
+    for (final Color stop in gradient.colors) {
+      final String? problem = _describeColorValue(stop);
+      if (problem != null) {
+        return 'GRADIENT ${gradient.runtimeType} 色标 $problem';
+      }
+    }
+    return null;
   }
   return _describeColorValue(decoration.color);
 }
