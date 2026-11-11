@@ -49,6 +49,7 @@ Future<void> showOhosBottomSheet({
   double? width,
   List<OhosSheetDetent>? detents,
   int initialDetent = 0,
+  EdgeInsetsGeometry? coverPadding,
 }) {
   // 没传形态就按窗口宽度取默认（官方 `preferType` 的三档规则）。
   // 这里读 `MediaQuery` 是因为 `showModalBottomSheet` 在**新路由**里建面板，
@@ -110,6 +111,7 @@ Future<void> showOhosBottomSheet({
         content: content,
         level: level,
         lightMaterial: lightMaterial,
+        coverPadding: coverPadding,
       );
   }
 }
@@ -157,11 +159,11 @@ Future<void> _showPanel({
       );
 
       // 三型的共同点：宽度与高度都不一样，所以外面套一层定位。
+      final bool centered =
+          type == OhosSheetType.center || type == OhosSheetType.popup;
       final double panelWidth =
           requestedWidth ??
-          (type == OhosSheetType.center || type == OhosSheetType.popup
-              ? OhosSheetSpec.centerDefaultWidth
-              : windowWidth);
+          (centered ? OhosSheetSpec.centerDefaultWidth : windowWidth);
 
       // 高度：detents 生效时 `height` 失效（官方原文），取首挡。
       final double? resolvedHeight = _resolvePanelHeight(
@@ -183,8 +185,18 @@ Future<void> _showPanel({
         child: panel,
       );
 
+      // CENTER / POPUP 的 480vp 是「最大宽度」而非必然值：手机竖屏窗口容不
+      // 下 480 时，还要与「窗口宽 − 两侧留白」取小，否则面板占满整屏、两侧
+      // 没有空隙（本轮缺陷）。BOTTOM 贴底、本来就占满整宽，不夹这层留白。
+      final double widthLimit = centered
+          ? windowWidth - OhosSheetSpec.centeredSideMargin * 2
+          : windowWidth;
+      final double effectiveWidth = panelWidth > widthLimit
+          ? widthLimit
+          : panelWidth;
+
       final Widget sized = SizedBox(
-        width: panelWidth > windowWidth ? windowWidth : panelWidth,
+        width: effectiveWidth,
         height: resolvedHeight,
         child: shell,
       );
@@ -263,12 +275,20 @@ Future<void> _showSide({
 }
 
 /// CONTENT_COVER：全屏、无圆角/边框/阴影/标题/关闭按钮/**蒙层**，仅侧滑关闭。
+///
+/// 官方全屏样式说明「builder 内容默认布局在安全区内」：这里用 [SafeArea] 避开
+/// 状态栏 / 导航条 / 刘海，再给内容一层 [coverPadding] 页面留白 —— 否则内容会
+/// 紧贴窗口左上角（左侧贴边、顶部压住状态栏）。需要真贴边的全屏画面（图片 /
+/// 视频）可把 `coverPadding` 显式传成 `EdgeInsets.zero`。
 Future<void> _showContentCover({
   required BuildContext context,
   required Widget content,
   required OhosLightMaterialLevel level,
   required bool lightMaterial,
+  EdgeInsetsGeometry? coverPadding,
 }) {
+  final EdgeInsetsGeometry resolvedPadding =
+      coverPadding ?? const EdgeInsets.all(16);
   return showGeneralDialog<void>(
     context: context,
     // **无蒙层**是官方的硬规格（「不支持蒙层效果」），不是省略。
@@ -283,7 +303,9 @@ Future<void> _showContentCover({
       return SizedBox.expand(
         child: Material(
           color: theme.cardColor,
-          child: SafeArea(child: content),
+          child: SafeArea(
+            child: Padding(padding: resolvedPadding, child: content),
+          ),
         ),
       );
     },

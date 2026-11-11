@@ -369,31 +369,18 @@ class ContainerPage extends StatelessWidget {
         DemoSection(
           title: '弹窗：壳交出去（customStyle: true）',
           description:
-              '官方此档「圆角为 0、背板透明」，本库不再画壳 —— 边界与底色全部由'
-              'contentWidget 自己决定。适合要贴图、要整块自定义布局的弹窗。',
+              '官方此档「圆角为 0、背板透明」，本库不再画壳。标题、正文、按钮全部'
+              '放进 contentWidget 的一整块卡片里，由它统一底色与圆角 —— 不再使用外部的 '
+              'title / actions，否则它们在透明壳上没有底色、看起来很奇怪。',
           child: DemoCard(
             child: OhosButton(
               onPressed: () => showOhosDialog<void>(
                 context: context,
-                title: '自定义外壳',
+                // 标题与按钮都归 contentWidget：这里传空、actions 留空，
+                // 组件在 customStyle 下不会再渲染没有底色的外部文字。
+                title: '',
                 customStyle: true,
-                contentWidget: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0A59F7),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    '我是 contentWidget，颜色和圆角都归我管。',
-                    style: TextStyle(color: Color(0xFFFFFFFF), fontSize: 15),
-                  ),
-                ),
-                actions: <OhosDialogAction>[
-                  OhosDialogAction(
-                    label: '好',
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+                contentWidget: const _CustomShellCard(),
               ),
               style: OhosButtonStyle.tonal,
               child: const Text('打开自定义壳弹窗'),
@@ -543,6 +530,125 @@ class _GroupFooter extends StatelessWidget {
         label,
         style: theme.typography.bodySmall?.copyWith(
           color: theme.textTertiaryColor,
+        ),
+      ),
+    );
+  }
+}
+
+/// customStyle 弹窗的完整自定义外壳：标题 / 正文 / 操作按钮都在这一整块卡片里，
+/// 组件不再画任何底色与圆角，外部也不会再出现没有底色的透明文字。
+class _CustomShellCard extends StatelessWidget {
+  const _CustomShellCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: theme.usesOutlines
+            ? Border.fromBorderSide(
+                ohosBorderSide(
+                  context,
+                  theme.dividerColor,
+                  width: theme.outlineWidth,
+                ),
+              )
+            : null,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 26, 24, 16),
+            child: Column(
+              children: <Widget>[
+                Text(
+                  '自定义外壳',
+                  textAlign: TextAlign.center,
+                  style:
+                      (theme.typography.titleMedium ??
+                              const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ))
+                          .copyWith(color: theme.textPrimaryColor),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '我是 contentWidget，标题、正文、按钮都在这一整块卡片里，'
+                  '颜色和圆角都归我管，外部不再有透明的文字。',
+                  textAlign: TextAlign.center,
+                  style:
+                      (theme.typography.bodyMedium ??
+                              const TextStyle(fontSize: 15))
+                          .copyWith(color: theme.textSecondaryColor),
+                ),
+              ],
+            ),
+          ),
+          const OhosDivider(indent: 0, endIndent: 0),
+          SizedBox(
+            height: 52,
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: _ShellAction(
+                    label: '取消',
+                    color: theme.textSecondaryColor,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: double.infinity,
+                  color: theme.dividerColor,
+                ),
+                Expanded(
+                  child: _ShellAction(
+                    label: '确定',
+                    color: theme.highlightColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      showOhosToast(context, '已确认');
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 自定义卡片底部的操作按钮（无 Material 底板，靠按压反馈表达可点）。
+class _ShellAction extends StatelessWidget {
+  const _ShellAction({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return OhosPressFeedback(
+      onTap: onTap,
+      child: Center(
+        child: Text(
+          label,
+          style: (theme.typography.labelLarge ?? const TextStyle(fontSize: 16))
+              .copyWith(color: color, fontWeight: FontWeight.w600),
         ),
       ),
     );
