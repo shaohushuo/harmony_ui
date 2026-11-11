@@ -94,6 +94,19 @@ abstract final class OhosSheetSpec {
   /// CENTER 的默认宽度。**官方**：480vp（资源表 `sheet_center_default_width = 480.0vp`）。
   static const double centerDefaultWidth = 480;
 
+  /// CENTER / POPUP 在窄屏（手机竖屏）上与窗口左右边缘的最小间距。
+  ///
+  /// **自拟**：资源表与文档都没有半模态专用的容器边距（只有对话框的
+  /// `dialog_container_margin` = 16vp）。这里取同样的 16vp，与对话框、
+  /// 页面常规留白保持一致。
+  ///
+  /// 为什么必须有它：[centerDefaultWidth] = 480 是**最大宽度**，不是必然
+  /// 宽度。手机竖屏窗口（360–430vp）容不下 480，若直接把宽度夹到窗口宽，
+  /// 面板会占满整屏、两侧没有空隙，圆角切在屏幕边缘、看起来不像悬浮面板。
+  /// 还要再与「窗口宽 − 两侧留白」取小 —— 与 `OhosDialogMetrics.sideMargin`
+  /// 是同一类「绝对上限 ≠ 必然值」的约束。
+  static const double centeredSideMargin = 16;
+
   /// SIDE 在「大于 md 断点」时的固定宽度。**官方**：400vp（文档原文）。
   static const double sideWideWidth = 400;
 

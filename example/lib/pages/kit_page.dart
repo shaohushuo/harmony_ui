@@ -28,7 +28,8 @@ class KitPage extends StatelessWidget {
         ),
         DemoSection(
           title: '侧边栏 OhosSideBar + OhosSideMenu',
-          description: 'overlay 模式侧边栏 + 一二级菜单与红点提醒。',
+          description:
+              '直角面板、无 Material 圆角/阴影；可切换 Overlay 浮层与 Embed 并排，含一二级菜单与红点提醒。',
           child: _SideBarDemo(),
         ),
         DemoSection(
@@ -339,6 +340,8 @@ class _SideBarDemo extends StatefulWidget {
 
 class _SideBarDemoState extends State<_SideBarDemo> {
   bool _showSideBar = true;
+  // 官方两种 SideBarContainerType：Overlay 浮层 / Embed 并排。
+  bool _overlay = true;
   String? _selected = '收件箱';
 
   static const List<OhosSideMenuItem> _items = <OhosSideMenuItem>[
@@ -372,11 +375,26 @@ class _SideBarDemoState extends State<_SideBarDemo> {
               ),
             ),
             OhosButton(
+              onPressed: () => setState(() => _overlay = !_overlay),
+              style: OhosButtonStyle.tonal,
+              child: Text(_overlay ? '模式：Overlay' : '模式：Embed'),
+            ),
+            const SizedBox(width: 8),
+            OhosButton(
               onPressed: () => setState(() => _showSideBar = !_showSideBar),
               style: OhosButtonStyle.tonal,
-              child: Text(_showSideBar ? '收起侧边栏' : '展开侧边栏'),
+              child: Text(_showSideBar ? '收起' : '展开'),
             ),
           ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _overlay
+              ? 'Overlay：面板浮在内容上，不推挤内容区。'
+              : 'Embed：面板与内容并排，展开时推挤内容区，右侧 1px 分割线。',
+          style: theme.typography.bodySmall?.copyWith(
+            color: theme.textTertiaryColor,
+          ),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -385,7 +403,8 @@ class _SideBarDemoState extends State<_SideBarDemo> {
             isShowSideBar: _showSideBar,
             onIsShowSideBarChanged: (bool v) =>
                 setState(() => _showSideBar = v),
-            overlay: true,
+            overlay: _overlay,
+            // Embed 模式没有遮罩；Overlay 下也先关掉，让两种模式对比更清楚。
             contentAreaMask: false,
             width: 230,
             sideBar: OhosSideMenu(

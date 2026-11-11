@@ -393,23 +393,29 @@ class _OhosAlertDialogState extends State<OhosAlertDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(
-              widget.title,
-              textAlign: TextAlign.center,
-              style:
-                  (theme.typography.titleMedium ??
-                          const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                          ))
-                      .copyWith(color: theme.textPrimaryColor),
-            ),
+            // customStyle 把壳交出去时，标题可能由 contentWidget 自己画：
+            // 传空字符串就不再渲染这行，避免在透明壳上留下一个没有底色的标题。
+            if (widget.title.isNotEmpty)
+              Text(
+                widget.title,
+                textAlign: TextAlign.center,
+                style:
+                    (theme.typography.titleMedium ??
+                            const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                            ))
+                        .copyWith(color: theme.textPrimaryColor),
+              ),
             if (widget.contentWidget != null)
               // 表单 / 列表可能比弹窗剩余空间高（320vp 窄屏 + 1.3x 字号下几个
-              // 输入框就够）：Flexible + 滚动，宁可滚也不纵向溢出。
+              // 输入框就够）：Flexible + 滚动，宁可滚也不纵向溢出。标题为空时
+              // （customStyle 整块接管）不再凭空加顶部间距。
               Flexible(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(
+                    top: widget.title.isNotEmpty ? 12 : 0,
+                  ),
                   child: SingleChildScrollView(child: widget.contentWidget!),
                 ),
               )
@@ -429,7 +435,8 @@ class _OhosAlertDialogState extends State<OhosAlertDialog> {
                   ),
                 ),
               ),
-            const SizedBox(height: 20),
+            // 操作按钮整块交出去（actions 为空）时，不再留按钮前的 20vp 空白。
+            if (widget.actions.isNotEmpty) const SizedBox(height: 20),
             for (int i = 0; i < widget.actions.length; i++) ...<Widget>[
               if (i > 0) const SizedBox(height: 4),
               _OhosDialogActionButton(action: widget.actions[i]),

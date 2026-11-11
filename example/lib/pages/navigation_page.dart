@@ -99,6 +99,21 @@ class NavigationPage extends StatelessWidget {
           child: _MiniBarDemo(),
         ),
         const DemoSection(
+          title: '纵向页签 OhosVerticalTabBar（侧边导航 + 出血图标）',
+          description:
+              '平板/横屏把页签栏挪到左侧纵向排列（vertical，栏宽 96vp）。带文字的是标准「图标+文字」项；'
+              '文字留空的项渲染成 48x48 圆形出血图标（bleedIconStyle）。可切换半屏居中（HALF_SCREEN_FIXED）：'
+              '栏整体垂直居中、总高为容器的 1/4，各页签在其中均分。',
+          child: _VerticalTabBarDemo(),
+        ),
+        const DemoSection(
+          title: '组件导航 OhosNavigationScaffold（HdsNavigation）',
+          description:
+              'HdsNavigation 根容器的视觉外壳：标题栏（MINI 56vp / FULL 大标题 112/138vp）+ 内容区 + '
+              '底部工具栏；路由仍由 Flutter Navigator 承担。可切换大标题、动态模糊背景板与工具栏。',
+          child: _NavigationScaffoldDemo(),
+        ),
+        const DemoSection(
           title: '导航点 OhosPageIndicator',
           description: '配合轮播 OhosSwiper 使用，支持自动播放。',
           child: _SwiperDemo(),
@@ -924,6 +939,215 @@ class _SwiperDemo extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 纵向页签：侧边导航 + 出血图标 + 半屏居中
+// ---------------------------------------------------------------------------
+
+class _VerticalTabBarDemo extends StatefulWidget {
+  const _VerticalTabBarDemo();
+
+  @override
+  State<_VerticalTabBarDemo> createState() => _VerticalTabBarDemoState();
+}
+
+class _VerticalTabBarDemoState extends State<_VerticalTabBarDemo> {
+  static const List<OhosVerticalTabItem> _items = <OhosVerticalTabItem>[
+    OhosVerticalTabItem(icon: Icon(Icons.home_outlined), label: '首页'),
+    OhosVerticalTabItem(icon: Icon(Icons.explore_outlined), label: '发现'),
+    OhosVerticalTabItem(
+      icon: Icon(Icons.notifications_none_rounded),
+      label: '消息',
+      badge: CircleAvatar(radius: 4, backgroundColor: Color(0xFFE84026)),
+    ),
+    // 无 label：出血图标项（48x48 圆形纯图标），模拟运营位。
+    OhosVerticalTabItem(
+      icon: Icon(Icons.add_circle_outline_rounded, size: 28),
+      activeIcon: Icon(Icons.add_circle_rounded, size: 28),
+    ),
+    OhosVerticalTabItem(icon: Icon(Icons.person_outline_rounded), label: '我的'),
+  ];
+
+  int _selected = 0;
+  bool _halfScreen = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SizedBox(
+          height: 320,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: <Widget>[
+                OhosVerticalTabBar(
+                  items: _items,
+                  selectedIndex: _selected,
+                  onSelected: (int i) => setState(() => _selected = i),
+                  halfScreenFixed: _halfScreen,
+                ),
+                Expanded(
+                  child: ColoredBox(
+                    color: theme.backgroundColor,
+                    child: Center(
+                      child: Text(
+                        '内容区\n当前选中：${_items[_selected].label ?? '出血运营位'}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: theme.textSecondaryColor),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: <Widget>[
+            OhosChip(
+              label: const Text('半屏居中 HALF_SCREEN_FIXED'),
+              selected: _halfScreen,
+              onPressed: () => setState(() => _halfScreen = !_halfScreen),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 组件导航：HdsNavigation 视觉外壳（标题栏 + 内容 + 工具栏）
+// ---------------------------------------------------------------------------
+
+class _NavigationScaffoldDemo extends StatefulWidget {
+  const _NavigationScaffoldDemo();
+
+  @override
+  State<_NavigationScaffoldDemo> createState() =>
+      _NavigationScaffoldDemoState();
+}
+
+class _NavigationScaffoldDemoState extends State<_NavigationScaffoldDemo> {
+  bool _full = false;
+  bool _blur = false;
+  bool _toolbar = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SizedBox(
+          height: 440,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: OhosNavigationScaffold(
+                title: _full ? '大标题' : '设置',
+                subtitle: _full ? '副标题 / 页面说明文字' : null,
+                titleMode: _full
+                    ? OhosNavTitleMode.full
+                    : OhosNavTitleMode.mini,
+                blurredBackground: _blur,
+                automaticallyImplyLeading: false,
+                actions: <Widget>[
+                  _barIcon(theme, Icons.search_rounded),
+                  _barIcon(theme, Icons.more_vert_rounded),
+                ],
+                toolbarItems: _toolbar
+                    ? <OhosNavToolbarItem>[
+                        OhosNavToolbarItem(
+                          icon: const Icon(Icons.edit_outlined),
+                          label: '编辑',
+                          onTap: () {},
+                        ),
+                        OhosNavToolbarItem(
+                          icon: const Icon(Icons.share_outlined),
+                          label: '分享',
+                          onTap: () {},
+                        ),
+                        OhosNavToolbarItem(
+                          icon: const Icon(Icons.favorite_border),
+                          label: '收藏',
+                          onTap: () {},
+                        ),
+                        OhosNavToolbarItem(
+                          icon: const Icon(Icons.delete_outline),
+                          label: '删除',
+                          onTap: () {},
+                        ),
+                      ]
+                    : null,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: <Widget>[
+                    Text(
+                      '内容区（HdsNavigation 的 child）',
+                      style: theme.typography.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'HdsNavigation 是路由根容器，内部默认包含标题栏、内容区与工具栏。'
+                      '这里的路由栈仍由 Flutter Navigator 承担，本组件提供与官方一致的'
+                      '布局骨架与动态模糊背景板。',
+                      style: theme.typography.bodyMedium?.copyWith(
+                        color: theme.textSecondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: <Widget>[
+            OhosChip(
+              label: const Text('大标题 FULL'),
+              selected: _full,
+              onPressed: () => setState(() => _full = !_full),
+            ),
+            OhosChip(
+              label: const Text('动态模糊背景板'),
+              selected: _blur,
+              onPressed: () => setState(() => _blur = !_blur),
+            ),
+            OhosChip(
+              label: const Text('底部工具栏'),
+              selected: _toolbar,
+              onPressed: () => setState(() => _toolbar = !_toolbar),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 标题栏右侧的圆形图标按钮（无 Material 水波纹）。
+  Widget _barIcon(OhosThemeData theme, IconData icon) {
+    return OhosPressFeedback(
+      onTap: () {},
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Icon(icon, size: 22, color: theme.textPrimaryColor),
+      ),
     );
   }
 }
