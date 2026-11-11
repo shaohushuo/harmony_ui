@@ -168,6 +168,14 @@ class OhosSlideRange {
 class _OhosSliderState extends State<OhosSlider> {
   double? _dragValue;
 
+  /// 刻度点的叠色不透明度：官方 `stepColor` 的默认值来自
+  /// `sys.color.ohos_id_alpha_normal_bg`，资源表里就是 **0.1**。
+  ///
+  /// 这个数不能凭观感调大：0.1 叠出来的对比度是「轨道 229 → 刻度 205」
+  /// （Δ24），与官方配图 `slider_10.png` 逐像素一致；调到 0.2 就变成 191，
+  /// 刻度点会比官方明显一档，看起来像「一串珠子」。
+  static const double _tickAlpha = 0.1;
+
   double get _display => _dragValue ?? widget.value;
 
   String get _bubble =>
@@ -220,12 +228,28 @@ class _OhosSliderState extends State<OhosSlider> {
     final double effectiveMin = range?.$1 ?? widget.min;
     final double effectiveMax = range?.$2 ?? widget.max;
 
-    // 刻度点要画在轨道上，所以轨道颜色与它同色时才需要一档反差 —— 直接
-    // 用 `theme.popupColor`（与背景一致的那一层）：未走过的轨道是浅色，
-    // 点取背景色是最省事又最稳的分界。
-    final Color tickColor = widget.style == OhosSliderStyle.inset
-        ? theme.cardColor
-        : theme.popupColor;
+    // 刻度点的颜色官方给了明确的默认值，不是「取背景色」：
+    //
+    // > 刻度颜色。默认值：混入 `sys.color.ohos_id_alpha_normal_bg` 透明度的
+    // > `sys.color.ohos_id_color_foreground` 颜色。
+    //
+    // 即**前景色以 10% 不透明度叠在轨道上**（`ohos_id_alpha_normal_bg` =
+    // 0.1），结果比轨道深一档，而不是比它浅。实测官方配图
+    // `slider_10.png`（2880×1440，轨道 `rgb(229,229,229)`）的刻度点正是
+    // `rgb(205,205,205)`：`229 × 0.9 + 0 × 0.1 = 206.1` —— 与「前景色 10%
+    // 压在轨道上」逐位吻合。
+    //
+    // 早前这里取 `theme.popupColor`（页面底色，白），等于把点画成比轨道
+    // **更亮**的白点，方向正好相反：用户看到的是「轨道上戳了一排亮孔」，
+    // 而官方是「轨道里嵌了一排暗点」。用 `alpha: 0.1` 的 textPrimaryColor
+    // 叠上去，深浅方向与官方一致；墨屏上 10% 叠不出来（16 级灰分不开），
+    // 策略会把这一档换成实线描边色，仍保持「比轨道深」的方向。
+    final Color tickColor =
+        theme.policy.tint(theme.textPrimaryColor, _tickAlpha) ==
+            Colors.transparent
+        // 墨屏：10% 的叠色在灰阶上等于没画，改取比轨道深一档的实色。
+        ? theme.textTertiaryColor
+        : theme.textPrimaryColor.withValues(alpha: _tickAlpha);
 
     final Widget slider = SliderTheme(
       data: SliderTheme.of(context).copyWith(
@@ -272,7 +296,7 @@ class _OhosSliderState extends State<OhosSlider> {
               ),
         overlayShape: RoundSliderOverlayShape(overlayRadius: _hotRegion / 2),
         tickMarkShape: _effectiveStepSize > 0 && widget.showSteps
-            ? _OhosTickMarkShape(diameter: _effectiveStepSize, color: tickColor)
+            ? OhosTickMarkShape(diameter: _effectiveStepSize, color: tickColor)
             : SliderTickMarkShape.noTickMark,
         // Material 自己还会画一个 value indicator（`divisions` + `label`
         // 时默认 onlyForDiscrete）：灰阶屏下它是白底、没有描边，贴在白页面
@@ -307,64 +331,97 @@ class _OhosSliderState extends State<OhosSlider> {
       ),
     );
 
-    final Widget column = Column(
-      mainAxisSize: MainAxisSize.min,
+    final Widget bubble = Container(
+      key: const ValueKey<String>('bubble'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.popupColor,
+        borderRadius: BorderRadius.circular(16),
+        // 墨屏：气泡与页面同为纯白，用实线代替看不见的浅阴影。
+        border: theme.usesOutlines
+            ? Border.all(
+                color: theme.dividerColor,
+                width: ohosStrokeWidth(context, theme.outlineWidth),
+              )
+            : null,
+        boxShadow: policy.allowsShadow
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Text(
+        _bubble,
+        style: theme.typography.labelMedium?.copyWith(
+          color: theme.textPrimaryColor,
+        ),
+      ),
+    );
+
+    // 前缀 / 后缀贴轨道两端，与轨道同高居中。给 `SizedBox` 而不是让
+    // 它们各自撑高：不固定高度时，一个大字号后缀会把整条滑条顶高。
+    final Widget row = Row(
       children: <Widget>[
-        if (showBubble)
-          Container(
-            key: const ValueKey<String>('bubble'),
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: theme.popupColor,
-              borderRadius: BorderRadius.circular(16),
-              // 墨屏：气泡与页面同为纯白，用实线代替看不见的浅阴影。
-              border: theme.usesOutlines
-                  ? Border.all(
-                      color: theme.dividerColor,
-                      width: ohosStrokeWidth(context, theme.outlineWidth),
-                    )
-                  : null,
-              boxShadow: policy.allowsShadow
-                  ? <BoxShadow>[
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Text(
-              _bubble,
-              style: theme.typography.labelMedium?.copyWith(
-                color: theme.textPrimaryColor,
-              ),
+        if (widget.prefix != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: SizedBox(
+              height: _hotRegion,
+              child: Center(child: widget.prefix),
             ),
           ),
-        // 前缀 / 后缀贴轨道两端，与轨道同高居中。给 `SizedBox` 而不是让
-        // 它们各自撑高：不固定高度时，一个大字号后缀会把整条滑条顶高。
-        Row(
-          children: <Widget>[
-            if (widget.prefix != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: SizedBox(
-                  height: _hotRegion,
-                  child: Center(child: widget.prefix),
-                ),
-              ),
-            Expanded(child: slider),
-            if (widget.suffix != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: SizedBox(
-                  height: _hotRegion,
-                  child: Center(child: widget.suffix),
-                ),
-              ),
-          ],
-        ),
+        Expanded(child: slider),
+        if (widget.suffix != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: SizedBox(
+              height: _hotRegion,
+              child: Center(child: widget.suffix),
+            ),
+          ),
+      ],
+    );
+
+    // **气泡不参与布局高度。** 官方原文：「气泡提示的绘制区域为 Slider 自身
+    // 节点的 overlay」—— 它浮在滑条之上，不撑高、不挤占兄弟节点。
+    //
+    // 早前把气泡当成 `Column` 的第一项，`showValueBubble` + `divisions`
+    // 一给，拖动时气泡出现 → 整条滑条连同页面下方所有内容被推下去 6 + 气泡
+    // 高，松手又弹回来。用户报的正是这条：「滑动时界面往下掉，应该固定不动」。
+    //
+    // 用 `Stack` 把气泡叠在轨道**行**上，行的高度由 `row` 自己决定（
+    // `Slider` 的固有高 = 命中区 40 / 32），气泡只是多画一层、不参与测量。
+    //
+    // `Stack` 默认按子节点最大者撑高：`row` 有确定高度，`Positioned` 的子节点
+    // 不参与测量，所以整体高度仍是 `row` 的高度 —— 拖动过程中恒定。
+    // `clipBehavior: Clip.none` 允许气泡画到 `Stack` 边界之外（往上溢出）。
+    //
+    // 气泡**水平跟着滑块**走（官方「蓝色条和气泡都会跟手运动」），用
+    // `Alignment` 按 `_display` 在有效区间内的比例定位，与 `Slider` 同一套
+    // 归一化。
+    final Widget stack = Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        // `Stack` 在**松散**约束下会被撑到父级允许的最大尺寸（实测
+        // `Center` 里直接给 600 高），必须先钉住这一行的高度。`row` 自己
+        // 是「命中区高」的 `Row`，`SizedBox` 只复述这个高度、不改变它。
+        SizedBox(height: _hotRegion, width: double.infinity, child: row),
+        if (showBubble)
+          Positioned(
+            // 气泡底边距轨道中线 = 轨道半高 + 间距；`bottom` 相对 `Stack`
+            // 底边，`Stack` 高 = `_hotRegion`，故减掉半个命中区。
+            bottom: _hotRegion / 2 + _trackThickness / 2 + 6,
+            left: 0,
+            right: 0,
+            child: Align(
+              alignment: Alignment(_bubbleAlignment * 2 - 1, 0),
+              child: bubble,
+            ),
+          ),
       ],
     );
 
@@ -373,9 +430,26 @@ class _OhosSliderState extends State<OhosSlider> {
     return widget.style == OhosSliderStyle.none
         ? ConstrainedBox(
             constraints: BoxConstraints(minHeight: _hotRegion),
-            child: Center(child: column),
+            child: Center(child: stack),
           )
-        : column;
+        : stack;
+  }
+
+  /// 气泡（与滑块）在轨道上的相对位置，0 = 最左、1 = 最右。
+  ///
+  /// 用 `value` 在本条滑条的**有效区间**内归一化，与 `Slider` 的滑块位置
+  /// 同一套算法；区间退化（min == max）时贴左，避免除零。
+  double get _bubbleAlignment {
+    final (double, double)? range = widget.slideRange?.resolve(
+      widget.min,
+      widget.max,
+    );
+    final double lo = range?.$1 ?? widget.min;
+    final double hi = range?.$2 ?? widget.max;
+    if (hi <= lo) {
+      return 0;
+    }
+    return ((_display.clamp(lo, hi) - lo) / (hi - lo)).clamp(0.0, 1.0);
   }
 }
 
@@ -412,8 +486,11 @@ class _NoThumbShape extends SliderComponentShape {
 ///
 /// 颜色不用 Material 的 active / inactive 两档：官方刻度点只有一种颜色，
 /// 已走过与未走过都画同一个，靠轨道自身的明度变化区分区间。
-class _OhosTickMarkShape extends SliderTickMarkShape {
-  const _OhosTickMarkShape({required this.diameter, required this.color});
+///
+/// 公开（而非 `_` 私有）是因为测试要断言它的 `color`：刻度点的颜色方向
+/// （比轨道深还是浅）是用户直接能看出来的观感问题，只能靠读字段验。
+class OhosTickMarkShape extends SliderTickMarkShape {
+  const OhosTickMarkShape({required this.diameter, required this.color});
 
   final double diameter;
   final Color color;

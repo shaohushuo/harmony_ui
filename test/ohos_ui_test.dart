@@ -2106,6 +2106,129 @@ void main() {
       }
     });
 
+    testWidgets('气泡不参与布局：拖动时轨道不下移、高度不变', (WidgetTester tester) async {
+      // 用户报的 bug：「滑动时界面往下掉，应该固定不动」。
+      //
+      // 根因是气泡被当成 `Column` 的第一项 —— 一拖动 `_dragValue` 从 null
+      // 变成有值、`showBubble` 转真，气泡插进树里，整条滑条连同页面下方所有
+      // 内容被推下去「6 + 气泡高」，松手再弹回来。实测旧实现下移 17vp。
+      //
+      // 官方原文：「气泡提示的绘制区域为 Slider 自身节点的 overlay」——
+      // 它浮在滑条之上，不撑高、不挤占兄弟节点。
+      for (final OhosSliderStyle style in OhosSliderStyle.values) {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: OhosThemeData.light(),
+            child: MaterialApp(
+              home: OhosScaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 320,
+                    child: OhosSlider(
+                      value: 30,
+                      onChanged: _noopDouble,
+                      style: style,
+                      divisions: 20,
+                      showSteps: true,
+                      showValueBubble: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final double height = tester.getSize(find.byType(Slider)).height;
+        final Offset top = tester.getTopLeft(find.byType(Slider));
+
+        final TestGesture gesture = await tester.startGesture(
+          tester.getCenter(find.byType(Slider)),
+        );
+        await gesture.moveBy(const Offset(24, 0));
+        await tester.pump();
+
+        // 气泡确实出现了（否则这条测试会因为「根本没画气泡」而假绿）。
+        expect(
+          find.byKey(const ValueKey<String>('bubble')),
+          findsOneWidget,
+          reason: '$style 拖动时应显示气泡',
+        );
+        expect(
+          tester.getTopLeft(find.byType(Slider)).dy,
+          top.dy,
+          reason: '$style 气泡出现不能把轨道往下推',
+        );
+        expect(
+          tester.getSize(find.byType(Slider)).height,
+          height,
+          reason: '$style 气泡出现不能改变控件高度',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(find.byType(Slider)).height,
+          height,
+          reason: '$style 松手后高度也不变',
+        );
+      }
+    });
+
+    testWidgets('刻度点比轨道深一档（官方 stepColor 默认值）', (WidgetTester tester) async {
+      // 官方 `stepColor`：「默认值：混入 sys.color.ohos_id_alpha_normal_bg
+      // 透明度的 sys.color.ohos_id_color_foreground 颜色」。前者在
+      // `float.json` 里是 **0.1**。
+      //
+      // 逐像素证据：官方配图 `slider_10.png`（2880×1440）轨道是
+      // `rgb(229,229,229)`、刻度点是 `rgb(205,205,205)` ——
+      // `229 × 0.9 + 0 × 0.1 = 206.1`，与「前景色 10% 压在轨道上」吻合。
+      //
+      // 早前取 `theme.popupColor`（页面底色白）画刻度点，方向正好反了：
+      // 白点比浅灰轨道更亮，看起来是「轨道上戳了一排亮孔」。
+      final OhosThemeData light = OhosThemeData.light();
+      await tester.pumpWidget(
+        OhosTheme(
+          data: light,
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: OhosSlider(
+                    value: 30,
+                    onChanged: _noopDouble,
+                    divisions: 4,
+                    showSteps: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final SliderThemeData data = SliderTheme.of(
+        tester.element(find.byType(Slider)),
+      );
+      final Color tick = (data.tickMarkShape! as OhosTickMarkShape).color;
+      // 刻度色必须带透明度（叠色），且基色是前景色而不是背景色。
+      expect(tick.a, closeTo(0.1, 0.001), reason: '叠色不透明度取 0.1');
+      expect(
+        tick.r,
+        closeTo(light.textPrimaryColor.r, 0.001),
+        reason: '叠的是前景色，不是页面背景色',
+      );
+      // 方向判据：叠出来的结果必须比未走过轨道深（值更小），不能更浅。
+      final Color inactive = data.inactiveTrackColor!;
+      Color composite(Color over, Color under) => Color.alphaBlend(over, under);
+      expect(
+        composite(tick, inactive).r,
+        lessThan(inactive.r),
+        reason: '刻度点应比轨道深一档，不是更亮',
+      );
+    });
+
     Widget rangeFrame(OhosSlideRange? range, double value) {
       return OhosTheme(
         data: OhosThemeData.light(),
@@ -5814,7 +5937,7 @@ void main() {
     });
 
     group('内联模式', () {
-      testWidgets('圆角 4、左右边距不对称 2 / 12、上下为 0', (WidgetTester tester) async {
+      testWidgets('圆角 4、左右边距不对称 2 / 12、上下各 2', (WidgetTester tester) async {
         await tester.pumpWidget(
           wrap(
             const OhosTextField(
@@ -5829,13 +5952,22 @@ void main() {
         expect(
           d.contentPadding,
           const EdgeInsets.only(
-            left: OhosTextFieldMetrics.inlinePaddingLeft,
+            left: OhosTextFieldMetrics.inlineContentPaddingLeft,
             right: OhosTextFieldMetrics.inlinePaddingRight,
+            top: OhosTextFieldMetrics.inlinePaddingVertical,
+            bottom: OhosTextFieldMetrics.inlinePaddingVertical,
           ),
         );
-        // 左 2 右 12 —— 不对称是官方值（textfield_inline_padding_left/right）
+        // 右 12 是官方 `textfield_inline_padding_right`；左 2 是官方
+        // `textfield_inline_padding_left`，但**不能直接当 contentPadding** ——
+        // `InputDecorator` 自带 4vp 基线内缩（实测 contentPadding.left 与
+        // 文字左偏移是 1:1 相加），再叠那 2 会得到 6vp，比官方配图的 4.5vp
+        // 明显偏大。所以传 0，由基线承担。
         expect(OhosTextFieldMetrics.inlinePaddingLeft, 2);
+        expect(OhosTextFieldMetrics.inlineContentPaddingLeft, 0);
         expect(OhosTextFieldMetrics.inlinePaddingRight, 12);
+        // 上下不再是 0 —— 0 就是用户看到的「字贴边框」。
+        expect(OhosTextFieldMetrics.inlinePaddingVertical, 2);
 
         final OutlineInputBorder b = d.enabledBorder! as OutlineInputBorder;
         expect(
@@ -5858,8 +5990,55 @@ void main() {
             .widget<TextField>(find.byType(TextField))
             .decoration!;
         final OutlineInputBorder b = d.enabledBorder! as OutlineInputBorder;
-        // 线宽 1，不是 filled 的 0 —— 它就是「一行可点的文本」，靠线才看得出来
-        expect(b.borderSide.width, 1);
+        // 官方 `INLINE_BORDER_WIDTH = 2.0_vp`，比填充形态那套 1vp hairline
+        // 粗一档 —— 内联只有这一圈线能定边界。配图 `textinput_16.png`
+        // 实测描边 8px ÷ DPR 4 = 2vp，与源码常量两处独立吻合。
+        expect(b.borderSide.width, OhosTextFieldMetrics.inlineBorderWidth);
+      });
+
+      testWidgets('内联形态文字不贴边框（上下有留白、左侧有内缩）', (WidgetTester tester) async {
+        // 用户报的 bug：「内联模式，输入框里面没有间距，里面的字直接接触到
+        // 边框了」。
+        //
+        // 根因：内联的 `contentPadding` 当时是 `(2, 0, 12, 0)` —— 上下为 0，
+        // 理由是「它就是一行文字，上下留白由所在行高提供」。这个前提不成立：
+        // `OhosTextField` 自己就是那个容器。实测框高只有 24vp、字形 12vp
+        // 顶满，上下间隙里还压着边框。
+        //
+        // 官方配图 `textinput_16.png`（DPR 4）内联框外高 26vp、内容高 22vp，
+        // 文字上下各留 2–3vp。
+        await tester.pumpWidget(
+          wrap(
+            const OhosTextField(
+              initialValue: '重命名',
+              variant: OhosTextFieldVariant.inline,
+            ),
+          ),
+        );
+
+        final TextField field = tester.widget<TextField>(
+          find.byType(TextField),
+        );
+        final EdgeInsets padding =
+            field.decoration!.contentPadding! as EdgeInsets;
+        expect(
+          padding.top,
+          OhosTextFieldMetrics.inlinePaddingVertical,
+          reason: '上下必须有留白，不能是 0',
+        );
+        expect(padding.bottom, OhosTextFieldMetrics.inlinePaddingVertical);
+        expect(padding.top, greaterThan(0), reason: '0 就是「字顶到边框」的原始 bug');
+        // 左内缩交给 `InputDecorator` 的 4vp 基线，这里传 0；右 12 是官方
+        // `textfield_inline_padding_right`。
+        expect(padding.right, OhosTextFieldMetrics.inlinePaddingRight);
+
+        // 端到端：框高必须容得下「字形 + 2×垂直留白 + 2×边框」，不能是
+        // 原来的 24（= 内容高 24、留白 0）。
+        final double height = tester.getSize(find.byType(TextField)).height;
+        expect(height, greaterThan(24), reason: '修复前框高恒为 24（上下留白为 0），字会贴边');
+        // 8（上下留白）+ 24（内容高）− 24 被 `isDense` 压掉的部分 …
+        // 直接对齐推导值：内容 24 + 2×2 留白 = 28。
+        expect(height, 28);
       });
 
       testWidgets('内联 + 密码：回落成 underline，不画「内联密码框」', (
@@ -6482,6 +6661,75 @@ void main() {
       expect(paints, isNotEmpty, reason: 'OhosPatternLock 里没有找到自绘 painter');
       return paints.first.painter!;
     }
+
+    testWidgets('可滚动页面里按下即选中，不等 kTouchSlop', (WidgetTester tester) async {
+      // 用户报的 bug：「圆圈很不容易点击，经常点不到」。
+      //
+      // 根因不是命中半径，而是**监听类型**：早前挂的是
+      // `GestureDetector.onPanStart`，它在真实页面里要和外层滚动容器的
+      // 垂直拖拽抢手势裁决（arena）。手指按下后只要没越过 `kTouchSlop`
+      // （18vp），arena 还没裁决，`onPanStart` 就没回调 —— 手指抖 3vp
+      // 这种最自然的点按全程都收不到事件。
+      //
+      // 本用例故意把图案锁放进 `ListView`（页面常见形态），按下后只抖
+      // 3vp。官方语义是「手指在 PatternLock 组件区域**按下**时开始进入
+      // 输入状态」，所以按下这一刻就该有 `[0]`。
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              children: <Widget>[
+                const SizedBox(height: 40),
+                Center(child: OhosPatternLock(onCompleted: _noopPattern)),
+                const SizedBox(height: 800),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+      final Offset at = origin + const Offset(72, 72);
+      final TestGesture gesture = await tester.startGesture(at);
+      await tester.pump();
+
+      final dynamic held = painterOf(tester);
+      expect(held.pattern, <int>[
+        0,
+      ], reason: '按下那一刻就应命中第 0 个点（不该等 18vp 滑动手势裁决）');
+
+      // 真机点按时手一定会抖几个 vp，这种抖动不能把选中弄丢。
+      await gesture.moveTo(at + const Offset(3, 3));
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, <int>[0]);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('命中半径 48vp 直径，且不与邻点重叠', (WidgetTester tester) async {
+      // 圆点视觉半径只有 6（直径 12）—— 拿它当命中区等于要求指尖精确压在
+      // 12vp 的圆上。取最小可点尺寸 48vp 直径，同时严格小于相邻两点间距的
+      // 一半，保证「随手一划串成一串」不会回来（那是上一轮的修复）。
+      const double size = 288;
+      const double step = size / 4; // 72
+      const double hit = 48 / 2; // 24
+      expect(hit, lessThan(step / 2), reason: '命中半径必须小于半格距，否则相邻两点命中区重叠');
+      expect(hit, greaterThan(6 * 1.5), reason: '必须比原来的 9vp 明显大');
+
+      // 端到端：在距圆点 20vp 处按下（旧实现 9vp 命中不到），应命中。
+      await tester.pumpWidget(wrap(OhosPatternLock(onCompleted: _noopPattern)));
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+      final TestGesture gesture = await tester.startGesture(
+        origin + const Offset(72 + 20, 72),
+      );
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, <int>[
+        0,
+      ], reason: '距圆点 20vp 仍应在命中区内');
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
 
     /// 从第 0 个圆点拖到 [target]（控件本地坐标）。
     ///

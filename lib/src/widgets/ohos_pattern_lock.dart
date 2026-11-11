@@ -135,13 +135,23 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
     return Offset(c.dx * _step, c.dy * _step);
   }
 
-  /// 命中半径**不是**格距的一大半。
+  /// 命中半径。**这不是圆点自身的半径，而是一个 48vp 的最小可点尺寸。**
   ///
-  /// 早先是 `_step * 0.75`（288 的格子里是 54vp 半径）—— 相邻两点的命中区
-  /// 大面积重叠，手指在两个点之间任意一处都算「碰到」，于是随手一划就把
-  /// 整个九宫格串成一串。官方的语义是「手指经过圆点」，判据因此取圆点自身
-  /// 的范围再加上一点点宽容度（半个圆点半径），而不是到下一个点的一半路。
-  double get _hitRadius => _circleRadius * 1.5;
+  /// 官方没有给命中区数值，但语义是「手指经过圆点」—— 圆点视觉半径只有
+  /// 6（直径 12），拿它当命中区等于要求用户把指尖精确压在 12vp 的圆上，
+  /// 实测「圆圈很不容易点击，经常点不到」就是这么来的。
+  ///
+  /// 取 48vp 直径（[OhosGeometry] 里所有可点元素共用的一档：`iconHotZone`
+  /// 40、`minTouchTarget` 48），同时**严格小于相邻两点间距的一半**，
+  /// 保证两个点的命中区永不重叠 —— 这是「随手一划串成一串」那轮修复的
+  /// 前提，不能被放大命中区推翻。
+  ///
+  /// 默认 288 时格距 72、半距 36 ⇒ `min(24, 35) = 24`（直径 48）；
+  /// 缩到 160 时格距 40、半距 20 ⇒ `min(24, 19) = 19`，不会重叠。
+  double get _hitRadius => math.min(_minTouchTarget / 2, _step / 2 - 1);
+
+  /// 最小可点尺寸：48vp 直径。
+  static const double _minTouchTarget = 48;
 
   int? _hit(Offset position) {
     // 取**最近**的候选，而不是「第一个落在范围里的」：后者的结果取决于
@@ -179,7 +189,22 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
     return Offset(position.dx.clamp(minX, maxX), position.dy.clamp(minY, maxY));
   }
 
-  void _onPanStart(DragStartDetails d) {
+  /// **按下即进入输入状态。**
+  ///
+  /// 官方原文：「手指在 PatternLock 组件区域**按下**时开始进入输入状态，
+  /// 手指离开屏幕时结束输入状态完成密码输入。」
+  ///
+  /// 早前只挂 `GestureDetector.onPanStart`，它有 `kTouchSlop`（18vp）的
+  /// 门槛：手指必须先移动超过 18vp 才认成拖拽，`onPanStart` 才回调。
+  /// 于是「按住不动再抬手」这种最自然的点选动作完全没反应 —— 用户报的
+  /// 「圆圈很不容易点击，经常点不到」就出在这里：点一个圆点时手指通常
+  /// 只挪几像素，永远达不到 18vp。
+  ///
+  /// 换成 `Listener` 的原始指针事件：`onPointerDown` 一按下就判定命中，
+  /// 没有移动门槛；`onPointerMove` 走同一套逻辑（后续经过的点照常追加）。
+  /// `onPanEnd` 那条路径保留给「手势被系统抢走」的收尾（见 [_finish]）。
+
+  void _onPointerDown(PointerDownEvent d) {
     setState(() {
       _pattern.clear();
       _error = false;
@@ -191,7 +216,13 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
     });
   }
 
-  void _onPanUpdate(DragUpdateDetails d) {
+  void _onPointerMove(PointerMoveEvent d) {
+    // 没有按在任何一个圆点上时，`onPointerDown` 没记录起点。这种情况下
+    // 手指移到点上也不该开始画 —— 官方是「按下」才进入输入状态，而不是
+    // 「经过」。`_pattern` 非空即代表按下时已命中。
+    if (_pattern.isEmpty) {
+      return;
+    }
     setState(() {
       _current = _clampToGrid(d.localPosition);
       final int? hit = _hit(d.localPosition);
@@ -201,7 +232,8 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
     });
   }
 
-  void _onPanEnd(DragEndDetails d) {
+  /// 收尾：抬手 / 手势被取消。
+  void _finish() {
     // 抬手后不再有「拖到一半」的线段：留着它会让静止的图案看起来还没画完。
     setState(() => _current = null);
     if (_pattern.length < 2) {
@@ -221,6 +253,10 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
     }
     widget.onCompleted(List<int>.of(_pattern));
   }
+
+  void _onPointerUp(PointerUpEvent d) => _finish();
+
+  void _onPointerCancel(PointerCancelEvent d) => _finish();
 
   /// 逐位比较；长度不同直接判否（`listEquals` 也可，但这里只比 int 列表，
   /// 自己写省一次泛型装箱）。
@@ -250,10 +286,16 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
         ? theme.dangerColor.withValues(alpha: 0.20)
         : (widget.activeCircleColor ?? _defaultActiveCircleColor);
 
-    return GestureDetector(
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
+    return Listener(
+      // 原始指针事件：按下即判定命中，不等 `kTouchSlop`。`behavior` 必须是
+      // `opaque` —— 默认的 `deferToChild` 会让 `CustomPaint` 之外的透明区域
+      // （九宫格四周 72vp 的留白）收不到事件，而官方是「在组件区域按下」
+      // 就进入输入状态，四周留白也算组件区域。
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _onPointerDown,
+      onPointerMove: _onPointerMove,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
       child: CustomPaint(
         size: Size.square(widget.size),
         painter: _PatternLockPainter(

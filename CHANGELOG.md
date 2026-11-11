@@ -52,6 +52,25 @@ Release date: 2026-11-11
 - 修复：`OhosNavigationScaffold` 双栏分割线 `DecoratedBox` 加 `position: DecorationPosition.foreground`。默认 `background` 先画装饰再画 child，而标题栏/工具栏都是不透明 `cardColor` 且撑满栏宽，那条 1px 线在它们高度范围内被整个盖住，`showDivider` 默认 true 却几乎看不见
 - 测试：库 **860 → 868 条**（+8：clamp 两个边界、SafeArea inset 不溢出、默认形态栏体铺满、自定义栏高出血上限、auto 无占位单栏、hideToolBar 过渡、分割线前景），example 保持 **187 条**，两端全绿。**破坏性复验 7 处全部确认变红**（clamp 旧写法实测抛 `ArgumentError: 336.0`、固定项高+SafeArea 实测溢出 40px、Column min 实测只到 320、写死 56/48、auto 只看宽度、_hasToolbar 含 hideToolBar、去掉 foreground）。两处自指断言一并修正：「栏体铺满」改量栏内 `Column` 而非 StatelessWidget 本身（后者向上取到父级紧约束，改回 min 也照样绿）；「auto 单栏」改量标题水平中心（单栏 ≈400 / 双栏 ≈120），不量 child 的 `Expanded`（祖先查找会命中 MaterialApp 内部无关节点）
 
+**输入 / 选择类三处观感缺陷（用户直接报的三条）**
+
+用户原话：①「输入类，图案锁，圆圈很不容易点击，经常点不到」②「输入类，内联模式，输入框里面没有间距，里面的字直接接触到边框了」③「选择类，滑动条，滑动时，界面往下掉，应该固定不动；还有一个问题，滑动条的背景为什么会有一个一个的小圆点，请仔细检查设计文档」。
+
+三条里有两条**根因不在参数，而在实现与官方语义相反**；第三条（小圆点）查完文档后确认**是官方特性，不是缺陷**，改的是颜色方向与示例密度。
+
+- 修复：`OhosPatternLock` **按下即进入输入状态**（用户第 ① 条）。官方原文：「手指在 PatternLock 组件区域**按下**时开始进入输入状态」。旧实现只挂 `GestureDetector.onPanStart`，它在真实页面里要和外层滚动容器抢手势裁决（gesture arena）：手指按下后只要没越过 `kTouchSlop`（18vp），arena 没裁决，`onPanStart` 就不回调 —— 而点一个圆点时手指通常只挪几像素。**实测（图案锁放进 `ListView`、按下后抖 3vp）：旧实现 `pattern == []`，新实现 `[0]`**。改为 `Listener` 的原始指针事件（`onPointerDown` / `onPointerMove` / `onPointerUp` / `onPointerCancel`），`behavior: HitTestBehavior.opaque`（默认 `deferToChild` 会让九宫格四周 72vp 留白收不到事件，而官方是「在组件区域按下」即算）
+- 修复：`OhosPatternLock` 命中半径从 `circleRadius × 1.5`（9vp）放大到 **48vp 直径**（`min(24, 半格距 − 1)`）。圆点视觉半径只有 6（直径 12），拿 9 当命中区等于要求指尖精确压在 18vp 的圆上 —— 这是「经常点不到」的另一半原因。上限仍严格小于相邻两点间距的一半（默认 288 时格距 72 ⇒ 24 < 36；缩到 160 时格距 40 ⇒ 19 < 20），保证「随手一划串成一串」那轮修复不回来
+- 修复：`OhosTextField` 内联形态**文字贴边框**（用户第 ② 条）。旧 `contentPadding` 是 `(2, 0, 12, 0)` —— 上下为 0，注释理由是「它就是一行文字，上下留白由所在行高提供」。这个前提不成立：`OhosTextField` 自己就是那个容器，行高是它自己算的，没人替它留白。**实测旧实现框高仅 24vp、字形 12vp 顶满**，上下间隙里还压着 1vp 边框。现改 `(0, 2, 12, 2)`：
+  - 上下 **2vp**：官方没有 `textfield_inline_padding_vertical` 令牌，由配图 `textinput_16.png` 反推 —— 内联框外高 104px、边框 8px×2、DPR 4 ⇒ 框外高 **26vp**、内容高 **22vp**、文字上下各留 2–3vp。落码后实测框高 24 → **28vp**
+  - 左 **0 而不是官方的 2**：`InputDecorator` 自带一档 **4vp** 基线内缩（实测 border 0/1/2 时 `EditableText` 左偏移恒为 `4 + contentPadding.left`，1:1 相加、边框不抵扣）。官方配图该距离是 **4.5vp**（18px ÷ DPR 4），传 0 得到 4vp 最接近；再叠官方那 2 会变 6vp、叠边框补偿会变 8vp，都明显偏大
+  - 内联描边 1 → **2vp**（官方源码常量 `INLINE_BORDER_WIDTH = 2.0_vp`，配图 8px ÷ DPR 4 = 2vp 两处独立吻合）。内联只有这一圈线能定边界，1vp 在 16 级灰上几乎看不见
+  - 断言修正：旧测试写死「上下为 0」，那正是 bug 本身，改为断言 2
+- 修复：`OhosSlider` **拖动时整条滑条下移**（用户第 ③ 条前半）。旧实现把气泡当 `Column` 的第一项，`showValueBubble` + 拖动一触发，气泡插进树里把滑条连同页面下方内容推下去「6 + 气泡高」，松手再弹回。**破坏性复验实测旧实现轨道下移 17vp**。官方原文：「气泡提示的绘制区域为 Slider 自身节点的 overlay」（`showTips`）—— 它不撑高、不挤占兄弟节点。改为 `Stack` + 定位气泡，行高钉在 `_hotRegion`（`Stack` 在松散约束下会被撑到父级最大尺寸，实测 `Center` 里直接给 600 高，必须先 `SizedBox` 钉住）。气泡水平跟着滑块走（官方「蓝色条和气泡都会跟手运动」），按 `_display` 在有效区间内的比例定位
+- 修复：`OhosSlider` 刻度点**颜色方向反了**（用户第 ③ 条后半「背景为什么会有一个一个的小圆点」）。查官方文档后的结论：**这排小圆点是官方特性**，不是缺陷 —— 设计文档原文「如果滑动条的数值范围较大，可以考虑将轨道分成若干个等分段…通过 `showSteps` 为滑动条增加刻度」，`stepSize`（直径）默认 4vp。但**颜色确实错了**：官方 `stepColor` 默认值是「混入 `sys.color.ohos_id_alpha_normal_bg`（= **0.1**）透明度的 `sys.color.ohos_id_color_foreground`」，即**前景色 10% 叠在轨道上、比轨道深一档**。旧实现取 `theme.popupColor`（页面底色白），画出来比轨道**更亮**，方向正好相反。逐像素证据：官方配图 `slider_10.png`（2880×1440）轨道 `rgb(229,229,229)`、刻度点 `rgb(205,205,205)` —— `229 × 0.9 + 0 × 0.1 = 206.1`，与「前景色 10% 压在轨道上」逐位吻合。墨屏下 10% 叠色在 16 级灰上等于没画，策略改取 `textTertiaryColor` 实色，方向仍保持「比轨道深」
+- 示例：`selection_page.dart` 滑动条 `divisions` 20 → **6**（21 个点 → 7 个点）。官方配图整条轨道 895px 上是 7 个分点、间距 125px，换算即 6 段；原先比官方密三倍，看上去像「一串珠子」。`_StyleSlider` 10 → 4 段。描述文案补上「这是官方步长刻度点、颜色比轨道深一档、气泡不占布局」三句，避免再被当成渲染瑕疵
+- 新增公开符号：`OhosTickMarkShape`（原 `_OhosTickMarkShape`，刻度点形状）。公开是为了让测试能断言它的 `color` —— 「比轨道深还是浅」是用户直接看得出的观感问题，只能读字段验
+- 测试：库 **868 → 873 条**（+5：气泡不推动布局（三形态）、刻度点比轨道深一档、图案锁按下即命中（可滚动页面）、图案锁 48vp 命中区、内联文字不贴边框），example **187 条**不变，两端全绿。**破坏性复验 4 处全部确认变红**：气泡塞回 `Column`（实测轨道下移 17vp，期望 280 实际 297）、刻度色改回 `popupColor`（alpha 期望 0.1 实际 1.0）、图案锁监听改回 `onPanStart`（期望 `[0]` 实际 `[]`）、内联 padding 改回 `(2,0,12,0)`（垂直期望 2 实际 0）。其中图案锁首版测试**验不红**（在无滚动容器的裸场景下 `TestGesture` 会把 down 直接推给 pan 识别器，旧实现照样命中），已改为放进 `ListView` 后才区分得开；刻度色首版用 `as dynamic` 取字段，改为公开类后类型安全
+
 > 0.6.1 之后的**评审修复轮**，对应 GitCode PR #24 的代码评审意见（1 个阻塞项 + 5 个建议项 + 3 个细节项）。主线是把「无障碍语义」与「墨水屏形体」两类此前靠巧合通过的问题补齐：`OhosPressFeedback` 统一接管按钮语义，消除嵌套 button 节点导致的离屏断言；墨屏下托不住形体的浅底一律改画 1px 实色线。**没有破坏性 API 变更**，新增的 `OhosPressFeedback.semanticLabel` / `onLongPressCancel` 都是可选参数。
 >
 > **行为变更（需留意）**：`OhosTextField.labelText` 从 Material 的**浮动标签**改为框外上方的**静态文字**——聚焦时文字不再缩放、输入框高度不再从 40 涨到 56；内联形态（`variant: inline`）下传入的 `labelText` 不渲染，需要标签请在组件外部放一行 `Text`。该视觉变更在 0.6.1 之后的开发提交中已落地，本版补上记录与迁移说明。
