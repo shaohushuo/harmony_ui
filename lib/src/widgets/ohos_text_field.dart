@@ -661,9 +661,17 @@ class _OhosTextFieldState extends State<OhosTextField> {
           // [OhosTextFieldMetrics.containerRadius] 的注释。
           _ => OhosTextFieldMetrics.containerRadius,
         },
-        // 内联形态：上下各 2vp、左 4vp（2 容器内边距 + 2 边框）、右 12vp。
-        // `OhosTextFieldMetrics` 里有逐步推导；要点是 Flutter 的
-        // `contentPadding` 不与边框抵消，所以边框宽度必须自己补进来。
+        // 内联形态：上下各 2vp、左 **0**、右 12vp。
+        //
+        // 左边为什么是 0 而不是官方的 `textfield_inline_padding_left = 2`：
+        // `InputDecorator` 自带 4vp 基线内缩，`contentPadding.left` 是**叠加**
+        // 在它之上的。传 0 得到「文字到框外沿」4vp，官方配图
+        // `textinput_16.png` 是 4.5vp，已经是这条路径能达到的最接近值；
+        // 传 2 会变成 6vp、传 4 会变成 8vp，都明显偏大。推导见
+        // [OhosTextFieldMetrics.inlineContentPaddingLeft]。
+        //
+        // 右边 12 是 `textfield_inline_padding_right`，左右不对称是官方的
+        // 原样（内联框右侧要留给光标与清除键的视觉余量）。
         padding: widget._inlineEffective
             ? const EdgeInsets.only(
                 left: OhosTextFieldMetrics.inlineContentPaddingLeft,
@@ -937,8 +945,17 @@ class _OhosTextFieldState extends State<OhosTextField> {
         accent,
         inline ? OhosTextFieldMetrics.inlineBorderWidth : 1.5,
       ),
+      // 禁用态的线宽必须跟 enabled / focused **同一档**，否则禁用瞬间边框
+      // 由 2vp 变 1vp，文字与外框的相对位置会跳 1vp。内联形态尤其明显：
+      // 2vp 是它唯一能定边界的线索（`INLINE_BORDER_WIDTH`）。
+      // 早前这里统一走 `border(...)` 的默认 1vp，内联被漏掉了。
       disabledBorder: useFill && !inline
           ? border(Colors.transparent, 0)
+          : inline
+          ? border(
+              theme.policy.line(theme.textTertiaryColor, 0.2),
+              OhosTextFieldMetrics.inlineBorderWidth,
+            )
           : border(theme.policy.line(theme.textTertiaryColor, 0.2)),
       // 错误描边 **1vp**（`textfield_error_border_width` →
       // `ohos_id_textfield_error_border_width` = 1）。原先写 1.5 是为了「让错误

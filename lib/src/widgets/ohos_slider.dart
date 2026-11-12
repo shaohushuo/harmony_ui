@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_stroke.dart';
@@ -242,13 +244,29 @@ class _OhosSliderState extends State<OhosSlider> {
     // 早前这里取 `theme.popupColor`（页面底色，白），等于把点画成比轨道
     // **更亮**的白点，方向正好相反：用户看到的是「轨道上戳了一排亮孔」，
     // 而官方是「轨道里嵌了一排暗点」。用 `alpha: 0.1` 的 textPrimaryColor
-    // 叠上去，深浅方向与官方一致；墨屏上 10% 叠不出来（16 级灰分不开），
-    // 策略会把这一档换成实线描边色，仍保持「比轨道深」的方向。
+    // 叠上去，深浅方向与官方一致。
+    //
+    // ## 墨屏回退色不能取 `textTertiaryColor`
+    //
+    // 墨屏上 10% 叠不出来（16 级灰分不开），`policy.tint` 判成透明，于是
+    // 落到回退色。但下面 `inactiveTrackColor` 的墨屏回退**也是**
+    // `theme.textTertiaryColor` —— 两个分支的触发条件是同一个判定
+    // （`policy.tint(...) == Colors.transparent`），15% 判透明则 10% 必然
+    // 也判透明，因此两者一定同时成立。结果 `tickColor ==
+    // inactiveTrackColor == #767676`：未走过的那一大段轨道上刻度点与轨道
+    // **完全同色**，刻度直接消失（实测像素里确实找不到独立的点色）。旧实现
+    // 的 `popupColor` 在墨屏上反而看得见 —— 这条修复会把「亮孔」换成
+    // 「没有」。
+    //
+    // 回退色改用 `textSecondaryColor`：白纸墨屏下是纯黑（比轨道 #767676
+    // 深），深色纸墨屏下是纯白（比轨道 #999999 亮）。两者都朝「与纸色反方向」
+    // 走，也就是都比轨道更突出，与官方「比轨道深一档」的观感方向一致。
     final Color tickColor =
         theme.policy.tint(theme.textPrimaryColor, _tickAlpha) ==
             Colors.transparent
-        // 墨屏：10% 的叠色在灰阶上等于没画，改取比轨道深一档的实色。
-        ? theme.textTertiaryColor
+        // 墨屏：10% 的叠色在灰阶上等于没画，改取比轨道更深一档的实色。
+        // **不能**用 `textTertiaryColor` —— 那是轨道的回退色，会撞成同色。
+        ? theme.textSecondaryColor
         : theme.textPrimaryColor.withValues(alpha: _tickAlpha);
 
     final Widget slider = SliderTheme(
@@ -296,7 +314,7 @@ class _OhosSliderState extends State<OhosSlider> {
               ),
         overlayShape: RoundSliderOverlayShape(overlayRadius: _hotRegion / 2),
         tickMarkShape: _effectiveStepSize > 0 && widget.showSteps
-            ? OhosTickMarkShape(diameter: _effectiveStepSize, color: tickColor)
+            ? _OhosTickMarkShape(diameter: _effectiveStepSize, color: tickColor)
             : SliderTickMarkShape.noTickMark,
         // Material 自己还会画一个 value indicator（`divisions` + `label`
         // 时默认 onlyForDiscrete）：灰阶屏下它是白底、没有描边，贴在白页面
@@ -364,6 +382,13 @@ class _OhosSliderState extends State<OhosSlider> {
 
     // 前缀 / 后缀贴轨道两端，与轨道同高居中。给 `SizedBox` 而不是让
     // 它们各自撑高：不固定高度时，一个大字号后缀会把整条滑条顶高。
+    //
+    // **气泡必须和 `slider` 一起待在 `Expanded` 里面。** 早前气泡是挂在
+    // 最外层 `Stack` 上、用 `Positioned(left: 0, right: 0)` 铺满整行的，
+    // 而那一行的宽度**包含** prefix / suffix 占位。于是 `Align` 的归一化
+    // 基数是「整行宽」，比真实轨道宽出 prefix+suffix（带后缀时约 36vp）：
+    // 气泡跟不上滑块 —— 拖到最右端时气泡还在滑块左边一大截。放进
+    // `Expanded` 后基数就是轨道所在的这一格。
     final Widget row = Row(
       children: <Widget>[
         if (widget.prefix != null)
@@ -374,7 +399,7 @@ class _OhosSliderState extends State<OhosSlider> {
               child: Center(child: widget.prefix),
             ),
           ),
-        Expanded(child: slider),
+        Expanded(child: _withBubble(slider, bubble, showBubble)),
         if (widget.suffix != null)
           Padding(
             padding: const EdgeInsets.only(left: 8),
@@ -386,37 +411,52 @@ class _OhosSliderState extends State<OhosSlider> {
       ],
     );
 
-    // **气泡不参与布局高度。** 官方原文：「气泡提示的绘制区域为 Slider 自身
-    // 节点的 overlay」—— 它浮在滑条之上，不撑高、不挤占兄弟节点。
-    //
-    // 早前把气泡当成 `Column` 的第一项，`showValueBubble` + `divisions`
-    // 一给，拖动时气泡出现 → 整条滑条连同页面下方所有内容被推下去 6 + 气泡
-    // 高，松手又弹回来。用户报的正是这条：「滑动时界面往下掉，应该固定不动」。
-    //
-    // 用 `Stack` 把气泡叠在轨道**行**上，行的高度由 `row` 自己决定（
-    // `Slider` 的固有高 = 命中区 40 / 32），气泡只是多画一层、不参与测量。
-    //
-    // `Stack` 默认按子节点最大者撑高：`row` 有确定高度，`Positioned` 的子节点
-    // 不参与测量，所以整体高度仍是 `row` 的高度 —— 拖动过程中恒定。
-    // `clipBehavior: Clip.none` 允许气泡画到 `Stack` 边界之外（往上溢出）。
-    //
-    // 气泡**水平跟着滑块**走（官方「蓝色条和气泡都会跟手运动」），用
-    // `Alignment` 按 `_display` 在有效区间内的比例定位，与 `Slider` 同一套
-    // 归一化。
-    final Widget stack = Stack(
+    // `none` 形态没有可见滑块，给整条一个最小高度，否则父容器按 0 高测量
+    // 之后连轨道都画不出来。
+    return widget.style == OhosSliderStyle.none
+        ? ConstrainedBox(
+            constraints: BoxConstraints(minHeight: _hotRegion),
+            child: Center(child: row),
+          )
+        : row;
+  }
+
+  /// 轨道左右两端相对 `Slider` 边界的内缩量。
+  ///
+  /// 与 Material `BaseSliderTrackShape.getPreferredRect` 逐字对齐：
+  /// `max(overlayWidth / 2, thumbWidth / 2)` —— 轨道要让开滑块与命中圆，
+  /// 两端各留这么多。气泡的归一化必须按**轨道**的宽度算，而不是整行宽度，
+  /// 否则带 prefix / suffix 时会偏出去。
+  double get _trackInset => math.max(_hotRegion / 2, _thumbDiameter / 2);
+
+  /// 把气泡叠在 [slider] 之上，并让它跟着滑块水平走。
+  ///
+  /// **气泡不参与布局高度。** 官方原文：「气泡提示的绘制区域为 Slider 自身
+  /// 节点的 overlay」—— 它浮在滑条之上，不撑高、不挤占兄弟节点。
+  ///
+  /// 早前把气泡当成 `Column` 的第一项，`showValueBubble` + `divisions`
+  /// 一给，拖动时气泡出现 → 整条滑条连同页面下方所有内容被推下去 6 + 气泡
+  /// 高，松手又弹回来。用户报的正是这条：「滑动时界面往下掉，应该固定不动」。
+  ///
+  /// 用 `Stack` 把气泡叠在滑块所在的那一格上，高度由 `slider` 自己的固有高
+  /// 决定（命中区 40 / 32），气泡只是多画一层、不参与测量 ——
+  /// `Positioned` 的子节点不参与 `Stack` 的尺寸计算。
+  ///
+  /// `clipBehavior: Clip.none` 允许气泡画到 `Stack` 边界之外（往上溢出）。
+  Widget _withBubble(Widget slider, Widget bubble, bool showBubble) {
+    return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
-        // `Stack` 在**松散**约束下会被撑到父级允许的最大尺寸（实测
-        // `Center` 里直接给 600 高），必须先钉住这一行的高度。`row` 自己
-        // 是「命中区高」的 `Row`，`SizedBox` 只复述这个高度、不改变它。
-        SizedBox(height: _hotRegion, width: double.infinity, child: row),
+        slider,
         if (showBubble)
           Positioned(
             // 气泡底边距轨道中线 = 轨道半高 + 间距；`bottom` 相对 `Stack`
-            // 底边，`Stack` 高 = `_hotRegion`，故减掉半个命中区。
+            // 底边，`Stack` 高 = 命中区高，故减掉半个命中区。
             bottom: _hotRegion / 2 + _trackThickness / 2 + 6,
-            left: 0,
-            right: 0,
+            // 左右各让出轨道的内缩量：这样 `Align` 的可用宽度正好是**轨道**
+            // 宽度，滑块在 0 / 1 两端时气泡刚好贴住轨道两端。
+            left: _trackInset,
+            right: _trackInset,
             child: Align(
               alignment: Alignment(_bubbleAlignment * 2 - 1, 0),
               child: bubble,
@@ -424,15 +464,6 @@ class _OhosSliderState extends State<OhosSlider> {
           ),
       ],
     );
-
-    // `none` 形态没有可见滑块，给整条一个最小高度，否则父容器按 0 高测量
-    // 之后连轨道都画不出来。
-    return widget.style == OhosSliderStyle.none
-        ? ConstrainedBox(
-            constraints: BoxConstraints(minHeight: _hotRegion),
-            child: Center(child: stack),
-          )
-        : stack;
   }
 
   /// 气泡（与滑块）在轨道上的相对位置，0 = 最左、1 = 最右。
@@ -487,10 +518,13 @@ class _NoThumbShape extends SliderComponentShape {
 /// 颜色不用 Material 的 active / inactive 两档：官方刻度点只有一种颜色，
 /// 已走过与未走过都画同一个，靠轨道自身的明度变化区分区间。
 ///
-/// 公开（而非 `_` 私有）是因为测试要断言它的 `color`：刻度点的颜色方向
-/// （比轨道深还是浅）是用户直接能看出来的观感问题，只能靠读字段验。
-class OhosTickMarkShape extends SliderTickMarkShape {
-  const OhosTickMarkShape({required this.diameter, required this.color});
+/// 保持私有。它是 `RenderSlider.paint` 直接调用的 shape，不是 `CustomPaint`，
+/// 因此测试既不能用 `_replay` 画布探针也不能读字段来验色 —— 验法改用
+/// 真实像素回读（`RepaintBoundary.toImage`），直接从「轨道上有没有一颗颜色
+/// 与轨道不同的点」得出结论。这样既不用为测试扩大公开 API，判据还更贴近
+/// 用户实际看到的东西。
+class _OhosTickMarkShape extends SliderTickMarkShape {
+  const _OhosTickMarkShape({required this.diameter, required this.color});
 
   final double diameter;
   final Color color;

@@ -1,6 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+// `OneSequenceGestureRecognizer` / `GestureDisposition` 不在 material 的
+// 导出链里（material 只 re-export `gestures.dart` 的一部分），必须显式引入，
+// 否则 `extends OneSequenceGestureRecognizer` 直接是「类型找不到」。
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/ohos_theme.dart';
@@ -83,6 +87,26 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
   final List<int> _pattern = <int>[];
   Offset? _current;
   bool _error = false;
+
+  /// 正在画这一笔的指针 id。
+  ///
+  /// 多指同时按在屏幕上时，`Listener` 会把**每一根手指**的事件都送进来。
+  /// 不认 id 的写法有两个错：第二根手指按下会在 `_onPointerDown` 里把已经
+  /// 画了一半的图案 `clear()` 掉；任意一根手指抬起又会在 `_onPointerUp`
+  /// 里以残缺图案提交（甚至判错）。
+  ///
+  /// 官方 `PatternLock` 只认单指（`onTouch` 里对 `event.source` 有单指
+  /// 假定），本库同样只跟随**第一个落下的指针**，其余指针的事件在整个
+  /// 笔画期间一律忽略。
+  int? _activePointer;
+
+  /// 本笔是否已经「进入输入状态」。
+  ///
+  /// 与 `_activePointer` 分开：起笔位置不在任何圆点附近时，图案还是空的，
+  /// 但这一笔仍然算「已开始」—— 手指随后滑到圆点上应该开始记录。
+  /// 早前用 `_pattern.isEmpty` 当判据，导致「起笔没压准圆点 ⇒ 整笔失效、
+  /// 划过圆点也不记」，比原来的 `onPanUpdate` 实现还退了一步。
+  bool _drawing = false;
 
   /// 官方默认：`pathColor` / 激活圆环都是 `#33182431`（深灰 20%），
   /// 圆点常态是 `#182431`（深灰）。
@@ -202,9 +226,32 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
   ///
   /// 换成 `Listener` 的原始指针事件：`onPointerDown` 一按下就判定命中，
   /// 没有移动门槛；`onPointerMove` 走同一套逻辑（后续经过的点照常追加）。
-  /// `onPanEnd` 那条路径保留给「手势被系统抢走」的收尾（见 [_finish]）。
-
+  ///
+  /// ## 为什么外面还要包一层 [RawGestureDetector]
+  ///
+  /// `Listener` 只收原始指针事件，**不向 GestureArena 注册识别器**。父级
+  /// `Scrollable` 的 `VerticalDragGestureRecognizer` 因此不再与它互斥：
+  /// 手指在图案锁上按下后，图案立刻开始记录，同时父级在位移超过
+  /// `kTouchSlop`(18vp) 后照常接管滚动 —— 页面滚动与画图案**同时发生**。
+  /// 两个后果都不是小事：
+  ///
+  /// 1. 抬手时 `_pattern.length >= 2` 就 `onCompleted(...)`。对图案锁这种
+  ///    安全输入而言，用户「想滚页面、手指划过图案锁」等于**意外提交密码**；
+  /// 2. `PointerMoveEvent.localPosition` 用的是按下那一刻缓存的 hit-test
+  ///    变换（`HitTestEntry.transform`）。页面滚动后控件已经位移，算出来的
+  ///    本地坐标是错的，画出的图案与手指实际经过的点对不上。
+  ///
+  /// 所以外面再包一个 [RawGestureDetector]，注册 [_AcceptImmediatelyRecognizer]
+  /// —— 它在 `addPointer` 里就直接 `resolve(accepted)`，父级滚动容器根本
+  /// 拿不到这一笔。原始指针语义（按下即命中、无 slop 门槛）与竞技场互斥
+  /// （滚动容器不能抢）两者同时成立。
   void _onPointerDown(PointerDownEvent d) {
+    // 已经有一根手指在画：后续落下的指针一律忽略，别把画了一半的图案清掉。
+    if (_activePointer != null) {
+      return;
+    }
+    _activePointer = d.pointer;
+    _drawing = true;
     setState(() {
       _pattern.clear();
       _error = false;
@@ -217,10 +264,13 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
   }
 
   void _onPointerMove(PointerMoveEvent d) {
-    // 没有按在任何一个圆点上时，`onPointerDown` 没记录起点。这种情况下
-    // 手指移到点上也不该开始画 —— 官方是「按下」才进入输入状态，而不是
-    // 「经过」。`_pattern` 非空即代表按下时已命中。
-    if (_pattern.isEmpty) {
+    if (d.pointer != _activePointer) {
+      return;
+    }
+    // 起笔位置不在圆点附近也要能继续：官方是「按下」进入输入状态，之后
+    // 手指经过哪个点就记哪个点。早前用 `_pattern.isEmpty` 判据，等于要求
+    // 「起笔必须压准圆点」，滑到点上也不记录 —— 比 `onPanUpdate` 还退步。
+    if (!_drawing) {
       return;
     }
     setState(() {
@@ -234,6 +284,8 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
 
   /// 收尾：抬手 / 手势被取消。
   void _finish() {
+    _activePointer = null;
+    _drawing = false;
     // 抬手后不再有「拖到一半」的线段：留着它会让静止的图案看起来还没画完。
     setState(() => _current = null);
     if (_pattern.length < 2) {
@@ -254,9 +306,19 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
     widget.onCompleted(List<int>.of(_pattern));
   }
 
-  void _onPointerUp(PointerUpEvent d) => _finish();
+  void _onPointerUp(PointerUpEvent d) {
+    if (d.pointer != _activePointer) {
+      return;
+    }
+    _finish();
+  }
 
-  void _onPointerCancel(PointerCancelEvent d) => _finish();
+  void _onPointerCancel(PointerCancelEvent d) {
+    if (d.pointer != _activePointer) {
+      return;
+    }
+    _finish();
+  }
 
   /// 逐位比较；长度不同直接判否（`listEquals` 也可，但这里只比 int 列表，
   /// 自己写省一次泛型装箱）。
@@ -286,32 +348,89 @@ class _OhosPatternLockState extends State<OhosPatternLock> {
         ? theme.dangerColor.withValues(alpha: 0.20)
         : (widget.activeCircleColor ?? _defaultActiveCircleColor);
 
-    return Listener(
-      // 原始指针事件：按下即判定命中，不等 `kTouchSlop`。`behavior` 必须是
-      // `opaque` —— 默认的 `deferToChild` 会让 `CustomPaint` 之外的透明区域
-      // （九宫格四周 72vp 的留白）收不到事件，而官方是「在组件区域按下」
-      // 就进入输入状态，四周留白也算组件区域。
+    // 外层 `RawGestureDetector` 的唯一职责是**把这一笔从父级滚动容器手里
+    // 抢过来**（详见 [_onPointerDown] 的注释）。识别器在 `addPointer` 里就
+    // `resolve(accepted)`，因此不需要任何回调；`behavior: opaque` 与内层
+    // `Listener` 一致，四周留白也算组件区域。
+    return RawGestureDetector(
       behavior: HitTestBehavior.opaque,
-      onPointerDown: _onPointerDown,
-      onPointerMove: _onPointerMove,
-      onPointerUp: _onPointerUp,
-      onPointerCancel: _onPointerCancel,
-      child: CustomPaint(
-        size: Size.square(widget.size),
-        painter: _PatternLockPainter(
-          pattern: _pattern,
-          current: _current,
-          centers: <Offset>[for (int i = 0; i < 9; i++) _position(i)],
-          circleRadius: _circleRadius,
-          ringRadius: _ringRadius,
-          strokeWidth: _strokeWidth,
-          pathColor: path,
-          circleColor: circle,
-          ringColor: ring,
+      gestures: <Type, GestureRecognizerFactory>{
+        _AcceptImmediatelyRecognizer:
+            GestureRecognizerFactoryWithHandlers<_AcceptImmediatelyRecognizer>(
+              _AcceptImmediatelyRecognizer.new,
+              (_AcceptImmediatelyRecognizer instance) {},
+            ),
+      },
+      child: Listener(
+        // 原始指针事件：按下即判定命中，不等 `kTouchSlop`。`behavior` 必须是
+        // `opaque` —— 默认的 `deferToChild` 会让 `CustomPaint` 之外的透明区域
+        // （九宫格四周 72vp 的留白）收不到事件，而官方是「在组件区域按下」
+        // 就进入输入状态，四周留白也算组件区域。
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _onPointerDown,
+        onPointerMove: _onPointerMove,
+        onPointerUp: _onPointerUp,
+        onPointerCancel: _onPointerCancel,
+        child: CustomPaint(
+          size: Size.square(widget.size),
+          painter: _PatternLockPainter(
+            pattern: _pattern,
+            current: _current,
+            centers: <Offset>[for (int i = 0; i < 9; i++) _position(i)],
+            circleRadius: _circleRadius,
+            ringRadius: _ringRadius,
+            strokeWidth: _strokeWidth,
+            pathColor: path,
+            circleColor: circle,
+            ringColor: ring,
+          ),
         ),
       ),
     );
   }
+}
+
+/// 一按下就赢下手势竞技场的识别器。
+///
+/// 只用来**占位**：`RawGestureDetector` 挂在图案锁外层，父级 `Scrollable`
+/// 的垂直拖拽识别器与它同在竞技场里；它一旦 `accepted`，竞技场立即关闭，
+/// 父级再也拿不到这一笔，页面不会跟着滚。
+///
+/// 为什么用 `resolve(accepted)` 而不是 `onDown` + 延时：`Listener` 的
+/// `onPointerDown` 已经承担了「按下即进入输入状态」的业务语义，识别器这边
+/// 只需要尽早把对手踢出局。等到 `onDown` 再由 `GestureDetector` 的
+/// `onVerticalDragStart` 之类去抢，是**靠 slop 竞速**，而 `kTouchSlop`(18)
+/// 小于 `kPanSlop`(36) —— 又回到「先动 18vp 才认」的老问题。
+///
+/// 奖励：`rejectGesture` / `acceptGesture` 都不需要实现。识别器被接受之后
+/// 唯一要做的就是「别取消自己」，而 `OneSequenceGestureRecognizer` 的默认
+/// 行为正是如此。
+class _AcceptImmediatelyRecognizer extends OneSequenceGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    // 立即宣告胜出。`resolve` 是幂等的：同一指针重复调用无副作用。
+    resolve(GestureDisposition.accepted);
+  }
+
+  @override
+  void handleEvent(PointerEvent event) {
+    // 胜负已定，后续 move 交给内层 `Listener`；但**必须**在抬起/取消时
+    // 停掉跟踪 —— `OneSequenceGestureRecognizer` 把这件事交给子类做，
+    // 不写就会一直把该指针留在 `_trackedPointers` 里。
+    if (event is PointerUpEvent || event is PointerCancelEvent) {
+      stopTrackingPointer(event.pointer);
+    }
+  }
+
+  @override
+  void didStopTrackingLastPointer(int pointer) {
+    // 没有任何跨笔状态要重置：识别器只负责「一按下就赢」。
+    // （父类要求实现它，但这里是真的无事可做。）
+  }
+
+  @override
+  String get debugDescription => 'pattern lock tap (accept immediately)';
 }
 
 class _PatternLockPainter extends CustomPainter {
