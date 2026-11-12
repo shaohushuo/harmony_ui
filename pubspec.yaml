@@ -2,6 +2,7 @@ name: harmony_ui
 description: "HarmonyOS design language widgets for Flutter, targeting HarmonyOS 7 and Flutter 3.50. 42 official controls, immersive light, dark and e-ink themes."
 version: 0.6.3
 repository: https://atomgit.com/oh-flutter/harmony_ui
+homepage: https://harmonyui.shaohushuo.com/
 topics:
   - ui
   - widgets
