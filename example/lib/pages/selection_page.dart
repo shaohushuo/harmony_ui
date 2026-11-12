@@ -165,7 +165,12 @@ class _SelectionPageState extends State<SelectionPage> {
         ),
         DemoSection(
           title: '滑动条 OhosSlider',
-          description: '带刻度与气泡数值，当前值: ${_slider.round()}',
+          description:
+              '轨道上那一排小圆点是官方的「步长刻度点」（showSteps + stepSize，'
+              '默认直径 4vp），不是渲染瑕疵 —— 官方设计文档明确说「通过 '
+              'showSteps 为滑动条增加刻度」。颜色取 stepColor 的默认值'
+              '（前景色叠 10% 不透明度），比轨道深一档。气泡浮在滑条上方，'
+              '不占布局高度，拖动时轨道固定不动。当前值: ${_slider.round()}',
           child: DemoCard(
             child: Column(
               children: <Widget>[
@@ -174,7 +179,24 @@ class _SelectionPageState extends State<SelectionPage> {
                   onChanged: (double v) => setState(() => _slider = v),
                   min: 0,
                   max: 100,
-                  divisions: 20,
+                  // **6 段 = 7 个刻度点。** 数字实测自官方配图
+                  // `slider_10.png`（2880×1440，DPR 4）：
+                  // - 轨道横向 991→1885，宽 **895px**（≈224vp）；
+                  // - 刻度点中心间距 **125px**（≈31vp），逐颗实测 1471 /
+                  //   1596 / 1721 / 1846 —— 间距恒为 125；
+                  // - 按这个间距排满，是 **7 个点**（6 个间隔 = 750px，
+                  //   两端再各让开约 72px 给滑块）。7 个点 = 6 段。
+                  //
+                  // 注意别把「7 个点 × 125px」当成轨道宽度 —— 7 个点只有
+                  // **6 个间隔**，750px；895px 里剩下的 145px 是两端让开
+                  // 滑块的余量。上一版注释正是把这个乘错了。
+                  //
+                  // 配图上肉眼只数得出 **4 个**点，是因为前 3 个压在蓝色
+                  // 「已走过」轨道底下（蓝条 992→1402 不透明，盖住了
+                  // 1096 / 1221 / 1346 三颗）。
+                  //
+                  // 原先给 20 段（21 个点）比官方密三倍，看上去像「一串珠子」。
+                  divisions: 6,
                   showSteps: true,
                   showValueBubble: true,
                 ),
@@ -396,7 +418,8 @@ class _StyleSlider extends StatelessWidget {
       value: 40,
       onChanged: _noopSlider,
       style: style,
-      divisions: 10,
+      // 4 段 = 5 个刻度点，与官方配图同密度（见上面那条 DemoSection 说明）。
+      divisions: 4,
       showSteps: true,
       prefix: const Icon(Icons.volume_mute_rounded, size: 20),
       suffix: const Icon(Icons.volume_up_rounded, size: 20),

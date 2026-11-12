@@ -186,10 +186,58 @@ class OhosTextFieldMetrics {
   static const double underlinePaddingVertical = 12;
 
   /// 内联形态左内边距（`textfield_inline_padding_left`）。**2，不对称。**
+  ///
+  /// **这是「容器」的左内边距，不是「文字与边框之间」的间距。** 官方实现里
+  /// 它是与边框一起参与横向排布的（`text_field_layout_algorithm.cpp` 的
+  /// `CalcInlineStatusAdvance` 用 `GetPaddingLeft() + GetPaddingRight()` 再
+  /// 减掉两侧 inline 边框宽度）；Flutter 的 `InputDecorator` 则把
+  /// `contentPadding` 与边框**并列**相加。直接把这个 2 当 `contentPadding`
+  /// 的 left，等于只留 2vp 再被边框挤掉，文字就贴到框线上了。
+  /// 实际传给 `contentPadding` 的值见 [inlineContentPaddingLeft]。
   static const double inlinePaddingLeft = 2;
 
   /// 内联形态右内边距（`textfield_inline_padding_right`）。**12，不对称。**
   static const double inlinePaddingRight = 12;
+
+  /// 内联形态边框宽度（`INLINE_BORDER_WIDTH`）。
+  ///
+  /// 官方源码常量 `constexpr Dimension INLINE_BORDER_WIDTH = 2.0_vp;`。
+  /// 配图 `textinput_16.png` 逐像素核对：内联框描边 8px、同图 DPR 正好 4
+  /// （由「边框 8px ÷ 官方 2vp」反推），故 **2vp** 成立。
+  ///
+  /// 这和填充 / 胶囊形态的 1vp 是两档：`input_border_width` 那套细描边不
+  /// 适用于内联 —— 内联要「看起来像一个可以点进去的文本框」，2vp 才立得住。
+  static const double inlineBorderWidth = 2;
+
+  /// 内联形态传给 `TextField.contentPadding` 的**左**值。
+  ///
+  /// = **0**，因为 `InputDecorator` 自带一档基线内缩。
+  ///
+  /// 实测（300 宽、`isDense: true`、边框 2vp）：`contentPadding.left = 0`
+  /// 时 `EditableText` 的左偏移恒为 **4vp**，`padding.left` 每加 1 就右移 1。
+  /// 也就是说「文字到框外沿」= `4 + contentPadding.left`，那 4 是
+  /// `InputDecorator` 自己的常量，改不掉。
+  ///
+  /// 官方配图 `textinput_16.png` 里这个距离是 **4.5vp**（框外沿到文字左沿
+  /// 18px ÷ DPR 4）。取 0 得到 4vp，差 0.5 —— 已经是这条路径能达到的最接近
+  /// 值；传 2（容器内边距）会变成 6vp、传 4 会变成 8vp，都明显偏大。
+  ///
+  /// 换句话说，官方那个 `textfield_inline_padding_left = 2` 在这套实现里
+  /// 由 `InputDecorator` 的 4vp 基线**隐含满足并超出**了，不能再叠一遍。
+  static const double inlineContentPaddingLeft = 0;
+
+  /// 内联形态传给 `TextField.contentPadding` 的**上 / 下**值。
+  ///
+  /// = **2**。官方没有 `textfield_inline_padding_vertical` 这个令牌，这个数
+  /// 由配图反推：`textinput_16.png` 里内联框外高 104px、边框 8px×2、字形
+  /// 69px，DPR 4 ⇒ 框外高 **26vp**、内容高 **22vp**、文字上下各留 **2–3vp**。
+  ///
+  /// 早前这里上下给 0 —— 注释写的理由是「它就是一行文字，上下留白由所在
+  /// 行高提供」。那个前提不成立：`OhosTextField` 自己就是那个容器，行高
+  /// 是它自己算的，没人会替它留白。结果框高只有 24vp、字形 12vp 顶满，
+  /// 上下各 3vp / 7vp 的间隙里还压着 1vp 边框 —— 用户看到的就是
+  /// 「输入框里面没有间距，字直接接触到边框」。
+  static const double inlinePaddingVertical = 2;
 
   /// 输入文字字号（`text_font_size` → `textfield_font_size` →
   /// `ohos_id_text_size_body1` = 16fp）。
@@ -613,12 +661,23 @@ class _OhosTextFieldState extends State<OhosTextField> {
           // [OhosTextFieldMetrics.containerRadius] 的注释。
           _ => OhosTextFieldMetrics.containerRadius,
         },
-        // 内联形态左右边距不对称（2 / 12）而上下为 0 —— 它就是「一行文字」，
-        // 上下留白由它所在的行高提供，不是由输入框自己。
+        // 内联形态：上下各 2vp、左 **0**、右 12vp。
+        //
+        // 左边为什么是 0 而不是官方的 `textfield_inline_padding_left = 2`：
+        // `InputDecorator` 自带 4vp 基线内缩，`contentPadding.left` 是**叠加**
+        // 在它之上的。传 0 得到「文字到框外沿」4vp，官方配图
+        // `textinput_16.png` 是 4.5vp，已经是这条路径能达到的最接近值；
+        // 传 2 会变成 6vp、传 4 会变成 8vp，都明显偏大。推导见
+        // [OhosTextFieldMetrics.inlineContentPaddingLeft]。
+        //
+        // 右边 12 是 `textfield_inline_padding_right`，左右不对称是官方的
+        // 原样（内联框右侧要留给光标与清除键的视觉余量）。
         padding: widget._inlineEffective
             ? const EdgeInsets.only(
-                left: OhosTextFieldMetrics.inlinePaddingLeft,
+                left: OhosTextFieldMetrics.inlineContentPaddingLeft,
                 right: OhosTextFieldMetrics.inlinePaddingRight,
+                top: OhosTextFieldMetrics.inlinePaddingVertical,
+                bottom: OhosTextFieldMetrics.inlinePaddingVertical,
               )
             : null,
         // 内联形态的底板是页面底色 + 强调色描边，不是灰块。
@@ -869,17 +928,34 @@ class _OhosTextFieldState extends State<OhosTextField> {
       ),
       // 内联形态的边界是「强调色细线」而不是「看不见的填充」——
       // 它要看起来像一个可以点进去的文本，而不是一块底板。
+      //
+      // 内联的线宽是 **2vp**（官方 `INLINE_BORDER_WIDTH = 2.0_vp`），比
+      // 填充形态那套 1vp 的 hairline 粗一档 —— 内联只有这一圈线能定边界，
+      // 1vp 在 16 级灰上几乎看不见。配图 `textinput_16.png` 实测描边
+      // 8px ÷ DPR 4 = 2vp，与源码常量两处独立吻合。
       enabledBorder: inline
           ? border(
               theme.usesOutlines ? theme.dividerColor : theme.textTertiaryColor,
-              1,
+              OhosTextFieldMetrics.inlineBorderWidth,
             )
           : useFill
           ? border(Colors.transparent, 0)
           : border(hairline),
-      focusedBorder: border(accent, inline ? 1 : 1.5),
+      focusedBorder: border(
+        accent,
+        inline ? OhosTextFieldMetrics.inlineBorderWidth : 1.5,
+      ),
+      // 禁用态的线宽必须跟 enabled / focused **同一档**，否则禁用瞬间边框
+      // 由 2vp 变 1vp，文字与外框的相对位置会跳 1vp。内联形态尤其明显：
+      // 2vp 是它唯一能定边界的线索（`INLINE_BORDER_WIDTH`）。
+      // 早前这里统一走 `border(...)` 的默认 1vp，内联被漏掉了。
       disabledBorder: useFill && !inline
           ? border(Colors.transparent, 0)
+          : inline
+          ? border(
+              theme.policy.line(theme.textTertiaryColor, 0.2),
+              OhosTextFieldMetrics.inlineBorderWidth,
+            )
           : border(theme.policy.line(theme.textTertiaryColor, 0.2)),
       // 错误描边 **1vp**（`textfield_error_border_width` →
       // `ohos_id_textfield_error_border_width` = 1）。原先写 1.5 是为了「让错误

@@ -183,6 +183,186 @@ List<Object> _replay(WidgetTester tester, Type type, {Size? size}) {
   return canvas.draws;
 }
 
+/// 把 [key] 包住的子树**真渲染一遍**，回读 RGB 像素。
+///
+/// 为什么需要它：`_replay` 只能录到 `CustomPaint.painter` 的绘制命令。而
+/// Material `Slider` 的刻度点是 `RenderSlider.paint` **直接**调
+/// `tickMarkShape.paint` 画的，既不是 `CustomPaint`，也不暴露任何可读字段
+/// —— 想验「刻度点到底看不看得见」，只剩像素这一条路。
+///
+/// 这比读字段更贴近事实：颜色值相等不等于视觉上分得开（墨屏下两个同色
+/// token 撞在一起就是这样），像素回读直接回答「屏幕上有没有这一颗点」。
+///
+/// 必须包 `tester.runAsync` —— `toImage` 走真实的 GPU/软件光栅路径，在
+/// 默认的 fake-async 测试环境里会一直挂着。
+Future<_Pixels> _pixelsOf(WidgetTester tester, GlobalKey key) async {
+  final RenderRepaintBoundary boundary =
+      key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  late ui.Image image;
+  await tester.runAsync(() async {
+    image = await boundary.toImage();
+  });
+  final ByteData? data = await tester.runAsync<ByteData?>(
+    () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+  );
+  expect(data, isNotNull, reason: '像素回读失败');
+  return _Pixels(image.width, image.height, data!.buffer.asUint8List());
+}
+
+/// 一张 RGBA 像素快照，只提供本文件用到的几个查询。
+class _Pixels {
+  const _Pixels(this.width, this.height, this.bytes);
+
+  final int width;
+  final int height;
+  final Uint8List bytes;
+
+  /// 指定像素的 RGB。
+  Color colorAt(int x, int y) {
+    final int i = (y * width + x) * 4;
+    return Color.fromARGB(bytes[i + 3], bytes[i], bytes[i + 1], bytes[i + 2]);
+  }
+
+  /// 某一行里出现次数最多的颜色 —— 也就是**轨道色**。
+  ///
+  /// 轨道占据整行绝大部分像素，刻度点只是几颗；用众数取轨道色比写死
+  /// `rgb(229,229,229)` 稳：主题、形态、禁用态换了都不用改断言。而且彩屏
+  /// 轨道是**彩色**的（浅蓝），不能按「灰度」找轨道。
+  _ColorCount modalColorInRow(int y) {
+    final Map<int, int> counts = <int, int>{};
+    for (int x = 0; x < width; x++) {
+      final int i = (y * width + x) * 4;
+      final int rgb = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+      counts[rgb] = (counts[rgb] ?? 0) + 1;
+    }
+    int bestRgb = 0;
+    int bestCount = -1;
+    counts.forEach((int rgb, int count) {
+      if (count > bestCount) {
+        bestRgb = rgb;
+        bestCount = count;
+      }
+    });
+    return _ColorCount(
+      Color.fromARGB(
+        255,
+        (bestRgb >> 16) & 0xFF,
+        (bestRgb >> 8) & 0xFF,
+        bestRgb & 0xFF,
+      ),
+      bestCount,
+    );
+  }
+
+  /// 某一行里连续出现的、**颜色不是 [track]** 的像素段。
+  ///
+  /// 每一段代表一颗刻度点（或滑块描边之类）。跳过贴着行首尾的段 ——
+  /// 那是控件外的页面底色，不是轨道上的东西。`OhosSlider` 会自己占满
+  /// 传入的宽度，行首尾各有一小段抗锯齿过渡。
+  List<_ColorCount> offscreenColorRuns(int y, Color track) {
+    final List<_ColorCount> runs = <_ColorCount>[];
+    // 每段取「最偏离轨道色」的那一个像素作代表：符号中间最纯，边缘是
+    // 抗锯齿的过渡色（实测 4px 宽的点是 `18,0,0,18`）。
+    Color? best;
+    int bestDelta = -1;
+    int runStart = -1;
+    void flush(int end) {
+      if (runStart < 0 || best == null) {
+        return;
+      }
+      // 行首尾的段是页面底色，丢掉。
+      if (runStart > 2 && end < width - 2) {
+        runs.add(_ColorCount(best!, end - runStart));
+      }
+      runStart = -1;
+      best = null;
+      bestDelta = -1;
+    }
+
+    for (int x = 0; x < width; x++) {
+      final Color c = colorAt(x, y);
+      if (c == track) {
+        flush(x);
+      } else {
+        if (runStart < 0) {
+          runStart = x;
+        }
+        final int delta = (_brightness(c) - _brightness(track)).abs();
+        if (delta > bestDelta) {
+          bestDelta = delta;
+          best = c;
+        }
+      }
+    }
+    flush(width);
+    return runs;
+  }
+}
+
+/// 一个颜色 + 它出现的次数 / 长度。
+class _ColorCount {
+  const _ColorCount(this.color, this.count);
+  final Color color;
+  final int count;
+}
+
+/// 感知亮度，0（纯黑）～255（纯白）。
+///
+/// 不用 `computeLuminance()`：它做 sRGB 线性化，数值落在 0～1 且非线性，
+/// 拿来比「谁更深」虽然方向对但不直观，报错信息里也读不出实际灰度。
+int _brightness(Color c) =>
+    ((c.r * 255) * 0.299 + (c.g * 255) * 0.587 + (c.b * 255) * 0.114).round();
+
+/// `R,G,B` 形式的颜色字符串，只为让断言失败信息可读。
+String _rgbString(Color c) =>
+    '${(c.r * 255).round()},${(c.g * 255).round()},${(c.b * 255).round()}';
+
+/// 把 [theme] 下的离散 `OhosSlider` 渲染出来，回读像素。
+///
+/// `value: 0` 让滑块贴最左：这样除第一颗刻度点之外，整条轨道都是
+/// 「未走过」的浅色轨道，刻度点与轨道的对比一目了然，不会被已走过的
+/// 深色段遮住。
+///
+/// **必须给一层不透明底色。** `RepaintBoundary` 只截这棵子树，滑条自己
+/// 不画背景，截出来大片像素的 alpha 是 0；而 RGBA 里透明像素的 RGB 也是
+/// `0,0,0`，会被误读成「纯黑」—— 上一版把页面当作纯黑、断言「刻度点比
+/// 轨道深」时就是这么假绿的。铺上主题的 `backgroundColor` 后，每个像素
+/// 都是它在下游真正显示的样子。
+Future<_Pixels> _renderSliderTicks(
+  WidgetTester tester,
+  OhosThemeData theme,
+  GlobalKey key,
+) async {
+  await tester.pumpWidget(
+    OhosTheme(
+      data: theme,
+      child: MaterialApp(
+        home: OhosScaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: key,
+              child: ColoredBox(
+                color: theme.backgroundColor,
+                child: SizedBox(
+                  width: 320,
+                  child: OhosSlider(
+                    value: 0,
+                    onChanged: _noopDouble,
+                    divisions: 4,
+                    showSteps: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return _pixelsOf(tester, key);
+}
+
 void main() {
   group('OhosTheme', () {
     testWidgets('of() provides the theme to descendants', (
@@ -2104,6 +2284,259 @@ void main() {
         expect(find.byType(Slider), findsOneWidget, reason: '$style 应渲染');
         expect(tester.takeException(), isNull, reason: '$style 不应溢出');
       }
+    });
+
+    testWidgets('气泡不参与布局：拖动时轨道不下移、高度不变', (WidgetTester tester) async {
+      // 用户报的 bug：「滑动时界面往下掉，应该固定不动」。
+      //
+      // 根因是气泡被当成 `Column` 的第一项 —— 一拖动 `_dragValue` 从 null
+      // 变成有值、`showBubble` 转真，气泡插进树里，整条滑条连同页面下方所有
+      // 内容被推下去「6 + 气泡高」，松手再弹回来。实测旧实现下移 17vp。
+      //
+      // 官方原文：「气泡提示的绘制区域为 Slider 自身节点的 overlay」——
+      // 它浮在滑条之上，不撑高、不挤占兄弟节点。
+      for (final OhosSliderStyle style in OhosSliderStyle.values) {
+        await tester.pumpWidget(
+          OhosTheme(
+            data: OhosThemeData.light(),
+            child: MaterialApp(
+              home: OhosScaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 320,
+                    child: OhosSlider(
+                      value: 30,
+                      onChanged: _noopDouble,
+                      style: style,
+                      divisions: 20,
+                      showSteps: true,
+                      showValueBubble: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final double height = tester.getSize(find.byType(Slider)).height;
+        final Offset top = tester.getTopLeft(find.byType(Slider));
+
+        final TestGesture gesture = await tester.startGesture(
+          tester.getCenter(find.byType(Slider)),
+        );
+        await gesture.moveBy(const Offset(24, 0));
+        await tester.pump();
+
+        // 气泡确实出现了（否则这条测试会因为「根本没画气泡」而假绿）。
+        expect(
+          find.byKey(const ValueKey<String>('bubble')),
+          findsOneWidget,
+          reason: '$style 拖动时应显示气泡',
+        );
+        expect(
+          tester.getTopLeft(find.byType(Slider)).dy,
+          top.dy,
+          reason: '$style 气泡出现不能把轨道往下推',
+        );
+        expect(
+          tester.getSize(find.byType(Slider)).height,
+          height,
+          reason: '$style 气泡出现不能改变控件高度',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(find.byType(Slider)).height,
+          height,
+          reason: '$style 松手后高度也不变',
+        );
+      }
+    });
+
+    testWidgets('带 prefix/suffix 时气泡跟着滑块走，不越出轨道', (WidgetTester tester) async {
+      // 评审 P3-7。早前气泡挂在最外层 `Stack` 上、`Positioned(left: 0,
+      // right: 0)` 铺满整行，而那一行的宽度**包含** prefix / suffix。
+      // `Align` 于是按「整行宽」归一化：拖到两端时气泡贴住的是**整行**
+      // 边缘，而不是轨道边缘，越出轨道 prefix/suffix 那么宽。
+      //
+      // 修法：把气泡塞进 `Expanded(child: slider)` 那一格，并左右各让出
+      // 轨道内缩量（`max(命中区/2, 滑块直径/2)`），归一化基数正好是轨道宽。
+      //
+      // 判据：气泡必须落在**轨道**的水平范围内（两端各容 1vp 抗锯齿）。
+      // 实测旧实现在 320 宽、带「前/后」时，右端气泡右缘到 560，而轨道
+      // 右缘只有 517.75 —— 越界 42vp，肉眼就是「气泡飘到滑条外面」。
+      //
+      // 只测中间值不够：0.5 时两边对称、偏移被抵消，必须测端点。
+      const double width = 320;
+      await tester.pumpWidget(
+        OhosTheme(
+          data: OhosThemeData.light(),
+          child: MaterialApp(
+            home: OhosScaffold(
+              body: Center(
+                child: SizedBox(
+                  width: width,
+                  child: OhosSlider(
+                    value: 0,
+                    min: 0,
+                    max: 100,
+                    onChanged: _noopDouble,
+                    divisions: 4,
+                    showValueBubble: true,
+                    prefix: const Text('前'),
+                    suffix: const Text('后'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final Finder bubbleFinder = find.byKey(const ValueKey<String>('bubble'));
+      final Rect sliderRect = tester.getRect(find.byType(Slider));
+      // 无障碍主题下轨道左右各内缩 `max(40/2, 16/2)` = 20。
+      const double inset = 20;
+      final double trackLeft = sliderRect.left + inset;
+      final double trackRight = sliderRect.right - inset;
+
+      /// 拖到全局横坐标 [x]，返回气泡矩形。
+      Future<Rect> dragTo(double x) async {
+        final Offset from = tester.getCenter(find.byType(Slider));
+        final TestGesture g = await tester.startGesture(from);
+        await tester.pump();
+        await g.moveTo(Offset((from.dx + x) / 2, sliderRect.center.dy));
+        await tester.pump();
+        await g.moveTo(Offset(x, sliderRect.center.dy));
+        await tester.pump();
+        expect(bubbleFinder, findsOneWidget, reason: '拖动时应显示气泡');
+        final Rect bubble = tester.getRect(bubbleFinder);
+        await g.up();
+        await tester.pumpAndSettle();
+        return bubble;
+      }
+
+      for (final double x in <double>[trackLeft, trackRight]) {
+        final Rect bubble = await dragTo(x);
+        expect(
+          bubble.left,
+          greaterThanOrEqualTo(trackLeft - 1),
+          reason: '拖到 $x 时气泡左缘 ${bubble.left} 越出了轨道左缘 $trackLeft（按整行宽归一化了）',
+        );
+        expect(
+          bubble.right,
+          lessThanOrEqualTo(trackRight + 1),
+          reason: '拖到 $x 时气泡右缘 ${bubble.right} 越出了轨道右缘 $trackRight（按整行宽归一化了）',
+        );
+      }
+    });
+
+    testWidgets('彩屏刻度点是前景色 10% 叠色，比未走过轨道深', (WidgetTester tester) async {
+      // 官方 `stepColor`：「默认值：混入 sys.color.ohos_id_alpha_normal_bg
+      // 透明度的 sys.color.ohos_id_color_foreground 颜色」。前者在
+      // `float.json` 里是 **0.1**。
+      //
+      // 逐像素证据：官方配图 `slider_10.png`（2880×1440）轨道是
+      // `rgb(229,229,229)`、刻度点是 `rgb(205,205,205)` ——
+      // `229 × 0.9 + 0 × 0.1 = 206.1`，与「前景色 10% 压在轨道上」吻合。
+      //
+      // 早前取 `theme.popupColor`（页面底色白）画刻度点，方向正好反了：
+      // 白点比浅灰轨道更亮，看起来是「轨道上戳了一排亮孔」。
+      //
+      // 判据落在**真实像素**上（刻度点由 `RenderSlider.paint` 直接画，
+      // 不是 `CustomPaint`，`_replay` 录不到）：轨道行里必须存在若干簇
+      // 「与轨道色不同、且比轨道更暗」的像素 —— 那就是刻度点。
+      //
+      // 注意彩屏轨道是**彩色**的（`rgb(206,220,245)` 一类的浅蓝），不能拿
+      // 「灰度」当判据（彩色像素根本不是灰的），得比 RGB 三通道的和。
+      final _Pixels px = await _renderSliderTicks(
+        tester,
+        OhosThemeData.light(),
+        GlobalKey(),
+      );
+      final int y = px.height ~/ 2;
+      final _ColorCount track = px.modalColorInRow(y);
+      final List<_ColorCount> dots = px.offscreenColorRuns(y, track.color);
+
+      expect(dots, isNotEmpty, reason: '轨道行里找不到任何与轨道色不同的像素：刻度点没画出来或与轨道同色');
+      expect(
+        dots.length,
+        greaterThanOrEqualTo(2),
+        reason: 'divisions: 4 应有 4 颗刻度点（最左那颗压在滑块下），实际只找到 ${dots.length} 簇',
+      );
+      for (final _ColorCount dot in dots) {
+        expect(
+          _brightness(dot.color),
+          lessThan(_brightness(track.color)),
+          reason:
+              '刻度点亮度 ${_brightness(dot.color)} 不低于轨道 ${_brightness(track.color)}：'
+              '方向反了（画成了「亮孔」而不是「暗点」）',
+        );
+      }
+    });
+
+    testWidgets('墨屏刻度点必须与未走过轨道不同色（否则直接消失）', (WidgetTester tester) async {
+      // 评审 P2-2。墨屏上 `policy.tint(_, 0.1)` 判成透明（16 级灰分不开），
+      // `tickColor` 于是落到回退色。早前回退色取的是 `textTertiaryColor`，
+      // 而同一段代码里 `inactiveTrackColor` 的墨屏回退**也是**它 ——
+      // 两个分支的触发条件是同一个判定（15% 判透明则 10% 必然也判透明），
+      // 因此 `tickColor == inactiveTrackColor`，刻度点在轨道上完全消失。
+      //
+      // 现在回退色改用 `textSecondaryColor`（白纸墨屏下纯黑，比轨道
+      // `#767676` 深得多）。判据：轨道行里必须有「与轨道色不同」的像素簇。
+      //
+      // 这条用例的价值在于**它会在旧实现上变红** —— 那时轨道行只有
+      // `#767676` 一种颜色，一簇都找不到。
+      final _Pixels px = await _renderSliderTicks(
+        tester,
+        OhosThemeData.ink(),
+        GlobalKey(),
+      );
+      final int y = px.height ~/ 2;
+      final _ColorCount track = px.modalColorInRow(y);
+      final List<_ColorCount> dots = px.offscreenColorRuns(y, track.color);
+
+      expect(
+        dots,
+        isNotEmpty,
+        reason:
+            '墨屏轨道行只有一种颜色（RGB ${_rgbString(track.color)}）：'
+            '刻度点与未走过轨道同色，等于没画',
+      );
+      // 方向：墨屏白纸上是「越黑越看得见」。
+      for (final _ColorCount dot in dots) {
+        expect(
+          _brightness(dot.color),
+          lessThan(_brightness(track.color)),
+          reason: '墨屏刻度点应比轨道深（更黑），不是更浅',
+        );
+      }
+      // 顺带钉住「确实是纯黑那一档」，即 textSecondaryColor 在墨屏的取值。
+      expect(
+        _brightness(dots.first.color),
+        0,
+        reason: '墨屏白纸下 textSecondaryColor 是纯黑',
+      );
+    });
+
+    testWidgets('墨屏刻度点色与未走过轨道色不是同一个 token', (WidgetTester tester) async {
+      // 上一条从像素反推。这条从**策略输出**正面钉住 P2-2 的根因：
+      // 两个回退分支若取同一个 token，条件必然同时成立（同一个判定）。
+      final OhosThemeData ink = OhosThemeData.ink();
+      final bool tintTransparent =
+          ink.policy.tint(ink.textPrimaryColor, 0.1) == Colors.transparent;
+      expect(tintTransparent, isTrue, reason: '墨屏上 10% 叠色应判成透明，否则走不到回退分支');
+      // 回退色（textSecondaryColor）与轨道回退色（textTertiaryColor）必须不同。
+      expect(
+        ink.textSecondaryColor,
+        isNot(ink.textTertiaryColor),
+        reason: '刻度点回退色与轨道回退色撞成同一个 token，刻度点会消失',
+      );
+      // 白纸上两者都要比纸色深（墨屏是白纸黑字，越深越看得见）。
+      expect(ink.textSecondaryColor.computeLuminance(), lessThan(0.5));
+      expect(ink.textTertiaryColor.computeLuminance(), lessThan(0.5));
     });
 
     Widget rangeFrame(OhosSlideRange? range, double value) {
@@ -5814,7 +6247,7 @@ void main() {
     });
 
     group('内联模式', () {
-      testWidgets('圆角 4、左右边距不对称 2 / 12、上下为 0', (WidgetTester tester) async {
+      testWidgets('圆角 4、左右边距不对称 2 / 12、上下各 2', (WidgetTester tester) async {
         await tester.pumpWidget(
           wrap(
             const OhosTextField(
@@ -5829,13 +6262,22 @@ void main() {
         expect(
           d.contentPadding,
           const EdgeInsets.only(
-            left: OhosTextFieldMetrics.inlinePaddingLeft,
+            left: OhosTextFieldMetrics.inlineContentPaddingLeft,
             right: OhosTextFieldMetrics.inlinePaddingRight,
+            top: OhosTextFieldMetrics.inlinePaddingVertical,
+            bottom: OhosTextFieldMetrics.inlinePaddingVertical,
           ),
         );
-        // 左 2 右 12 —— 不对称是官方值（textfield_inline_padding_left/right）
+        // 右 12 是官方 `textfield_inline_padding_right`；左 2 是官方
+        // `textfield_inline_padding_left`，但**不能直接当 contentPadding** ——
+        // `InputDecorator` 自带 4vp 基线内缩（实测 contentPadding.left 与
+        // 文字左偏移是 1:1 相加），再叠那 2 会得到 6vp，比官方配图的 4.5vp
+        // 明显偏大。所以传 0，由基线承担。
         expect(OhosTextFieldMetrics.inlinePaddingLeft, 2);
+        expect(OhosTextFieldMetrics.inlineContentPaddingLeft, 0);
         expect(OhosTextFieldMetrics.inlinePaddingRight, 12);
+        // 上下不再是 0 —— 0 就是用户看到的「字贴边框」。
+        expect(OhosTextFieldMetrics.inlinePaddingVertical, 2);
 
         final OutlineInputBorder b = d.enabledBorder! as OutlineInputBorder;
         expect(
@@ -5858,8 +6300,94 @@ void main() {
             .widget<TextField>(find.byType(TextField))
             .decoration!;
         final OutlineInputBorder b = d.enabledBorder! as OutlineInputBorder;
-        // 线宽 1，不是 filled 的 0 —— 它就是「一行可点的文本」，靠线才看得出来
-        expect(b.borderSide.width, 1);
+        // 官方 `INLINE_BORDER_WIDTH = 2.0_vp`，比填充形态那套 1vp hairline
+        // 粗一档 —— 内联只有这一圈线能定边界。配图 `textinput_16.png`
+        // 实测描边 8px ÷ DPR 4 = 2vp，与源码常量两处独立吻合。
+        expect(b.borderSide.width, OhosTextFieldMetrics.inlineBorderWidth);
+      });
+
+      testWidgets('内联形态禁用时边框不退化成 1vp（否则文字会跳一下）', (WidgetTester tester) async {
+        // 评审 P3-3。`enabledBorder` / `focusedBorder` 这次都改成了
+        // `inlineBorderWidth`(2)，但 `disabledBorder` 仍走 `border(...)` 的
+        // 默认宽度 1vp。于是「刚被禁用」这一瞬间边框由 2 变 1，
+        // `InputDecorator` 的内容区随之外扩 1vp，文字与外框的相对位置跳动。
+        // 内联只有这一圈线能定边界，2vp 掉成 1vp 等于边界直接淡掉。
+        Future<InputDecoration> decorationWith({required bool enabled}) async {
+          await tester.pumpWidget(
+            wrap(
+              OhosTextField(
+                initialValue: '重命名',
+                variant: OhosTextFieldVariant.inline,
+                enabled: enabled,
+              ),
+            ),
+          );
+          return tester.widget<TextField>(find.byType(TextField)).decoration!;
+        }
+
+        final OutlineInputBorder enabled =
+            (await decorationWith(enabled: true)).enabledBorder!
+                as OutlineInputBorder;
+        final OutlineInputBorder disabled =
+            (await decorationWith(enabled: false)).disabledBorder!
+                as OutlineInputBorder;
+
+        expect(
+          disabled.borderSide.width,
+          enabled.borderSide.width,
+          reason:
+              '禁用态线宽 ${disabled.borderSide.width} 与启用态 '
+              '${enabled.borderSide.width} 不一致：禁用瞬间边框会变细、文字位移',
+        );
+        expect(
+          disabled.borderSide.width,
+          OhosTextFieldMetrics.inlineBorderWidth,
+        );
+      });
+
+      testWidgets('内联形态文字不贴边框（上下有留白、左侧有内缩）', (WidgetTester tester) async {
+        // 用户报的 bug：「内联模式，输入框里面没有间距，里面的字直接接触到
+        // 边框了」。
+        //
+        // 根因：内联的 `contentPadding` 当时是 `(2, 0, 12, 0)` —— 上下为 0，
+        // 理由是「它就是一行文字，上下留白由所在行高提供」。这个前提不成立：
+        // `OhosTextField` 自己就是那个容器。实测框高只有 24vp、字形 12vp
+        // 顶满，上下间隙里还压着边框。
+        //
+        // 官方配图 `textinput_16.png`（DPR 4）内联框外高 26vp、内容高 22vp，
+        // 文字上下各留 2–3vp。
+        await tester.pumpWidget(
+          wrap(
+            const OhosTextField(
+              initialValue: '重命名',
+              variant: OhosTextFieldVariant.inline,
+            ),
+          ),
+        );
+
+        final TextField field = tester.widget<TextField>(
+          find.byType(TextField),
+        );
+        final EdgeInsets padding =
+            field.decoration!.contentPadding! as EdgeInsets;
+        expect(
+          padding.top,
+          OhosTextFieldMetrics.inlinePaddingVertical,
+          reason: '上下必须有留白，不能是 0',
+        );
+        expect(padding.bottom, OhosTextFieldMetrics.inlinePaddingVertical);
+        expect(padding.top, greaterThan(0), reason: '0 就是「字顶到边框」的原始 bug');
+        // 左内缩交给 `InputDecorator` 的 4vp 基线，这里传 0；右 12 是官方
+        // `textfield_inline_padding_right`。
+        expect(padding.right, OhosTextFieldMetrics.inlinePaddingRight);
+
+        // 端到端：框高必须容得下「字形 + 2×垂直留白 + 2×边框」，不能是
+        // 原来的 24（= 内容高 24、留白 0）。
+        final double height = tester.getSize(find.byType(TextField)).height;
+        expect(height, greaterThan(24), reason: '修复前框高恒为 24（上下留白为 0），字会贴边');
+        // 8（上下留白）+ 24（内容高）− 24 被 `isDense` 压掉的部分 …
+        // 直接对齐推导值：内容 24 + 2×2 留白 = 28。
+        expect(height, 28);
       });
 
       testWidgets('内联 + 密码：回落成 underline，不画「内联密码框」', (
@@ -6482,6 +7010,250 @@ void main() {
       expect(paints, isNotEmpty, reason: 'OhosPatternLock 里没有找到自绘 painter');
       return paints.first.painter!;
     }
+
+    testWidgets('可滚动页面里按下即选中，不等 kTouchSlop', (WidgetTester tester) async {
+      // 用户报的 bug：「圆圈很不容易点击，经常点不到」。
+      //
+      // 根因不是命中半径，而是**监听类型**：早前挂的是
+      // `GestureDetector.onPanStart`，它在真实页面里要和外层滚动容器的
+      // 垂直拖拽抢手势裁决（arena）。手指按下后只要没越过 `kTouchSlop`
+      // （18vp），arena 还没裁决，`onPanStart` 就没回调 —— 手指抖 3vp
+      // 这种最自然的点按全程都收不到事件。
+      //
+      // 本用例故意把图案锁放进 `ListView`（页面常见形态），按下后只抖
+      // 3vp。官方语义是「手指在 PatternLock 组件区域**按下**时开始进入
+      // 输入状态」，所以按下这一刻就该有 `[0]`。
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              children: <Widget>[
+                const SizedBox(height: 40),
+                Center(child: OhosPatternLock(onCompleted: _noopPattern)),
+                const SizedBox(height: 800),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+      final Offset at = origin + const Offset(72, 72);
+      final TestGesture gesture = await tester.startGesture(at);
+      await tester.pump();
+
+      final dynamic held = painterOf(tester);
+      expect(held.pattern, <int>[
+        0,
+      ], reason: '按下那一刻就应命中第 0 个点（不该等 18vp 滑动手势裁决）');
+
+      // 真机点按时手一定会抖几个 vp，这种抖动不能把选中弄丢。
+      await gesture.moveTo(at + const Offset(3, 3));
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, <int>[0]);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('滚动容器里拖动：列表不滚，图案按本地坐标完整记录', (WidgetTester tester) async {
+      // 评审 P2-1。上一版为了修「按下即命中」把 `GestureDetector` 换成了
+      // `Listener` —— 后者只收原始指针事件，**不进 GestureArena**。父级
+      // `Scrollable` 的垂直拖拽识别器因此失去了对手：手指在图案锁上按下，
+      // 图案开始画，同时页面照常滚动。两个后果：
+      //
+      // 1. 抬手时 `_pattern.length >= 2` 就 `onCompleted`，而这一笔本来是
+      //    用户拿来滚页面的 —— 对图案锁这种安全输入，「划过 = 提交」不可接受；
+      // 2. `PointerMoveEvent.localPosition` 用的是按下那一刻缓存的
+      //    `HitTestEntry.transform`。页面滚走后控件已经位移，同一份本地坐标
+      //    对应的屏幕位置全变了，画出/提交的图案与手指实际经过的点对不上。
+      //
+      // 修法是外层补 `RawGestureDetector`，注册一个 `addPointer` 里就
+      // `resolve(accepted)` 的识别器，让**滚动与画图案二者只能有一个发生**。
+      //
+      // ## 方向必须是向上（`pixels` 变大）
+      //
+      // `ScrollPosition.pixels` 从 0 起步，向下拖（手指往下、内容往下露）会
+      // 被夹在 0 —— 无论竞技场是否互斥，`pixels` 都是 0。用向下拖来断言
+      // 「没滚动」是自指的，写坏了也照样绿（实测变异验证里正是这样漏掉的）。
+      // 所以这里向上拖，让「不滚」成为一个**可被违反**的断言。
+      //
+      // 判据分两层：
+      // - 列表一 vp 都不滚（竞技场互斥成立）；
+      // - 提交的图案是拖动真实经过的点。这一条是后果 2 的探针 —— 页面若滚走
+      //   而 `localPosition` 仍用旧变换，算出的点位会整体偏移，不会正好命中
+      //   手指经过的那几个点。
+      List<int>? completed;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              children: <Widget>[
+                const SizedBox(height: 40),
+                Center(
+                  child: OhosPatternLock(
+                    onCompleted: (List<int> p) => completed = p,
+                  ),
+                ),
+                const SizedBox(height: 1200),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final ScrollPosition position = tester
+          .state<ScrollableState>(find.byType(Scrollable))
+          .position;
+      expect(position.pixels, 0);
+      expect(
+        position.maxScrollExtent,
+        greaterThan(200),
+        reason: '得有滚动余量，否则断言无意义',
+      );
+
+      // 从底行的第 6 个点起笔（72, 216），竖直往上拖到第 0 个点（72, 72）。
+      // 手指向上移动 = 内容向上走 = `pixels` 增大，因此「不滚动」是可违反的。
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+      final TestGesture gesture = await tester.startGesture(
+        origin + const Offset(72, 216),
+      );
+      await tester.pump();
+      for (final double y in <double>[144, 72, 20]) {
+        await gesture.moveTo(origin + Offset(72, y));
+        await tester.pump();
+      }
+
+      expect(position.pixels, 0, reason: '图案锁上的拖动被父级 Scrollable 抢走了（竞技场没有互斥）');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // 提交的图案就是这条竖线：说明本地坐标没被滚动污染（后果 2 的探针）。
+      expect(completed, <int>[
+        6,
+        3,
+        0,
+      ], reason: '提交的图案与手指实际经过的点不符（localPosition 用了过期的 hit-test 变换）');
+      expect(position.pixels, 0);
+    });
+
+    testWidgets('多指时只跟随第一个指针，不被第二指打断', (WidgetTester tester) async {
+      // 评审 P3-5。`Listener` 会把**每一根手指**的事件都送进来。不认
+      // `pointer` id 的写法有两个错：第二根手指按下会在 `_onPointerDown`
+      // 里把画了一半的图案 `clear()` 掉；任意一根手指抬起又会在
+      // `_onPointerUp` 里以残缺图案提交。
+      //
+      // 官方 `PatternLock` 只认单指，本库跟随**第一个落下的指针**。
+      List<int>? completed;
+      await tester.pumpWidget(
+        wrap(OhosPatternLock(onCompleted: (List<int> p) => completed = p)),
+      );
+
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+      // 第一根手指：0 → 1 → 2。
+      final TestGesture first = await tester.startGesture(
+        origin + const Offset(72, 72),
+      );
+      await tester.pump();
+      await first.moveTo(origin + const Offset(144, 72));
+      await tester.pump();
+      await first.moveTo(origin + const Offset(216, 72));
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, <int>[0, 1, 2]);
+
+      // 第二根手指落在下半屏（6 号点）。它不该清空已画的图案。
+      final TestGesture second = await tester.startGesture(
+        origin + const Offset(72, 216),
+      );
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, <int>[
+        0,
+        1,
+        2,
+      ], reason: '第二根手指按下把第一根已画的图案清掉了');
+
+      // 第二根手指先抬起：不该以残缺图案提交。
+      await second.up();
+      await tester.pump();
+      expect(completed, isNull, reason: '非活动指针抬起触发了提交');
+
+      // 第一根手指抬起：这才是合法的收尾。
+      await first.up();
+      await tester.pumpAndSettle();
+      expect(completed, <int>[0, 1, 2]);
+    });
+
+    testWidgets('起笔没压准圆点，滑到点上仍能开始记录', (WidgetTester tester) async {
+      // 评审 P3-6。早前 `_onPointerMove` 的守卫是 `if (_pattern.isEmpty) return;`
+      // —— 等于要求「起笔必须压在圆点上」。官方的语义是「手指在组件区域
+      // **按下**时进入输入状态」，之后手指经过哪个点就记哪个点。
+      //
+      // 这个守卫比原来的 `onPanUpdate` 实现还退了一步：旧实现在留白处起笔、
+      // 滑进九宫格照样能画。
+      List<int>? completed;
+      await tester.pumpWidget(
+        wrap(OhosPatternLock(onCompleted: (List<int> p) => completed = p)),
+      );
+
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+      // 在左上角的留白处起笔（距 0 号点超过命中半径 24vp，不命中任何点）。
+      final TestGesture gesture = await tester.startGesture(
+        origin + const Offset(20, 20),
+      );
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, isEmpty);
+
+      // 滑到 0 号点，再滑到 1 号点 —— 两个点都该被记录。
+      await gesture.moveTo(origin + const Offset(72, 72));
+      await tester.pump();
+      await gesture.moveTo(origin + const Offset(144, 72));
+      await tester.pump();
+      expect((painterOf(tester) as dynamic).pattern, <int>[
+        0,
+        1,
+      ], reason: '起笔在留白处时整笔失效了（守卫用错判据）');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(completed, <int>[0, 1]);
+    });
+
+    testWidgets('命中半径 48vp 直径：实测边界命中、边界外一 vp 不命中', (WidgetTester tester) async {
+      // 圆点视觉半径只有 6（直径 12）—— 拿它当命中区等于要求指尖精确压在
+      // 12vp 的圆上。改用最小可点尺寸 48vp 直径（半径 24），同时又严格小于
+      // 相邻两点间距的一半（36），保证「随手一划串成一串」不会回来。
+      //
+      // 判据必须是**实测边界**，不能在测试里再声明一遍 `48/2` 然后自己跟
+      // 自己比 —— 那种写法即使把组件里的常量改坏也照样绿（自指断言）。
+      // 做法：沿 x 轴二分／扫描出「按下能命中 0 号点的最远距离」，
+      // 断言它落在 24 这个真实值上，且明确小于半格距。
+      await tester.pumpWidget(wrap(OhosPatternLock(onCompleted: _noopPattern)));
+      final Offset origin = tester.getTopLeft(find.byType(OhosPatternLock));
+
+      /// 在距 0 号点右侧 [dx] 处按下，返回是否命中 0 号点。
+      Future<bool> hitsAt(double dx) async {
+        final TestGesture g = await tester.startGesture(
+          origin + Offset(72 + dx, 72),
+        );
+        await tester.pump();
+        final bool hit = (painterOf(tester) as dynamic).pattern.isNotEmpty;
+        await g.up();
+        await tester.pumpAndSettle();
+        return hit;
+      }
+
+      // 边界内一定命中（20 已在旧实现 9vp 的命中区之外，是回归点）。
+      expect(await hitsAt(20), isTrue, reason: '距圆点 20vp 仍应在命中区内');
+      expect(await hitsAt(23), isTrue, reason: '半径 24 的命中区，23vp 必须命中');
+
+      // 边界外一定不命中。
+      expect(await hitsAt(25), isFalse, reason: '半径 24 的命中区，25vp 必须落空');
+      expect(await hitsAt(36), isFalse, reason: '半格距处是两点正中间，不该命中');
+
+      // 边界本身：24vp（半径）必须命中，这说明实测半径就是 48/2，不是别的小值。
+      expect(await hitsAt(24), isTrue, reason: '实测命中半径应正好是 24vp（48vp 直径）');
+    });
 
     /// 从第 0 个圆点拖到 [target]（控件本地坐标）。
     ///

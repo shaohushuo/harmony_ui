@@ -109,9 +109,11 @@ class _InputPageState extends State<InputPage> {
           title: '内联模式（整行重命名）',
           description:
               'variant: inline 对应 ArkUI 的 TextInputStyle.Inline —— 圆角 4、'
-              '左右边距 2 / 12（不对称是官方值）、上下为 0，看起来就是一行可点的文本。'
-              '官方限定只支持 Normal 单行：给 obscurePassword 或 maxLines > 1 会回落成'
-              '下划线形态，不画官方不存在的「内联密码框」。',
+              '描边 2（官方 INLINE_BORDER_WIDTH）、上下各 2 内边距、右侧 12。'
+              '左侧文字与框线的距离由 InputDecorator 的 4vp 基线承担，与官方'
+              '配图的 4.5 基本一致。官方限定只支持 Normal 单行：给 '
+              'obscurePassword 或 maxLines > 1 会回落成下划线形态，不画官方'
+              '不存在的「内联密码框」。',
           child: DemoCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

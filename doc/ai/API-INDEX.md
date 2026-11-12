@@ -296,7 +296,7 @@
 
 ## `lib/src/widgets/ohos_pattern_lock.dart`
 
-- `OhosPatternLock` | class | extends StatefulWidget | (key, required onCompleted, onError, errorPattern, size=288, circleRadius=6, pathStrokeWidth=12, pathColor, circleColor, activeCircleColor) | 1 forms | `lib/src/widgets/ohos_pattern_lock.dart:19`
+- `OhosPatternLock` | class | extends StatefulWidget | (key, required onCompleted, onError, errorPattern, size=288, circleRadius=6, pathStrokeWidth=12, pathColor, circleColor, activeCircleColor) | 1 forms | `lib/src/widgets/ohos_pattern_lock.dart:23`
 
 ## `lib/src/widgets/ohos_picker.dart`
 
@@ -419,10 +419,10 @@
 
 ## `lib/src/widgets/ohos_slider.dart`
 
-- `OhosSliderStyle` | enum | `lib/src/widgets/ohos_slider.dart:7`
-- `OhosSlider` | class | extends StatefulWidget | (key, required value, required onChanged, min=0, max=100, divisions, label, activeColor, enabled=true, showValueBubble=false, style=OhosSliderStyle.outset, showSteps=false, stepSize=4, prefix, +2) | 5 forms | `lib/src/widgets/ohos_slider.dart:39`
-- `OhosSlideRange` | class | (from, to) | `lib/src/widgets/ohos_slider.dart:135`
-- `OhosSliderThumbShape` | class | extends SliderComponentShape | (radius=10, outlineColor, outlineWidth=1, disabledFillColor, elevation=0, shadowColor=const Color(0x33000000)) | `lib/src/widgets/ohos_slider.dart:448`
+- `OhosSliderStyle` | enum | `lib/src/widgets/ohos_slider.dart:9`
+- `OhosSlider` | class | extends StatefulWidget | (key, required value, required onChanged, min=0, max=100, divisions, label, activeColor, enabled=true, showValueBubble=false, style=OhosSliderStyle.outset, showSteps=false, stepSize=4, prefix, +2) | 5 forms | `lib/src/widgets/ohos_slider.dart:41`
+- `OhosSlideRange` | class | (from, to) | `lib/src/widgets/ohos_slider.dart:137`
+- `OhosSliderThumbShape` | class | extends SliderComponentShape | (radius=10, outlineColor, outlineWidth=1, disabledFillColor, elevation=0, shadowColor=const Color(0x33000000)) | `lib/src/widgets/ohos_slider.dart:559`
 
 ## `lib/src/widgets/ohos_snack_bar.dart`
 
@@ -478,7 +478,7 @@
 - `OhosTextFieldVariant` | enum | 4 forms | `lib/src/widgets/ohos_text_field.dart:9`
 - `OhosInputCounterOptions` | class | (thresholdPercentage, highlightBorder=true) | 1 forms | `lib/src/widgets/ohos_text_field.dart:56`
 - `OhosTextFieldMetrics` | class | () | 2 forms | `lib/src/widgets/ohos_text_field.dart:123`
-- `OhosTextField` | class | extends StatefulWidget | (key, controller, focusNode, hintText, labelText, prefixIcon, suffixIcon, errorText, obscureText=false, enabled=true, keyboardType, textInputAction, onChanged, onSubmitted, +13) | 2 forms | `lib/src/widgets/ohos_text_field.dart:233`
+- `OhosTextField` | class | extends StatefulWidget | (key, controller, focusNode, hintText, labelText, prefixIcon, suffixIcon, errorText, obscureText=false, enabled=true, keyboardType, textInputAction, onChanged, onSubmitted, +13) | 2 forms | `lib/src/widgets/ohos_text_field.dart:281`
 
 ## `lib/src/widgets/ohos_theme_toggle_button.dart`
 
