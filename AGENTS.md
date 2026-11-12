@@ -7,6 +7,8 @@
 
 HarmonyOS 设计语言的 Flutter 组件库，对齐官方「控件概览」42 个控件。它**不是** Material 组件的换皮，也**不是** ArkUI API 的直译：这是一层有自己取舍的翻译层，很多参数被有意删掉或改名，理由写在源码 `///` 注释里。
 
+定位上它**面向 HarmonyOS 7 与 Flutter 3.50**：前者带来了「沉浸光感」等新设计理念（本库已有 `OhosLightMaterial` / `OhosPointLight` / `OhosPressShadow` 的 Flutter 侧近似），后者把 UI 拆成独立的 `material_ui` / `cupertino_ui`，从此设计语言可以脱离框架发版节奏演进 —— 这是这类第三方 UI 库在架构上的立足点。**但现状与目标有差距，回答 API 问题时别把方向当事实**：`lib/` 下 84 个 Dart 文件里仍有 78 个 `import 'package:flutter/material.dart'`（`material_ui` 迁移未做），官方的「非线性形变」与整个「空间计算」能力本库都没有。
+
 - 唯一公开入口：`import 'package:harmony_ui/harmony_ui.dart';`
 - `lib/src/**` 是内部实现。**不要**从外部 import `package:harmony_ui/src/...`；`lib/harmony_ui.dart` 的 export 列表是「公开」的唯一定义（`lib/src/widgets/ohos_arc.dart` 就故意没有导出）。
 - 图标来自 `harmony_icons` 包，类名仍是 `OhosIcons`；旧的 `ohos_icons` 已弃用。

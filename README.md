@@ -1,5 +1,17 @@
 # harmony_ui
 
+**面向 HarmonyOS 7 与 Flutter 3.50 设计。**
+
+HarmonyOS 7 的设计规范引入了「空间计算」「沉浸光感」等全新设计理念：空间美学、空间影音与空间交互构成一套完整技术栈，ArkUI 侧把光线传播与材质反射抽象成可配置的组件材质（`IMMERSIVE` 材质，以及光随指动、光线勾勒、非线性形变三组空间感动效）。
+
+Flutter 自 3.50 起把 UI 彻底拆分为 `material_ui` 与 `cupertino_ui` 两个独立包 —— `package:flutter/material.dart` 与 `package:flutter/cupertino.dart` 正式废弃（独立包 1.0 于 3.47 上架 pub.dev，3.50 起 `flutter create` 新项目默认 `material_ui`）。这标志着 UI 与框架解耦、UI 库可以独立演进，也正是 `harmony_ui` 这类第三方设计语言库在架构层面被支撑的前提：一套设计语言不必再排队等框架的季度发版。
+
+> **范围说明** —— 「面向」是设计方向，不等于已交付清单：
+>
+> - **沉浸光感已有实现**：`OhosLightMaterial`（五档 `ULTRA_THIN…ULTRA_THICK` 材质、光池跟随 `glowAlignment`、镜面扫掠与 rim 高光、光感漫射）、`OhosPointLight` / `OhosIlluminated`、`OhosPressShadow`，详见下文[「沉浸光感」一节](#沉浸光感immersive-light)。官方那三组空间感动效里，「光随指动」（`enablePressGlow`）与「光线勾勒」（rim 亮边 + 顶缘发丝高光）有近似，**「非线性形变」尚无**；且实现是高斯模糊 + 多层 tint 合成，不是 ArkUI 的原生材质。
+> - **空间计算不在范围内**：3DGS 端侧重建、空间音频、空间影像属 `Spatial Recon Kit` / `ArkGraphics 3D` / `Audio Kit` 等系统 Kit，不是 UI 组件层能承载的。
+> - **`material_ui` 迁移尚未进行**：`lib/` 下 84 个 Dart 文件仍有 78 个 `import 'package:flutter/material.dart'`（0 个用 Cupertino），当前按 `ohos/oh-3.35.7-release` 与上游 stable 3.47.x 双版本验证。上面两段讲的是**架构方向** —— UI 能独立于框架演进。
+
 > **在线预览**：全部组件提供 Web 版画廊，无需安装即可在浏览器中查看实际效果：
 > <https://shaohushuo.github.io/harmony_ui/>
 
@@ -48,7 +60,7 @@
 
 > 状态：代码已发布到 GitHub，pub.dev 发布计划中（仓库：`shaohushuo/harmony_ui`，包名 `harmony_ui`）。
 
-Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范），并完整覆盖官方「控件概览」文档中的 **6 大类 42 个控件**。组件命名与 API 尽可能对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，方便迁移：
+`harmony_ui` 是一个 Material / Cupertino 风格的 Flutter 组件库，实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范），并完整覆盖官方「控件概览」文档中的 **6 大类 42 个控件**。组件命名与 API 尽可能对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，方便迁移：
 
 | Material / Cupertino | harmony_ui |
 | --- | --- |

@@ -2,6 +2,18 @@
 
 ## 简介
 
+**面向 HarmonyOS 7 与 Flutter 3.50 设计。**
+
+HarmonyOS 7 的设计规范引入了「空间计算」「沉浸光感」等全新设计理念：空间美学、空间影音与空间交互构成一套完整技术栈，ArkUI 侧把光线传播与材质反射抽象成可配置的组件材质（`IMMERSIVE` 材质，以及光随指动、光线勾勒、非线性形变三组空间感动效）。
+
+Flutter 自 3.50 起把 UI 彻底拆分为 `material_ui` 与 `cupertino_ui` 两个独立包 —— `package:flutter/material.dart` 与 `package:flutter/cupertino.dart` 正式废弃（独立包 1.0 于 3.47 上架 pub.dev，3.50 起 `flutter create` 新项目默认 `material_ui`）。这标志着 UI 与框架解耦、UI 库可以独立演进，也正是 `harmony_ui` 这类第三方设计语言库在架构层面被支撑的前提：一套设计语言不必再排队等框架的季度发版。
+
+> **范围说明（「面向」是目标，不是已交付清单）**
+>
+> - **沉浸光感**已有实现（`OhosLightMaterial` / `OhosPointLight` / `OhosPressShadow`），但是 Flutter 侧近似（高斯模糊 + 多层 tint 合成），不是 ArkUI 的原生材质；官方三组空间感动效中「光随指动」「光线勾勒」有近似，**「非线性形变」尚无**。
+> - **空间计算**（3DGS 端侧重建、空间音频、空间影像）属于 `Spatial Recon Kit` / `ArkGraphics 3D` / `Audio Kit` 等系统 Kit 能力，不在 UI 组件层范围内。
+> - **`material_ui` 迁移尚未进行**：`lib/` 下 84 个 Dart 文件里仍有 78 个 `import 'package:flutter/material.dart'`。
+
 `harmony_ui` 是一个 Material/Cupertino 风格的 Flutter 组件库，完整实现了 **HarmonyOS 设计语言**（华为鸿蒙「设计入门」规范），覆盖官方「控件概览」文档中的 **6 大类 42 个控件**，并实现沉浸光感材质、响应式布局、转场动效，以及对照华为「UI Design Kit 能力」文档的点光源、按压阴影、侧边栏、常驻通知、动态模糊标题栏等增强能力。
 
 组件命名与 API 对齐 Flutter 内置的 `Material*` / `Cupertino*` 组件，会写 Flutter 即可直接使用。纯 Dart / Flutter 实现，零平台通道调用，唯一第三方依赖为二维码生成 `qr` 包。

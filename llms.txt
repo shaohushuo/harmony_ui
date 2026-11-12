@@ -1,6 +1,6 @@
 # harmony_ui
 
-> HarmonyOS design language widgets for Flutter: 42 official controls, 254 public symbols, version 0.6.3. Import only `package:harmony_ui/harmony_ui.dart`.
+> HarmonyOS design language widgets for Flutter, targeting HarmonyOS 7 and Flutter 3.50. 42 official controls, 254 public symbols, version 0.6.3. Import only `package:harmony_ui/harmony_ui.dart`.
 
 ## Start here (small, safe to load)
 
