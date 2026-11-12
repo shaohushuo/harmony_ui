@@ -717,7 +717,8 @@ def build() -> tuple[dict, dict[str, str]]:
     llms = [
         "# harmony_ui",
         "",
-        "> HarmonyOS design language widgets for Flutter: 42 official controls, "
+        "> HarmonyOS design language widgets for Flutter, targeting HarmonyOS 7 "
+        "and Flutter 3.50. 42 official controls, "
         f"{counts['symbols']} public symbols, version {version()}. "
         "Import only `package:harmony_ui/harmony_ui.dart`.",
         "",

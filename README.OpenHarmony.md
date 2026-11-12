@@ -2,6 +2,18 @@
 
 ## Introduction
 
+**Designed for HarmonyOS 7 and Flutter 3.50.**
+
+HarmonyOS 7 introduces new design directions such as **spatial computing** and **immersive light**: spatial aesthetics, spatial media, and spatial interaction form a complete stack, and on the ArkUI side the propagation of light and the reflection of materials become configurable component materials (the `IMMERSIVE` material, plus three spatial-motion effects — light-follows-finger, light-edged contours, and non-linear deformation).
+
+Since Flutter 3.50, the UI layer is fully split into two standalone packages, `material_ui` and `cupertino_ui` — `package:flutter/material.dart` and `package:flutter/cupertino.dart` are formally deprecated (the standalone packages reached 1.0 on pub.dev in 3.47, and `flutter create` defaults to `material_ui` from 3.50 on). That marks the decoupling of UI from the framework: a UI library can now evolve on its own schedule, which is exactly the architectural footing a third-party design language library like `harmony_ui` needs — a design language no longer has to wait in line for the framework's quarterly release.
+
+> **Scope note — "designed for" is a direction, not a shipped checklist**
+>
+> - **Immersive light is already implemented** (`OhosLightMaterial` / `OhosPointLight` / `OhosPressShadow`), but as a Flutter-side approximation (Gaussian blur plus layered tints), not ArkUI's native material. Of the three spatial-motion effects, light-follows-finger and light-edged contours have approximations; **non-linear deformation does not exist yet**.
+> - **Spatial computing** (on-device 3DGS reconstruction, spatial audio, spatial video) belongs to system kits such as `Spatial Recon Kit` / `ArkGraphics 3D` / `Audio Kit`, not to the widget layer.
+> - **The `material_ui` migration has not happened yet**: 78 of the 84 Dart files under `lib/` still `import 'package:flutter/material.dart'`.
+
 `harmony_ui` is a Material/Cupertino-style Flutter widget library that fully implements the **HarmonyOS design language** (Huawei "Design Basics" specification). It covers all **42 controls in 6 categories** from the official "Controls Overview" documentation, and implements immersive light material, responsive layout, transition motion, plus enhanced capabilities aligned with Huawei's "UI Design Kit" documentation — point light, press shadow, side bar, resident snackbar, dynamic blur app bar, and more.
 
 Widget naming and APIs are aligned with Flutter's built-in `Material*` / `Cupertino*` widgets, so anyone who can write Flutter can use it directly. It is pure Dart / Flutter with zero platform-channel calls; the only third-party dependency is the `qr` package for QR code generation.
