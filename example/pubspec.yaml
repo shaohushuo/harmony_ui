@@ -5,7 +5,9 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  # hm_symbol 1.1.0 requires Dart >=3.10.7 (Flutter 3.47+).
+  # The library package itself keeps its 3.9.2 floor; only this example raises it.
+  sdk: ^3.10.7
 
 dependencies:
   flutter:
@@ -13,6 +15,7 @@ dependencies:
   harmony_ui:
     path: ../
   harmony_icons: ^0.1.0
+  hm_symbol: ^1.1.0
 
 dev_dependencies:
   flutter_test:

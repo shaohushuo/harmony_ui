@@ -114,7 +114,7 @@ class HomePage extends StatelessWidget {
     ),
     GalleryCategory(
       title: '图标库',
-      subtitle: 'harmony_icons · 具名图标 · 隐藏字形 · 搜索筛选',
+      subtitle: 'harmony_icons + hm_symbol · 官方 / 全量图标',
       icon: OhosIcons.square_grid_2x2,
       builder: (BuildContext context) => IconsPage(),
     ),

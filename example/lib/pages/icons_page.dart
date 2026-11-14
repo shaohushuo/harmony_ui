@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
+import 'package:hm_symbol/hm_symbol.dart';
 
 import '../theme_switch.dart';
 
-/// `harmony_icons` 图标浏览器。
+/// 图标库的两个来源：
 ///
-/// 默认只列出 [OhosIcons] 具名导出的图标 —— 也就是源码里一个个
-/// `IconData` 常量，日常查名字先看这一层就够了。切到「全部字形」后，会额外
-/// 带出字体里保留、但没有单独常量名的 RTL 镜像字形（隐藏字形）。
-/// 当前 harmony_icons 0.1.0 / Symbol 2.3 的对应数量是 534 + 107 = 641。
+/// - [official]：`harmony_icons`，534 个官方推荐图标，带中文名、分类、
+///   模块、最低版本和 RTL 镜像码点等元数据。
+/// - [full]：`hm_symbol`，3,844 个英文命名的全量 HarmonyOS Symbol 字形，
+///   包含线性、填充和 `*_mirroring` 镜像字形。
+enum _IconLibrary { official, full }
+
+/// 图标浏览器。
+///
+/// 两个 tab 分别对应两个库的定位：日常用官方推荐集查元数据，需要找冷门
+/// 字形时切到全量集。两个库互不修改，页面只做消费。
 class IconsPage extends StatefulWidget {
   const IconsPage({super.key});
 
@@ -18,145 +25,166 @@ class IconsPage extends StatefulWidget {
   State<IconsPage> createState() => _IconsPageState();
 }
 
-/// 浏览范围：默认只看具名图标，也可以把隐藏的镜像字形一起带出来。
-enum _IconScope { named, all }
+class _IconsPageState extends State<IconsPage> {
+  _IconLibrary _library = _IconLibrary.official;
 
-/// 一个可浏览的字形。具名图标与镜像字形共用这套结构，[isMirror] 区分来源。
-@immutable
-class _IconEntry {
-  const _IconEntry({
-    required this.key,
-    required this.name,
-    required this.label,
-    required this.module,
-    required this.categories,
-    required this.supportVersion,
-    required this.codepoint,
-    required this.icon,
-    this.isMirror = false,
-  });
-
-  /// 列表内唯一键；镜像字形用 `<name>__mirror`，避免和具名图标撞车。
-  final String key;
-  final String name;
-  final String label;
-  final String module;
-  final List<String> categories;
-  final String supportVersion;
-  final int codepoint;
-  final IconData icon;
-  final bool isMirror;
-
-  String get hexCodepoint => '0x${codepoint.toRadixString(16).toUpperCase()}';
-
-  String get searchText =>
-      'OhosIcons.$name $name $label $module ${categories.join(' ')} '
-              '$hexCodepoint'
-          .toLowerCase();
+  @override
+  Widget build(BuildContext context) {
+    return OhosScaffold(
+      appBar: OhosAppBar(
+        title: const Text('图标库'),
+        actions: const <Widget>[ThemeSwitchButton()],
+      ),
+      body: Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _LibraryHeader(library: _library),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: OhosSegmentedButton<_IconLibrary>(
+              type: OhosSegmentType.tab,
+              segments: <OhosSegment<_IconLibrary>>[
+                OhosSegment<_IconLibrary>(
+                  label: '官方 ${OhosIcons.count}',
+                  value: _IconLibrary.official,
+                ),
+                OhosSegment<_IconLibrary>(
+                  label: '全量 ${harmonySymbolCatalog.length}',
+                  value: _IconLibrary.full,
+                ),
+              ],
+              selected: _library,
+              onSelected: (_IconLibrary library) {
+                setState(() => _library = library);
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: IndexedStack(
+              index: _library.index,
+              children: const <Widget>[
+                _OfficialIconsBrowser(),
+                _FullSymbolsBrowser(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _IconsPageState extends State<IconsPage> {
+/// 顶部说明卡：随当前 tab 切换文案与图标。
+class _LibraryHeader extends StatelessWidget {
+  const _LibraryHeader({required this.library});
+
+  final _IconLibrary library;
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final bool official = library == _IconLibrary.official;
+
+    return OhosCard(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: theme.policy.tint(theme.highlightColor, 0.10),
+              borderRadius: BorderRadius.circular(14),
+              border: theme.usesOutlines
+                  ? Border.all(color: theme.dividerColor)
+                  : null,
+            ),
+            child: Icon(
+              official ? OhosIcons.square_grid_2x2 : OhosIcons.grid,
+              size: 24,
+              color: theme.highlightColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  official
+                      ? 'harmony_icons · Symbol ${OhosIcons.version}'
+                      : 'hm_symbol · 全量字形',
+                  style: theme.typography.titleSmall,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  official
+                      ? '官方推荐集：${OhosIcons.count} 个具名图标，带中文名、分类、'
+                            '版本与 RTL 镜像元数据。'
+                      : '全量集：${harmonySymbolCatalog.length} 个英文命名字形，'
+                            '含线性、填充与 mirroring 镜像。',
+                  style: theme.typography.bodySmall?.copyWith(
+                    color: theme.textSecondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 官方推荐集：harmony_icons
+// ---------------------------------------------------------------------------
+
+class _OfficialIconsBrowser extends StatefulWidget {
+  const _OfficialIconsBrowser();
+
+  @override
+  State<_OfficialIconsBrowser> createState() => _OfficialIconsBrowserState();
+}
+
+class _OfficialIconsBrowserState extends State<_OfficialIconsBrowser> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   String _query = '';
   int _categoryIndex = 0;
-  bool _showAllGlyphs = false;
 
-  late final List<_IconEntry> _namedEntries = _buildNamedEntries();
-  late final List<_IconEntry> _mirrorEntries = _buildMirrorEntries();
-  late final List<_IconEntry> _allEntries = _interleaveMirrors();
+  static final List<OhosIconMeta> _metas = OhosIcons.values.toList()
+    ..sort((OhosIconMeta a, OhosIconMeta b) => a.name.compareTo(b.name));
 
   List<String> get _categories => OhosIcons.categories;
 
-  List<_IconEntry> get _source => _showAllGlyphs ? _allEntries : _namedEntries;
-
-  List<_IconEntry> get _visibleEntries {
+  List<OhosIconMeta> get _visibleMetas {
     final String query = _query.trim().toLowerCase();
     final String? category = _categoryIndex == 0
         ? null
         : _categories[_categoryIndex - 1];
 
-    return _source
-        .where((_IconEntry entry) {
-          if (category != null && !entry.categories.contains(category)) {
+    return _metas
+        .where((OhosIconMeta meta) {
+          if (category != null && !meta.categories.contains(category)) {
             return false;
           }
           if (query.isEmpty) {
             return true;
           }
-          return entry.searchText.contains(query);
+          final String codepoint =
+              '0x${meta.codepoint.toRadixString(16).toUpperCase()}';
+          final String searchText =
+              'OhosIcons.${meta.name} ${meta.name} ${meta.label} ${meta.module} '
+                      '${meta.categories.join(' ')} $codepoint'
+                  .toLowerCase();
+          return searchText.contains(query);
         })
         .toList(growable: false);
-  }
-
-  List<_IconEntry> _buildNamedEntries() {
-    final List<OhosIconMeta> metas = OhosIcons.values.toList()
-      ..sort((OhosIconMeta a, OhosIconMeta b) => a.name.compareTo(b.name));
-    return <_IconEntry>[
-      for (final OhosIconMeta meta in metas)
-        _IconEntry(
-          key: meta.name,
-          name: meta.name,
-          label: meta.label,
-          module: meta.module,
-          categories: meta.categories,
-          supportVersion: meta.supportVersion,
-          codepoint: meta.codepoint,
-          icon: meta.icon,
-        ),
-    ];
-  }
-
-  /// 字体里每个图标还可能带一个 RTL 镜像码点。这些字形没有独立的
-  /// `OhosIcons.xxx` 常量，只能通过 [OhosIconMeta.mirrorIcon] 取到，
-  /// 所以归到「隐藏字形」里单独展示。
-  List<_IconEntry> _buildMirrorEntries() {
-    final Set<int> usedCodepoints = <int>{
-      for (final OhosIconMeta meta in OhosIcons.values) meta.codepoint,
-    };
-    final List<_IconEntry> mirrors = <_IconEntry>[];
-
-    for (final OhosIconMeta meta in OhosIcons.values) {
-      final int? mirrorCodepoint = meta.mirrorCodepoint;
-      final IconData? mirrorIcon = meta.mirrorIcon;
-      if (mirrorCodepoint == null || mirrorIcon == null) {
-        continue;
-      }
-      // 多个条目可能指向同一个镜像字形，按码点去重，保证「字形总数」准确。
-      if (!usedCodepoints.add(mirrorCodepoint)) {
-        continue;
-      }
-      mirrors.add(
-        _IconEntry(
-          key: '${meta.name}__mirror',
-          name: meta.name,
-          label: '${meta.label}（镜像）',
-          module: meta.module,
-          categories: meta.categories,
-          supportVersion: meta.supportVersion,
-          codepoint: mirrorCodepoint,
-          icon: mirrorIcon,
-          isMirror: true,
-        ),
-      );
-    }
-
-    mirrors.sort((_IconEntry a, _IconEntry b) => a.name.compareTo(b.name));
-    return mirrors;
-  }
-
-  /// 「全部字形」把镜像紧跟在同名图标后面，方便对照正向 / RTL 字形。
-  List<_IconEntry> _interleaveMirrors() {
-    final Map<String, _IconEntry> mirrorsByName = <String, _IconEntry>{
-      for (final _IconEntry mirror in _mirrorEntries) mirror.name: mirror,
-    };
-    return <_IconEntry>[
-      for (final _IconEntry named in _namedEntries) ...<_IconEntry>[
-        named,
-        if (mirrorsByName[named.name] case final _IconEntry mirror) mirror,
-      ],
-    ];
   }
 
   @override
@@ -167,7 +195,6 @@ class _IconsPageState extends State<IconsPage> {
   }
 
   void _scrollToTop() {
-    // 过滤后列表可能变短，等新一帧布局完成再回到顶部。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(0);
@@ -184,24 +211,18 @@ class _IconsPageState extends State<IconsPage> {
     _scrollToTop();
   }
 
-  Future<void> _copyIconName(BuildContext context, _IconEntry entry) async {
-    // 先关弹窗再写剪贴板：写入是异步的，等它回来再 pop 的话，用户若在
-    // 这一瞬间点了遮罩，这次 pop 就会把下面的页面一起关掉。
+  Future<void> _copyName(BuildContext context, String name) async {
+    // 先关弹窗再写剪贴板：写入是异步的，避免等待期间用户点遮罩后再 pop
+    // 把下面的页面一起关掉。
     Navigator.of(context).pop();
-    await Clipboard.setData(ClipboardData(text: entry.name));
+    await Clipboard.setData(ClipboardData(text: name));
     if (!context.mounted) {
       return;
     }
-    showOhosToast(
-      context,
-      entry.isMirror
-          ? '已复制 ${entry.name}（镜像码点 ${entry.hexCodepoint}）'
-          : '已复制 ${entry.name}',
-      icon: OhosIcons.checkmark_circle,
-    );
+    showOhosToast(context, '已复制 $name', icon: OhosIcons.checkmark_circle);
   }
 
-  void _showDetails(BuildContext context, _IconEntry entry) {
+  void _showDetails(BuildContext context, OhosIconMeta meta) {
     final OhosThemeData theme = OhosTheme.of(context);
     final TextStyle bodyStyle =
         (theme.typography.bodyMedium ?? const TextStyle(fontSize: 15)).copyWith(
@@ -210,17 +231,17 @@ class _IconsPageState extends State<IconsPage> {
 
     showOhosDialog<void>(
       context: context,
-      title: entry.label,
+      title: meta.label,
       // showDialog 挂在 Navigator Overlay 上，没有 Material 祖先；
       // 不显式给 DefaultTextStyle 会退回黄色双下划线的 fallback 样式。
       contentWidget: DefaultTextStyle(
         style: bodyStyle,
-        child: _IconDetail(entry: entry, theme: theme),
+        child: _OfficialIconDetail(meta: meta, theme: theme),
       ),
       actions: <OhosDialogAction>[
         OhosDialogAction(
           label: '复制图标名',
-          onPressed: () => _copyIconName(context, entry),
+          onPressed: () => _copyName(context, meta.name),
         ),
         OhosDialogAction(
           label: '关闭',
@@ -233,178 +254,356 @@ class _IconsPageState extends State<IconsPage> {
   @override
   Widget build(BuildContext context) {
     final OhosThemeData theme = OhosTheme.of(context);
-    final List<_IconEntry> visible = _visibleEntries;
-    final int total = _source.length;
+    final List<OhosIconMeta> visible = _visibleMetas;
 
-    return OhosScaffold(
-      appBar: OhosAppBar(
-        title: const Text('图标库'),
-        actions: const <Widget>[ThemeSwitchButton()],
-      ),
-      body: CustomScrollView(
-        controller: _scrollController,
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        slivers: <Widget>[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: OhosCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: <Widget>[
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: theme.policy.tint(theme.highlightColor, 0.10),
-                        borderRadius: BorderRadius.circular(14),
-                        border: theme.usesOutlines
-                            ? Border.all(color: theme.dividerColor)
-                            : null,
-                      ),
-                      child: Icon(
-                        OhosIcons.square_grid_2x2,
-                        size: 24,
-                        color: theme.highlightColor,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            'HarmonyOS Symbol ${OhosIcons.version}',
-                            style: theme.typography.titleSmall,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '默认展示 ${OhosIcons.count} 个具名图标；切到「全部字形」'
-                            '还能查看 ${_mirrorEntries.length} 个隐藏的 RTL 镜像字形。',
-                            style: theme.typography.bodySmall?.copyWith(
-                              color: theme.textSecondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: OhosSearchBar(
+            key: const ValueKey<String>('official-icons-search'),
+            controller: _searchController,
+            hintText: '搜索英文名 / 中文名 / 分类 / 码点',
+            onChanged: (String value) {
+              setState(() => _query = value);
+              _scrollToTop();
+            },
+            onClear: () {
+              setState(() => _query = '');
+              _scrollToTop();
+            },
+          ),
+        ),
+        OhosChipGroup(
+          items: <OhosChipItem>[
+            const OhosChipItem(label: Text('全部')),
+            for (final String category in _categories)
+              OhosChipItem(label: Text(category)),
+          ],
+          selectedIndex: _categoryIndex,
+          onSelected: (int index) {
+            setState(() => _categoryIndex = index);
+            _scrollToTop();
+          },
+          size: OhosChipSize.small,
+          scrollable: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '显示 ${visible.length} / ${_metas.length} 个',
+              key: const ValueKey<String>('official-icons-count'),
+              style: theme.typography.bodySmall?.copyWith(
+                color: theme.textSecondaryColor,
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: OhosSearchBar(
-                key: const ValueKey<String>('icons-search'),
-                controller: _searchController,
-                hintText: '搜索英文名 / 中文名 / 分类 / 码点',
-                onChanged: (String value) {
-                  setState(() => _query = value);
-                  _scrollToTop();
-                },
-                onClear: () {
-                  setState(() => _query = '');
-                  _scrollToTop();
-                },
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: OhosSegmentedButton<_IconScope>(
-                key: const ValueKey<String>('icons-scope'),
-                // capsule 选中态在浅色彩屏上是「10% 品牌蓝底 + 反白字」，
-                // 对比度不足；这里要的是切换视图，tab 形态的白底黑字更合适。
-                type: OhosSegmentType.tab,
-                segments: <OhosSegment<_IconScope>>[
-                  OhosSegment<_IconScope>(
-                    label: '图标 ${OhosIcons.count}',
-                    value: _IconScope.named,
+        ),
+        Expanded(
+          child: visible.isEmpty
+              ? SingleChildScrollView(
+                  child: _IconsEmptyState(
+                    title: '没有匹配的图标',
+                    description: '换个关键词，或清空分类与搜索条件。',
+                    onReset: _resetFilters,
+                    theme: theme,
                   ),
-                  OhosSegment<_IconScope>(
-                    label: '全部字形 ${_allEntries.length}',
-                    value: _IconScope.all,
+                )
+              : GridView.builder(
+                  key: const ValueKey<String>('official-icons-grid'),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 92,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 0.78,
                   ),
-                ],
-                selected: _showAllGlyphs ? _IconScope.all : _IconScope.named,
-                onSelected: (_IconScope scope) {
-                  setState(() => _showAllGlyphs = scope == _IconScope.all);
-                  _scrollToTop();
-                },
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: OhosChipGroup(
-              items: <OhosChipItem>[
-                const OhosChipItem(label: Text('全部')),
-                for (final String category in _categories)
-                  OhosChipItem(label: Text(category)),
-              ],
-              selectedIndex: _categoryIndex,
-              onSelected: (int index) {
-                setState(() => _categoryIndex = index);
-                _scrollToTop();
-              },
-              size: OhosChipSize.small,
-              scrollable: true,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(
-                '显示 ${visible.length} / $total 个'
-                '${_showAllGlyphs ? '（含 ${_mirrorEntries.length} 个隐藏字形）' : ''}',
-                key: const ValueKey<String>('icons-count'),
-                style: theme.typography.bodySmall?.copyWith(
-                  color: theme.textSecondaryColor,
+                  itemCount: visible.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final OhosIconMeta meta = visible[index];
+                    return _IconCell(
+                      key: ValueKey<String>('official-${meta.name}'),
+                      name: meta.name,
+                      subtitle: meta.label,
+                      icon: meta.icon,
+                      onTap: () => _showDetails(context, meta),
+                    );
+                  },
                 ),
-              ),
-            ),
-          ),
-          if (visible.isEmpty)
-            SliverToBoxAdapter(
-              child: _IconsEmptyState(onReset: _resetFilters, theme: theme),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 92,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 0.78,
-                ),
-                delegate: SliverChildBuilderDelegate((
-                  BuildContext context,
-                  int index,
-                ) {
-                  final _IconEntry entry = visible[index];
-                  return _IconCell(
-                    key: ValueKey<String>('icon-${entry.key}'),
-                    entry: entry,
-                    onTap: () => _showDetails(context, entry),
-                  );
-                }, childCount: visible.length),
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _IconCell extends StatelessWidget {
-  const _IconCell({super.key, required this.entry, required this.onTap});
+// ---------------------------------------------------------------------------
+// 全量集：hm_symbol
+// ---------------------------------------------------------------------------
 
-  final _IconEntry entry;
+enum _SymbolStyle {
+  all('全部'),
+  outline('线性'),
+  fill('填充'),
+  mirroring('镜像');
+
+  const _SymbolStyle(this.label);
+
+  final String label;
+
+  bool matches(_FullSymbol symbol) {
+    return switch (this) {
+      _SymbolStyle.all => true,
+      _SymbolStyle.outline => !symbol.isFilled,
+      _SymbolStyle.fill => symbol.isFilled,
+      _SymbolStyle.mirroring => symbol.isMirroring,
+    };
+  }
+}
+
+/// `hm_symbol` 只提供英文名与 IconData，没有中文名和分类；这里把搜索与
+/// 样式判断需要的派生字段算一次，避免每次按键都重新 split。
+@immutable
+class _FullSymbol {
+  _FullSymbol(this.name, this.icon)
+    : lowerName = name.toLowerCase(),
+      unicode =
+          'U+${icon.codePoint.toRadixString(16).toUpperCase().padLeft(5, '0')}',
+      isFilled = _fillToken.hasMatch(name),
+      isMirroring = name.endsWith('_mirroring');
+
+  final String name;
+  final IconData icon;
+  final String lowerName;
+  final String unicode;
+  final bool isFilled;
+  final bool isMirroring;
+
+  String get searchText => '$lowerName ${unicode.toLowerCase()}';
+}
+
+final RegExp _fillToken = RegExp(r'(^|_)(fill|filled)(_|$)');
+
+class _FullSymbolsBrowser extends StatefulWidget {
+  const _FullSymbolsBrowser();
+
+  @override
+  State<_FullSymbolsBrowser> createState() => _FullSymbolsBrowserState();
+}
+
+class _FullSymbolsBrowserState extends State<_FullSymbolsBrowser> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  String _query = '';
+  _SymbolStyle _style = _SymbolStyle.all;
+
+  static final List<_FullSymbol> _symbols =
+      harmonySymbolCatalog.entries
+          .map(
+            (MapEntry<String, IconData> entry) =>
+                _FullSymbol(entry.key, entry.value),
+          )
+          .toList()
+        ..sort((_FullSymbol a, _FullSymbol b) => a.name.compareTo(b.name));
+
+  List<_FullSymbol> get _visibleSymbols {
+    final List<String> terms = _query
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((String term) => term.isNotEmpty)
+        .toList(growable: false);
+
+    return _symbols
+        .where((_FullSymbol symbol) {
+          if (!_style.matches(symbol)) {
+            return false;
+          }
+          if (terms.isEmpty) {
+            return true;
+          }
+          return terms.every((String term) => symbol.searchText.contains(term));
+        })
+        .toList(growable: false);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    });
+  }
+
+  void _resetFilters() {
+    _searchController.clear();
+    setState(() {
+      _query = '';
+      _style = _SymbolStyle.all;
+    });
+    _scrollToTop();
+  }
+
+  Future<void> _copyCode(BuildContext context, _FullSymbol symbol) async {
+    final String code = 'Icon(HarmonySymbols.${symbol.name})';
+    Navigator.of(context).pop();
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!context.mounted) {
+      return;
+    }
+    showOhosToast(context, '已复制 $code', icon: OhosIcons.checkmark_circle);
+  }
+
+  void _showDetails(BuildContext context, _FullSymbol symbol) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final TextStyle bodyStyle =
+        (theme.typography.bodyMedium ?? const TextStyle(fontSize: 15)).copyWith(
+          color: theme.textPrimaryColor,
+        );
+
+    showOhosDialog<void>(
+      context: context,
+      title: '全量字形',
+      contentWidget: DefaultTextStyle(
+        style: bodyStyle,
+        child: _FullSymbolDetail(symbol: symbol, theme: theme),
+      ),
+      actions: <OhosDialogAction>[
+        OhosDialogAction(
+          label: '复制代码',
+          onPressed: () => _copyCode(context, symbol),
+        ),
+        OhosDialogAction(
+          label: '关闭',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final OhosThemeData theme = OhosTheme.of(context);
+    final List<_FullSymbol> visible = _visibleSymbols;
+
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: OhosSearchBar(
+            key: const ValueKey<String>('full-symbols-search'),
+            controller: _searchController,
+            hintText: '搜索英文名 / 码点',
+            onChanged: (String value) {
+              setState(() => _query = value);
+              _scrollToTop();
+            },
+            onClear: () {
+              setState(() => _query = '');
+              _scrollToTop();
+            },
+          ),
+        ),
+        OhosChipGroup(
+          items: <OhosChipItem>[
+            for (final _SymbolStyle style in _SymbolStyle.values)
+              OhosChipItem(label: Text(style.label)),
+          ],
+          selectedIndex: _style.index,
+          onSelected: (int index) {
+            setState(() => _style = _SymbolStyle.values[index]);
+            _scrollToTop();
+          },
+          size: OhosChipSize.small,
+          scrollable: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '显示 ${visible.length} / ${_symbols.length} 个',
+              key: const ValueKey<String>('full-symbols-count'),
+              style: theme.typography.bodySmall?.copyWith(
+                color: theme.textSecondaryColor,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: visible.isEmpty
+              ? SingleChildScrollView(
+                  child: _IconsEmptyState(
+                    title: '没有匹配的字形',
+                    description: '换个关键词，或切换线性 / 填充 / 镜像筛选。',
+                    onReset: _resetFilters,
+                    theme: theme,
+                  ),
+                )
+              : GridView.builder(
+                  key: const ValueKey<String>('full-symbols-grid'),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 96,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 0.76,
+                  ),
+                  itemCount: visible.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final _FullSymbol symbol = visible[index];
+                    return _IconCell(
+                      key: ValueKey<String>('full-${symbol.name}'),
+                      name: symbol.name,
+                      subtitle: symbol.unicode,
+                      icon: symbol.icon,
+                      subtitleColor: theme.textTertiaryColor,
+                      onTap: () => _showDetails(context, symbol),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 共用展示件
+// ---------------------------------------------------------------------------
+
+class _IconCell extends StatelessWidget {
+  const _IconCell({
+    super.key,
+    required this.name,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    this.subtitleColor,
+  });
+
+  final String name;
+  final String subtitle;
+  final IconData icon;
   final VoidCallback onTap;
+  final Color? subtitleColor;
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +613,7 @@ class _IconCell extends StatelessWidget {
     return OhosPressFeedback(
       onTap: onTap,
       borderRadius: radius,
-      semanticLabel: '${entry.label} ${entry.name}',
+      semanticLabel: '$subtitle $name',
       child: Container(
         decoration: BoxDecoration(
           color: theme.cardColor,
@@ -430,16 +629,10 @@ class _IconCell extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(
-              entry.icon,
-              size: 26,
-              color: entry.isMirror
-                  ? theme.textSecondaryColor
-                  : theme.textPrimaryColor,
-            ),
+            Icon(icon, size: 26, color: theme.textPrimaryColor),
             const SizedBox(height: 5),
             Text(
-              entry.name,
+              name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -449,14 +642,12 @@ class _IconCell extends StatelessWidget {
             ),
             const SizedBox(height: 1),
             Text(
-              entry.isMirror ? 'RTL 镜像' : entry.label,
+              subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: theme.typography.labelSmall?.copyWith(
-                color: entry.isMirror
-                    ? theme.highlightColor
-                    : theme.textSecondaryColor,
+                color: subtitleColor ?? theme.textSecondaryColor,
               ),
             ),
           ],
@@ -467,8 +658,15 @@ class _IconCell extends StatelessWidget {
 }
 
 class _IconsEmptyState extends StatelessWidget {
-  const _IconsEmptyState({required this.onReset, required this.theme});
+  const _IconsEmptyState({
+    required this.title,
+    required this.description,
+    required this.onReset,
+    required this.theme,
+  });
 
+  final String title;
+  final String description;
   final VoidCallback onReset;
   final OhosThemeData theme;
 
@@ -485,13 +683,13 @@ class _IconsEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '没有匹配的图标',
+            title,
             style: theme.typography.titleSmall,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
-            '换个关键词，或清空分类与搜索条件。',
+            description,
             style: theme.typography.bodySmall?.copyWith(
               color: theme.textSecondaryColor,
             ),
@@ -509,55 +707,26 @@ class _IconsEmptyState extends StatelessWidget {
   }
 }
 
-class _IconDetail extends StatelessWidget {
-  const _IconDetail({required this.entry, required this.theme});
+class _IconPreview extends StatelessWidget {
+  const _IconPreview({required this.icon, required this.theme});
 
-  final _IconEntry entry;
+  final IconData icon;
   final OhosThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          width: 96,
-          height: 96,
-          decoration: BoxDecoration(
-            color: theme.policy.tint(theme.highlightColor, 0.10),
-            borderRadius: BorderRadius.circular(24),
-            border: theme.usesOutlines
-                ? Border.all(color: theme.dividerColor)
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Icon(entry.icon, size: 56, color: theme.textPrimaryColor),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          entry.name,
-          style: theme.typography.titleSmall?.copyWith(
-            fontFamily: 'monospace',
-            color: theme.textPrimaryColor,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        _DetailRow(label: '中文名', value: entry.label, theme: theme),
-        _DetailRow(
-          label: '分类',
-          value: entry.categories.join(' / '),
-          theme: theme,
-        ),
-        _DetailRow(label: '模块', value: entry.module, theme: theme),
-        _DetailRow(label: '版本', value: entry.supportVersion, theme: theme),
-        _DetailRow(label: '码点', value: entry.hexCodepoint, theme: theme),
-        _DetailRow(
-          label: '类型',
-          value: entry.isMirror ? 'RTL 镜像字形（隐藏）' : '具名图标',
-          theme: theme,
-        ),
-      ],
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: BoxDecoration(
+        color: theme.policy.tint(theme.highlightColor, 0.10),
+        borderRadius: BorderRadius.circular(24),
+        border: theme.usesOutlines
+            ? Border.all(color: theme.dividerColor)
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: Icon(icon, size: 56, color: theme.textPrimaryColor),
     );
   }
 }
@@ -600,6 +769,96 @@ class _DetailRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _OfficialIconDetail extends StatelessWidget {
+  const _OfficialIconDetail({required this.meta, required this.theme});
+
+  final OhosIconMeta meta;
+  final OhosThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _IconPreview(icon: meta.icon, theme: theme),
+        const SizedBox(height: 14),
+        Text(
+          meta.name,
+          style: theme.typography.titleSmall?.copyWith(
+            fontFamily: 'monospace',
+            color: theme.textPrimaryColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        _DetailRow(label: '中文名', value: meta.label, theme: theme),
+        _DetailRow(
+          label: '分类',
+          value: meta.categories.join(' / '),
+          theme: theme,
+        ),
+        _DetailRow(label: '模块', value: meta.module, theme: theme),
+        _DetailRow(label: '版本', value: meta.supportVersion, theme: theme),
+        _DetailRow(
+          label: '码点',
+          value: '0x${meta.codepoint.toRadixString(16).toUpperCase()}',
+          theme: theme,
+        ),
+        _DetailRow(
+          label: '来源',
+          value: 'harmony_icons · ${OhosIcons.count} 个官方推荐图标',
+          theme: theme,
+        ),
+      ],
+    );
+  }
+}
+
+class _FullSymbolDetail extends StatelessWidget {
+  const _FullSymbolDetail({required this.symbol, required this.theme});
+
+  final _FullSymbol symbol;
+  final OhosThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final String type = symbol.isMirroring
+        ? '镜像字形（mirroring）'
+        : symbol.isFilled
+        ? '填充（fill）'
+        : '线性（outline）';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _IconPreview(icon: symbol.icon, theme: theme),
+        const SizedBox(height: 14),
+        Text(
+          symbol.name,
+          style: theme.typography.titleSmall?.copyWith(
+            fontFamily: 'monospace',
+            color: theme.textPrimaryColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        _DetailRow(label: '码点', value: symbol.unicode, theme: theme),
+        _DetailRow(label: '类型', value: type, theme: theme),
+        _DetailRow(
+          label: '代码',
+          value: 'Icon(HarmonySymbols.${symbol.name})',
+          theme: theme,
+        ),
+        _DetailRow(
+          label: '来源',
+          value: 'hm_symbol · ${harmonySymbolCatalog.length} 个全量字形',
+          theme: theme,
+        ),
+      ],
     );
   }
 }
