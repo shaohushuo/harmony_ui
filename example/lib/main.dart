@@ -5,6 +5,7 @@ import 'package:harmony_ui/harmony_ui.dart';
 import 'pages/action_page.dart';
 import 'pages/container_page.dart';
 import 'pages/display_page.dart';
+import 'pages/icons_page.dart';
 import 'pages/input_page.dart';
 import 'pages/kit_page.dart';
 import 'pages/layout_page.dart';
@@ -110,6 +111,12 @@ class HomePage extends StatelessWidget {
       subtitle: '点光源 · 按压阴影 · 侧边栏 · 横滑 · 常驻通知',
       icon: Icons.auto_awesome_rounded,
       builder: (BuildContext context) => KitPage(),
+    ),
+    GalleryCategory(
+      title: '图标库',
+      subtitle: 'harmony_icons · 具名图标 · 隐藏字形 · 搜索筛选',
+      icon: OhosIcons.square_grid_2x2,
+      builder: (BuildContext context) => IconsPage(),
     ),
   ];
 
