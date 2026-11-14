@@ -5,6 +5,7 @@ import 'package:harmony_ui/harmony_ui.dart';
 import 'package:ohos_ui_example/pages/action_page.dart';
 import 'package:ohos_ui_example/pages/container_page.dart';
 import 'package:ohos_ui_example/pages/display_page.dart';
+import 'package:ohos_ui_example/pages/icons_page.dart';
 import 'package:ohos_ui_example/pages/input_page.dart';
 import 'package:ohos_ui_example/pages/kit_page.dart';
 import 'package:ohos_ui_example/pages/layout_page.dart';
@@ -97,6 +98,7 @@ void main() {
     'action': const ActionPage(),
     'container': const ContainerPage(),
     'display': const DisplayPage(),
+    'icons': const IconsPage(),
     'input': const InputPage(),
     'kit': const KitPage(),
     'layout': const LayoutPage(),
