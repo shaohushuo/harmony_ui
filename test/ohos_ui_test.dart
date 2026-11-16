@@ -13986,6 +13986,7 @@ void main() {
       required double topPadding,
       required OhosAppBar bar,
       double width = 360,
+      TextDirection textDirection = TextDirection.ltr,
     }) {
       return OhosTheme(
         data: OhosThemeData.light(),
@@ -13999,9 +14000,12 @@ void main() {
             // 先用 `Align` 松开约束再把栏宽定成 360vp。
             child: Align(
               alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: width,
-                child: Scaffold(appBar: bar, body: const SizedBox.expand()),
+              child: Directionality(
+                textDirection: textDirection,
+                child: SizedBox(
+                  width: width,
+                  child: Scaffold(appBar: bar, body: const SizedBox.expand()),
+                ),
               ),
             ),
           ),
@@ -14041,6 +14045,351 @@ void main() {
     test('preferredSize 不含状态栏：Scaffold 已经加过一次，重复加会多留一条', () {
       const OhosAppBar bar = OhosAppBar(title: Text('t'));
       expect(bar.preferredSize, const Size.fromHeight(56));
+    });
+
+    // 栏宽 360、标题「标题」实测 34.5 × 24。三个对齐方式共用同一套槽位宽度：
+    // leading 自带左侧 4vp 内边距，actions 是 4vp + 内容 + 4vp 尾随。
+    OhosAppBar titleBar({
+      required OhosAppBarTitleAlignment alignment,
+      Widget? leading,
+      List<Widget>? actions,
+      Widget title = const Text('标题'),
+      EdgeInsetsGeometry? titlePadding,
+    }) => OhosAppBar(
+      primary: false,
+      automaticallyImplyLeading: false,
+      titleAlignment: alignment,
+      leading: leading,
+      title: title,
+      actions: actions,
+      titlePadding: titlePadding ?? const EdgeInsets.symmetric(horizontal: 8),
+    );
+
+    // `small` 对应示例里常用的 40vp 图标按钮（默认是 48vp / 24vp 图标）。
+    OhosIconButton iconButton(IconData icon, {bool small = false}) =>
+        OhosIconButton(
+          icon: Icon(icon),
+          size: small ? 40 : 48,
+          iconSize: small ? 20 : 24,
+          onPressed: () {},
+        );
+
+    testWidgets('centerBetweenSlots 保留 0.6.x 几何：单侧偏 28vp、两侧偏 2vp', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: titleBar(
+            alignment: OhosAppBarTitleAlignment.centerBetweenSlots,
+            actions: <Widget>[iconButton(Icons.more_horiz)],
+          ),
+        ),
+      );
+      // 右侧占 4 + 48 + 4 = 56 → 标题在 [0, 304] 里居中，落在 152，比中轴左 28
+      expect(tester.getCenter(find.text('标题')).dx, 152);
+
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: titleBar(
+            alignment: OhosAppBarTitleAlignment.centerBetweenSlots,
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[iconButton(Icons.more_horiz)],
+          ),
+        ),
+      );
+      // 左 52 / 右 56 → 偏 2vp
+      expect(tester.getCenter(find.text('标题')).dx, 178);
+    });
+
+    testWidgets('center 在左右不等时仍压在栏中轴上', (WidgetTester tester) async {
+      final Map<String, ({Widget? leading, List<Widget>? actions})> cases =
+          <String, ({Widget? leading, List<Widget>? actions})>{
+            '只有右侧一个 40vp 动作': (
+              leading: null,
+              actions: <Widget>[iconButton(Icons.search, small: true)],
+            ),
+            '只有左侧返回键': (
+              leading: iconButton(Icons.arrow_back_rounded),
+              actions: null,
+            ),
+            '左侧 1 个、右侧 3 个': (
+              leading: iconButton(Icons.arrow_back_rounded),
+              actions: <Widget>[
+                iconButton(Icons.search, small: true),
+                iconButton(Icons.share, small: true),
+                iconButton(Icons.more_horiz, small: true),
+              ],
+            ),
+            '左侧 2 个 40vp': (
+              leading: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  iconButton(Icons.search, small: true),
+                  iconButton(Icons.share, small: true),
+                ],
+              ),
+              actions: null,
+            ),
+          };
+      for (final MapEntry<String, ({Widget? leading, List<Widget>? actions})>
+          entry
+          in cases.entries) {
+        await tester.pumpWidget(
+          host(
+            topPadding: 0,
+            bar: titleBar(
+              alignment: OhosAppBarTitleAlignment.center,
+              leading: entry.value.leading,
+              actions: entry.value.actions,
+            ),
+          ),
+        );
+        expect(
+          tester.getCenter(find.text('标题')).dx,
+          180,
+          reason: '${entry.key}：标题中心应压在栏中轴上',
+        );
+      }
+    });
+
+    testWidgets('center 给标题剩余空间，放不下时夹在两侧之间（不压按钮、不塌成 0）', (
+      WidgetTester tester,
+    ) async {
+      const String longTitle = '这是一个很长很长的标题文字用来观察是否会与右侧图标叠加';
+      OhosAppBar bar(OhosAppBarTitleAlignment alignment, Widget title) => titleBar(
+        alignment: alignment,
+        leading: iconButton(Icons.arrow_back_rounded),
+        actions: <Widget>[
+          iconButton(Icons.search, small: true),
+          iconButton(Icons.share, small: true),
+          iconButton(Icons.more_horiz, small: true),
+        ],
+        title: title,
+      );
+
+      // 左槽 4 + 48 = 52，右槽 4 + 120 + 4 = 128 → 剩余 180，文字 164。
+      // 文字把槽位填满，居中位置只能落在 52 上（夹取退化成「贴住 leading」）。
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: bar(
+            OhosAppBarTitleAlignment.center,
+            const Text(longTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      );
+      final Rect clipped = tester.getRect(find.text(longTitle));
+      final Rect back = tester.getRect(find.byIcon(Icons.arrow_back_rounded));
+      final Rect lastAction = tester.getRect(find.byIcon(Icons.more_horiz));
+      expect(clipped.width, 164, reason: '先按剩余空间给满，不再为「对称预留」砍到 88');
+      expect(clipped.left, greaterThanOrEqualTo(back.right));
+      expect(clipped.right, lessThanOrEqualTo(lastAction.left));
+      expect(clipped.height, 24, reason: 'ellipsis 后仍是单行，不会被 56vp 的栏高裁掉下半截');
+      expect(clipped.center.dx, 142, reason: '被夹住，只有短标题才是精确的 180');
+
+      // 对照：同样的栏用 centerBetweenSlots，宽度一样、但整体再左 8vp
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: bar(
+            OhosAppBarTitleAlignment.centerBetweenSlots,
+            const Text(longTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      );
+      expect(tester.getRect(find.text(longTitle)).width, 164);
+      expect(tester.getRect(find.text(longTitle)).center.dx, 142);
+
+      // 极端几何：左侧 2 个 48 + 右侧 4 个 48（这个组合曾让「对称预留」算出负值、
+      // 标题位塌成 0）。改动后仍能拿到 44vp，且不越界。
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: titleBar(
+            alignment: OhosAppBarTitleAlignment.center,
+            leading: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                iconButton(Icons.search),
+                iconButton(Icons.share),
+              ],
+            ),
+            actions: <Widget>[
+              iconButton(Icons.settings),
+              iconButton(Icons.help_outline),
+              iconButton(Icons.favorite_border),
+              iconButton(Icons.more_horiz),
+            ],
+            title: const Text(
+              longTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      );
+      final Rect tight = tester.getRect(find.text(longTitle));
+      expect(tight.width, 44, reason: '60 的槽位减去 titlePadding 左右各 8，不再是 0');
+      expect(tight.left, greaterThanOrEqualTo(tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.share),
+      ).right));
+      expect(tight.right, lessThanOrEqualTo(tester.getRect(
+        find.widgetWithIcon(OhosIconButton, Icons.settings),
+      ).left));
+    });
+
+    testWidgets('两侧都没有时 center 就是整条栏的中轴，不多留空', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: titleBar(alignment: OhosAppBarTitleAlignment.center),
+        ),
+      );
+      expect(tester.getCenter(find.text('标题')).dx, 180);
+      expect(tester.getSize(find.text('标题')).width, 34.5, reason: '松约束下按固有宽度');
+      expect(tester.getCenter(find.text('标题')).dy, 28);
+      expect(
+        const OhosAppBar(title: Text('t')).titleAlignment,
+        OhosAppBarTitleAlignment.center,
+        reason: '默认值仍叫 center，只是语义改成「以整条栏为轴」',
+      );
+    });
+
+    // 长标题在 56vp 的栏里没有纵向空间可以折行：多出来的行会被栏高裁掉，
+    // 且 `Material` 不裁子节点，漏出去的部分会压到下面内容上。所以组件必须
+    // 自己把标题按单行 + 省略号收住，doc 里承诺的「ellipsizes」才成立。
+    testWidgets('标题默认单行省略：长标题不折行、也不越过 actions', (
+      WidgetTester tester,
+    ) async {
+      const String long = '这是一个非常非常长的标题文字用来验证省略号截断';
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            primary: false,
+            automaticallyImplyLeading: false,
+            title: const Text(long),
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[
+              iconButton(Icons.more_horiz),
+              iconButton(Icons.share),
+            ],
+          ),
+        ),
+      );
+      final Rect titleRect = tester.getRect(find.text(long));
+      // 单行高 24（titleMedium 17）；折行会变成 48
+      expect(titleRect.height, 24, reason: '环境 DefaultTextStyle 已按单行收住');
+      // 左 52 起、右侧 actions 占 56 + 内边距 8，可用宽 236
+      expect(titleRect.left, 60);
+      expect(titleRect.width, lessThanOrEqualTo(236));
+      expect(titleRect.right, lessThanOrEqualTo(360 - 56));
+      // 机制：`Text` 把环境里的 maxLines / overflow 传给 `RichText`
+      final RichText rich = tester.widget<RichText>(
+        find.descendant(of: find.text(long), matching: find.byType(RichText)),
+      );
+      expect(rich.maxLines, 1);
+      expect(rich.overflow, TextOverflow.ellipsis);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('标题自带 maxLines / overflow 时以调用方为准', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            primary: false,
+            automaticallyImplyLeading: false,
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[iconButton(Icons.more_horiz)],
+            title: const Text(
+              '这个标题需要折成两行才能完整显示出来',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester.getSize(find.text('这个标题需要折成两行才能完整显示出来')).height,
+        48,
+        reason: '调用方的 maxLines: 2 不被组件覆盖',
+      );
+    });
+
+    testWidgets('RTL：返回键贴右、动作在左，center 仍压在整条栏的中轴', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          textDirection: TextDirection.rtl,
+          bar: titleBar(
+            alignment: OhosAppBarTitleAlignment.center,
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[iconButton(Icons.more_horiz)],
+          ),
+        ),
+      );
+      // 栏宽 360：leading 槽 4 + 48 = 52 在右（308..360），icon 中心 332
+      expect(tester.getCenter(find.byIcon(Icons.arrow_back_rounded)).dx, 332);
+      // actions 槽 48 + 4（组内垫）+ 4（外侧）= 56 在左（0..56），icon 中心 28
+      expect(tester.getCenter(find.byIcon(Icons.more_horiz)).dx, 28);
+      // 中轴与方向无关：可用区 [52, 304]，标题 34.5 宽居中回落 180
+      expect(tester.getCenter(find.text('标题')).dx, 180);
+    });
+
+    testWidgets('RTL 下 start 贴着右边的 leading，而不是贴左边', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          textDirection: TextDirection.rtl,
+          bar: titleBar(
+            alignment: OhosAppBarTitleAlignment.start,
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[iconButton(Icons.more_horiz)],
+            titlePadding: EdgeInsets.zero,
+          ),
+        ),
+      );
+      // leading 内沿在 x = 360 − 56 = 304，标题右沿应正好贴住它
+      expect(tester.getRect(find.text('标题')).right, 304);
+    });
+
+    testWidgets('两侧槽位总宽超过栏宽时 debug 断言，不静默画歪', (
+      WidgetTester tester,
+    ) async {
+      // 断言在 `performLayout` 里抛，`pumpWidget` 期间会被框架收走，
+      // 所以先接住 `FlutterError.onError` 再看是不是我们那条。
+      final List<FlutterErrorDetails> errors = <FlutterErrorDetails>[];
+      final void Function(FlutterErrorDetails)? previous = FlutterError.onError;
+      FlutterError.onError = errors.add;
+      addTearDown(() => FlutterError.onError = previous);
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          bar: OhosAppBar(
+            primary: false,
+            automaticallyImplyLeading: false,
+            title: const Text('标题'),
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[
+              for (int i = 0; i < 8; i++) iconButton(Icons.settings),
+            ],
+          ),
+        ),
+      );
+      final Iterable<FlutterErrorDetails> asserts = errors.where(
+        (FlutterErrorDetails d) => d.exception is AssertionError,
+      );
+      expect(asserts, isNotEmpty);
+      expect(asserts.first.exception.toString(), contains('超过了栏宽'));
     });
 
     testWidgets('statusBarBackgroundColor 只给状态栏那条上色，栏高与标题位置不变', (
@@ -14335,11 +14684,16 @@ void main() {
       expect(actions.center.dy, moreOrLessEquals(28, epsilon: 0.5));
     });
 
-    testWidgets('只有 actions 时标题居中于「剩余空间」而不是整栏中轴', (WidgetTester tester) async {
+    // 0.7 起默认的 `center` 以整条栏为轴；「剩余空间居中」搬到
+    // `centerBetweenSlots`，这条用例跟着显式指名。
+    testWidgets('centerBetweenSlots 时标题居中于「剩余空间」而不是整栏中轴', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         host(
           topPadding: 0,
           bar: OhosAppBar(
+            titleAlignment: OhosAppBarTitleAlignment.centerBetweenSlots,
             title: const Text('标题'),
             actions: <Widget>[
               OhosIconButton(
@@ -14447,6 +14801,9 @@ void main() {
           topPadding: 0,
           bar: OhosAppBar(
             leadingWidth: 96,
+            // 这条查的是「标题可用区从 96 起算」，用剩余空间居中才看得出边界，
+            // 默认的 center 会把短标题拉回整栏中轴（180）。
+            titleAlignment: OhosAppBarTitleAlignment.centerBetweenSlots,
             leading: OhosIconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
               onPressed: () {},
