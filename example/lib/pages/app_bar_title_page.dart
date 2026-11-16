@@ -331,12 +331,17 @@ class _MaterialCompareDemo extends StatelessWidget {
             ),
           ),
           _divider(theme),
-          _label('② leading 2 个 / actions 4 个（长标题，看是否重叠）'),
+          // 这一档是「槽位多到快吃掉整栏」的极端几何，按钮用 40vp 而不是 48vp：
+          // 320vp 屏减掉 `DemoScaffold` 左右各 16 的 padding 只剩 288vp，48vp 的
+          // 2 leading + 4 actions 会是 100 + 200 = 300vp，直接触发组件里那条
+          // 「两侧槽位不能吃掉整栏」的断言。40vp 下是 84 + 168 = 252vp。
+          _label('② leading 2 个 / actions 4 个（40vp 按钮 + 长标题，看是否重叠）'),
           _barRow(
             theme,
             'Material AppBar：标题收成省略号并贴住 leading + 16vp 间隙，不重叠',
             _materialBar(
               theme,
+              buttonSize: 40,
               leadingIcons: <IconData>[Icons.search, Icons.share],
               actionIcons: <IconData>[
                 Icons.settings,
@@ -358,13 +363,13 @@ class _MaterialCompareDemo extends StatelessWidget {
               alignment: OhosAppBarTitleAlignment.center,
               leading: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: <Widget>[_icon48(Icons.search), _icon48(Icons.share)],
+                children: <Widget>[_icon40(Icons.search), _icon40(Icons.share)],
               ),
               actions: <Widget>[
-                _icon48(Icons.settings),
-                _icon48(Icons.help_outline),
-                _icon48(Icons.favorite_border),
-                _icon48(Icons.more_horiz),
+                _icon40(Icons.settings),
+                _icon40(Icons.help_outline),
+                _icon40(Icons.favorite_border),
+                _icon40(Icons.more_horiz),
               ],
               title: const Text(
                 _longTitle,
@@ -382,30 +387,45 @@ class _MaterialCompareDemo extends StatelessWidget {
   ///
   /// `leadingWidth` 要显式给足（默认 56 只够一个按钮），`primary: false`
   /// 才不吃状态栏内边距，几何才能和下面的 ohos 栏对齐。
+  ///
+  /// [buttonSize] 只是为了在「槽位多」那一档把每枚按钮压到 40vp，与同档的
+  /// `OhosIconButton(size: 40)` 对齐 —— 否则两栏宽度不同，位置没法直接比。
   Widget _materialBar(
     OhosThemeData theme, {
     required List<IconData> leadingIcons,
     required List<IconData> actionIcons,
     Widget? title,
+    double buttonSize = 48,
   }) {
+    // 只给 `constraints` 不够：M3 的 `IconButton` 仍按 `minimumSize`（默认
+    // 48×48）撑开，40vp 档会变成 48 → leading 的 Row 比 `leadingWidth` 宽 16，
+    // 直接报 `RenderFlex overflowed`。`style` 里把上下限一起压到 buttonSize。
+    Widget button(IconData icon) => IconButton(
+      icon: Icon(icon, size: buttonSize / 2),
+      style: IconButton.styleFrom(
+        minimumSize: Size.square(buttonSize),
+        maximumSize: Size.square(buttonSize),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () {},
+    );
     return AppBar(
       primary: false,
       centerTitle: true,
-      leadingWidth: leadingIcons.length * 48.0,
+      leadingWidth: leadingIcons.length * buttonSize,
       backgroundColor: theme.backgroundColor,
       foregroundColor: theme.textPrimaryColor,
       elevation: 0,
       leading: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          for (final IconData icon in leadingIcons)
-            IconButton(icon: Icon(icon), onPressed: () {}),
+          for (final IconData icon in leadingIcons) button(icon),
         ],
       ),
       title: title ?? const Text('标题'),
       actions: <Widget>[
-        for (final IconData icon in actionIcons)
-          IconButton(icon: Icon(icon), onPressed: () {}),
+        for (final IconData icon in actionIcons) button(icon),
       ],
     );
   }

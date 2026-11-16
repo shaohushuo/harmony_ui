@@ -157,8 +157,15 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Fixed width of the leading slot; the widget is centered inside it.
   ///
-  /// Useful for aligning the title with the content below when the leading
-  /// slot is wider than an icon button. Null keeps the natural width.
+  /// Useful when the leading slot is wider than an icon button: with
+  /// [OhosAppBarTitleAlignment.start] or
+  /// [OhosAppBarTitleAlignment.centerBetweenSlots] the title follows the slot,
+  /// so setting it to the content's left inset lines the two up. With the
+  /// default [OhosAppBarTitleAlignment.center] a short title stays on the bar
+  /// axis whatever this is set to — only a title that fills the leftover space
+  /// gets pushed by it.
+  ///
+  /// Null keeps the natural width.
   final double? leadingWidth;
 
   /// Actions displayed at the trailing edge.
