@@ -544,31 +544,32 @@ class _AppBarLayout extends MultiChildLayoutDelegate {
       '${size.width}vp：标题会被压成 0 宽，动作按钮会画到栏外盖住 leading。'
       '请减少 actions，或折叠进「更多」菜单。',
     );
+    // 标题的「自由区间」（两侧槽位之间那段）。宽度与方向无关，**端点**与方向
+    // 有关：RTL 下 leading 在右、actions 在左，左边那一刀切的是 actions。
+    final double freeStart = ltr ? leadingWidth : actionsWidth;
+    final double freeEnd = ltr
+        ? size.width - actionsWidth
+        : size.width - leadingWidth;
     // 两种居中给标题的**宽度**完全一样：两侧槽位之间的剩余空间。差别只在
     // 「居中轴」是哪一条 —— 严格对称预留（`栏宽 − 2×max(两侧)`）会让标题位在
     // 偏一边的栏里塌成 0（360vp 栏 + 2 个 leading + 4 个 actions 就是负值），
     // Material 的 `NavigationToolbar` 也是给剩余空间再把位置夹进两侧之间，
     // 所以这里采用同一套算术。
-    final double maxTitleWidth = math.max(
-      0,
-      size.width - leadingWidth - actionsWidth,
-    );
+    final double maxTitleWidth = math.max(0, freeEnd - freeStart);
     final Size titleSize = layoutChild(
       _AppBarSlot.title,
       loose.copyWith(maxWidth: maxTitleWidth, maxHeight: size.height),
     );
-    // 标题没占满时，居中位置可以在 [leading 右沿, actions 左沿 − 标题宽]
+    // 标题没占满时，居中位置可以在 [leading 内沿, 另一侧内沿 − 标题宽]
     // 之间自由滑动；标题本来就填满了剩余空间时这个区间退化成一个点，
     // 于是自然贴住较窄的那一侧 —— 永不重叠，也永不塌成 0。
     final double slack = math.max(0, maxTitleWidth - titleSize.width);
     final double titleX = switch (alignment) {
-      // 贴 leading 的内沿：RTL 下 leading 在右边，所以从右往左算。
-      OhosAppBarTitleAlignment.start => ltr
-          ? leadingWidth
-          : size.width - actionsWidth - titleSize.width,
-      OhosAppBarTitleAlignment.centerBetweenSlots => leadingWidth + slack / 2,
+      // 贴 leading 的内沿：LTR 从自由区间左端起算，RTL 从右端往左让出标题宽。
+      OhosAppBarTitleAlignment.start => ltr ? freeStart : freeStart + slack,
+      OhosAppBarTitleAlignment.centerBetweenSlots => freeStart + slack / 2,
       OhosAppBarTitleAlignment.center => ((size.width - titleSize.width) / 2)
-          .clamp(leadingWidth, leadingWidth + slack)
+          .clamp(freeStart, freeStart + slack)
           .toDouble(),
     };
     positionChild(

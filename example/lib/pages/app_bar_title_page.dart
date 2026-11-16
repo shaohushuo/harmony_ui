@@ -71,7 +71,7 @@ Widget _icon48(IconData icon) =>
 
 Widget _back48() => _icon48(Icons.arrow_back_rounded);
 
-Widget _label(OhosThemeData theme, String text) => Padding(
+Widget _label(String text) => Padding(
   padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
   child: Text(
     text,
@@ -225,7 +225,7 @@ class _SlotCountDemo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _label(theme, '① 只有右侧一个 40vp 动作'),
+          _label('① 只有右侧一个 40vp 动作'),
           _pair(
             theme,
             slotsNote: '左偏（剩余空间居中）',
@@ -233,7 +233,7 @@ class _SlotCountDemo extends StatelessWidget {
             actions: <Widget>[_icon40(Icons.search)],
           ),
           _divider(theme),
-          _label(theme, '② 只有左侧一个返回键'),
+          _label('② 只有左侧一个返回键'),
           _pair(
             theme,
             slotsNote: '右偏',
@@ -241,7 +241,7 @@ class _SlotCountDemo extends StatelessWidget {
             leading: _back48(),
           ),
           _divider(theme),
-          _label(theme, '③ 左侧 1 个 / 右侧 3 个，长标题'),
+          _label('③ 左侧 1 个 / 右侧 3 个，长标题'),
           _pair(
             theme,
             slotsNote: '标题填满剩余空间，贴住 leading',
@@ -311,7 +311,7 @@ class _MaterialCompareDemo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _label(theme, '① leading 1 个 / actions 2 个（短标题）'),
+          _label('① leading 1 个 / actions 2 个（短标题）'),
           _barRow(
             theme,
             'Material AppBar（centerTitle: true）：标题压在中轴竖线上',
@@ -331,7 +331,7 @@ class _MaterialCompareDemo extends StatelessWidget {
             ),
           ),
           _divider(theme),
-          _label(theme, '② leading 2 个 / actions 4 个（长标题，看是否重叠）'),
+          _label('② leading 2 个 / actions 4 个（长标题，看是否重叠）'),
           _barRow(
             theme,
             'Material AppBar：标题收成省略号并贴住 leading + 16vp 间隙，不重叠',

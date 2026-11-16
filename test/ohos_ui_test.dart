@@ -14284,10 +14284,11 @@ void main() {
       final Rect titleRect = tester.getRect(find.text(long));
       // 单行高 24（titleMedium 17）；折行会变成 48
       expect(titleRect.height, 24, reason: '环境 DefaultTextStyle 已按单行收住');
-      // 左 52 起、右侧 actions 占 56 + 内边距 8，可用宽 236
+      // leading 槽 4 + 48 = 52，actions 槽 2×48 + 4（组内垫）+ 4（外侧）= 104，
+      // 于是自由区间是 [52, 256]，标题拿到 204 − 左右各 8 内边距 = 188。
       expect(titleRect.left, 60);
-      expect(titleRect.width, lessThanOrEqualTo(236));
-      expect(titleRect.right, lessThanOrEqualTo(360 - 56));
+      expect(titleRect.width, lessThanOrEqualTo(188));
+      expect(titleRect.right, lessThanOrEqualTo(256), reason: '不越过 actions 左沿');
       // 机制：`Text` 把环境里的 maxLines / overflow 传给 `RichText`
       final RichText rich = tester.widget<RichText>(
         find.descendant(of: find.text(long), matching: find.byType(RichText)),
@@ -14339,7 +14340,7 @@ void main() {
       expect(tester.getCenter(find.byIcon(Icons.arrow_back_rounded)).dx, 332);
       // actions 槽 48 + 4（组内垫）+ 4（外侧）= 56 在左（0..56），icon 中心 28
       expect(tester.getCenter(find.byIcon(Icons.more_horiz)).dx, 28);
-      // 中轴与方向无关：可用区 [52, 304]，标题 34.5 宽居中回落 180
+      // 中轴与方向无关：自由区间 [56, 308]，标题 34.5 宽居中仍落 180
       expect(tester.getCenter(find.text('标题')).dx, 180);
     });
 
@@ -14358,8 +14359,46 @@ void main() {
           ),
         ),
       );
-      // leading 内沿在 x = 360 − 56 = 304，标题右沿应正好贴住它
-      expect(tester.getRect(find.text('标题')).right, 304);
+      // leading 槽 52 贴右（308..360），它的内沿就是 x = 360 − 52 = 308；
+      // 贴的是 leading 不是 actions（后者宽 56，按它算会差 4vp 且随槽宽放大）
+      expect(tester.getRect(find.text('标题')).right, 308);
+    });
+
+    // 两侧槽宽差得越多，LTR 那套夹取区间错得越明显：RTL 下 actions 在**左边**，
+    // 若仍按 `[leading, …]` 夹取，标题会被放到 actions 底下。
+    testWidgets('RTL 下 actions 明显更宽时，center 被夹到左侧动作之外', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          topPadding: 0,
+          textDirection: TextDirection.rtl,
+          bar: titleBar(
+            alignment: OhosAppBarTitleAlignment.center,
+            leading: iconButton(Icons.arrow_back_rounded),
+            actions: <Widget>[
+              for (final IconData icon in <IconData>[
+                Icons.search,
+                Icons.share,
+                Icons.settings,
+                Icons.more_horiz,
+              ])
+                iconButton(icon),
+            ],
+            titlePadding: EdgeInsets.zero,
+          ),
+        ),
+      );
+      // 栏宽 360：leading 槽 52 在右、actions 槽 4×48 + 8 = 200 在左，
+      // 自由区间 [200, 308]，标题 34.5 宽 → 居中本应 162.75，夹到左端 200
+      final Rect titleRect = tester.getRect(find.text('标题'));
+      expect(titleRect.left, 200);
+      expect(titleRect.right, lessThanOrEqualTo(308));
+      // 中轴居中不再成立（此几何下标题必然离开中轴），但绝不能压住动作按钮
+      expect(
+        tester.getCenter(find.byIcon(Icons.more_horiz)).dx,
+        lessThan(titleRect.left),
+      );
     });
 
     testWidgets('两侧槽位总宽超过栏宽时 debug 断言，不静默画歪', (
