@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'package:ohos_ui_example/pages/action_page.dart';
+import 'package:ohos_ui_example/pages/app_bar_title_page.dart';
 import 'package:ohos_ui_example/pages/container_page.dart';
 import 'package:ohos_ui_example/pages/display_page.dart';
 import 'package:ohos_ui_example/pages/icons_page.dart';
@@ -96,6 +97,7 @@ Future<void> _scan(
 void main() {
   final Map<String, Widget> pages = <String, Widget>{
     'action': const ActionPage(),
+    'app-bar-title': const AppBarTitlePage(),
     'container': const ContainerPage(),
     'display': const DisplayPage(),
     'icons': const IconsPage(),

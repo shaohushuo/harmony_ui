@@ -3,6 +3,7 @@ import 'package:harmony_icons/harmony_icons.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'pages/action_page.dart';
+import 'pages/app_bar_title_page.dart';
 import 'pages/container_page.dart';
 import 'pages/display_page.dart';
 import 'pages/icons_page.dart';
@@ -111,6 +112,12 @@ class HomePage extends StatelessWidget {
       subtitle: '点光源 · 按压阴影 · 侧边栏 · 横滑 · 常驻通知',
       icon: Icons.auto_awesome_rounded,
       builder: (BuildContext context) => KitPage(),
+    ),
+    GalleryCategory(
+      title: '标题栏展示',
+      subtitle: '三种标题对齐 · 中轴参考线 · 与 Material AppBar 对比',
+      icon: Icons.format_align_center,
+      builder: (BuildContext context) => const AppBarTitlePage(),
     ),
     GalleryCategory(
       title: '图标库',

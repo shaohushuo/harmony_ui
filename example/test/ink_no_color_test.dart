@@ -8,6 +8,7 @@ import 'package:harmony_ui/harmony_ui.dart';
 
 import 'package:ohos_ui_example/ink_color_data.dart';
 import 'package:ohos_ui_example/pages/action_page.dart';
+import 'package:ohos_ui_example/pages/app_bar_title_page.dart';
 import 'package:ohos_ui_example/pages/container_page.dart';
 import 'package:ohos_ui_example/pages/display_page.dart';
 import 'package:ohos_ui_example/pages/input_page.dart';
@@ -67,6 +68,7 @@ final GlobalKey _boundaryKey = GlobalKey();
 void main() {
   final Map<String, Widget> pages = <String, Widget>{
     'action': const ActionPage(),
+    'app-bar-title': const AppBarTitlePage(),
     'container': const ContainerPage(),
     'display': const DisplayPage(),
     'input': const InputPage(),
