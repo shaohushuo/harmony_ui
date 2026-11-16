@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -51,10 +52,43 @@ class OhosAppBarScrollEffectOptions {
 
 /// How [OhosAppBar.title] sits between the leading and trailing slots.
 enum OhosAppBarTitleAlignment {
-  /// Centered in the space left between leading and actions (default).
+  /// Centered on the bar's own axis, whatever the two side slots hold
+  /// (default).
+  ///
+  /// This is what "centered title" means in Material (`AppBar.centerTitle`),
+  /// Compose (`CenterAlignedTopAppBar`) and UIKit: a bar with a back button and
+  /// three trailing icons still puts the title in the middle of the bar, not in
+  /// the middle of the space left over — those differ by
+  /// `(leading − actions) / 2`, i.e. 38vp for a 48vp back button plus three
+  /// 40vp actions on a 360vp bar.
+  ///
+  /// The title keeps the full space between the two slots, and its centered
+  /// position is clamped so it never runs under a slot: when the bar is too
+  /// crowded for a real centered title, it slides towards the roomier side and
+  /// ellipsizes instead of collapsing. A 360vp bar with two 48vp leading
+  /// buttons and four 48vp actions still leaves the title 60vp; reserving
+  /// `max(leading, actions)` symmetrically would leave it 0.
+  ///
+  /// A title that fills the remaining space by itself (a `TextField`, a
+  /// `SizedBox.expand`) has no slack to slide in, so its position is the same
+  /// as [start] — there is nothing to center.
   center,
 
-  /// Left (start) aligned, the usual HarmonyOS list / detail page look.
+  /// Centered in the space left *between* leading and actions.
+  ///
+  /// The title keeps the same width as [center], but the centering axis is the
+  /// leftover space, so the two sides do not have to balance: a back button
+  /// alone pushes the title 26vp right of the bar axis, three trailing icons
+  /// push it 38vp left. Kept for apps that want the pre-0.7 look; prefer
+  /// [center] unless the title has to hug the leading slot.
+  centerBetweenSlots,
+
+  /// Aligned to the leading slot's inner edge, the usual HarmonyOS list /
+  /// detail page look.
+  ///
+  /// Direction aware: flush left in a [TextDirection.ltr] subtree, flush right
+  /// in a [TextDirection.rtl] one, where the leading slot itself sits on the
+  /// right.
   start,
 }
 
@@ -63,7 +97,13 @@ enum OhosAppBarTitleAlignment {
 ///
 /// Lays the bar out as a single row: a back button when [leading] is provided
 /// or [automaticallyImplyLeading] is true and a route can pop, then [title] in
-/// the remaining space, then [actions] on the trailing edge.
+/// the remaining space, then [actions] on the trailing edge. Where the title
+/// sits inside that space is up to [titleAlignment].
+///
+/// Leading / trailing are resolved against the ambient [Directionality]: in an
+/// RTL subtree the back button moves to the right edge, the actions to the
+/// left, and [OhosAppBarTitleAlignment.start] flushes against whichever side
+/// the leading slot took.
 class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   const OhosAppBar({
     super.key,
@@ -89,9 +129,19 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   /// The main title widget, typically a [Text].
+  ///
+  /// The bar installs a `DefaultTextStyle` with `maxLines: 1` and
+  /// [TextOverflow.ellipsis], so a plain [Text] never wraps into a second line
+  /// that the bar height would clip. A [Text] that sets its own `maxLines` /
+  /// `overflow` keeps them — pass those to opt into a wrapping title.
   final Widget? title;
 
-  /// How [title] is aligned in the space between leading and actions.
+  /// How [title] is placed between the leading and trailing slots.
+  ///
+  /// Defaults to [OhosAppBarTitleAlignment.center], i.e. centered on the bar's
+  /// own axis. Existing 0.6.x code that wants the old
+  /// "centered in the leftover space" look should pass
+  /// [OhosAppBarTitleAlignment.centerBetweenSlots].
   final OhosAppBarTitleAlignment titleAlignment;
 
   /// Padding around [title], inside the space it is given.
@@ -107,8 +157,15 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Fixed width of the leading slot; the widget is centered inside it.
   ///
-  /// Useful for aligning the title with the content below when the leading
-  /// slot is wider than an icon button. Null keeps the natural width.
+  /// Useful when the leading slot is wider than an icon button: with
+  /// [OhosAppBarTitleAlignment.start] or
+  /// [OhosAppBarTitleAlignment.centerBetweenSlots] the title follows the slot,
+  /// so setting it to the content's left inset lines the two up. With the
+  /// default [OhosAppBarTitleAlignment.center] a short title stays on the bar
+  /// axis whatever this is set to — only a title that fills the leftover space
+  /// gets pushed by it.
+  ///
+  /// Null keeps the natural width.
   final double? leadingWidth;
 
   /// Actions displayed at the trailing edge.
@@ -260,52 +317,76 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     final double topInset = primary
         ? MediaQuery.maybePaddingOf(context)?.top ?? 0.0
         : 0.0;
-    final bool centered = titleAlignment == OhosAppBarTitleAlignment.center;
+    // leading / actions 归哪一边由书写方向决定；没有 `Directionality` 时按 LTR。
+    final bool ltr = (Directionality.maybeOf(context) ?? TextDirection.ltr) ==
+        TextDirection.ltr;
+    // 两种居中都用居中的文本对齐；只有 `start` 是贴边对齐。
+    final bool centered = titleAlignment != OhosAppBarTitleAlignment.start;
     final Widget titleSlot = DefaultTextStyle.merge(
       style: theme.typography.titleMedium ?? const TextStyle(fontSize: 17),
       textAlign: centered ? TextAlign.center : TextAlign.start,
+      // 单行 + 省略：中轴居中只有「位置」没有「宽度」可让，标题放大了字号
+      // 又长一点就会折成两行，多出来的行被 56vp 的栏高直接裁掉（不报溢出）。
+      // 调用方自己写了 `maxLines` / `overflow` 的话以它为准。
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       child: Padding(
         padding: titlePadding,
         child: title ?? const SizedBox.shrink(),
       ),
     );
+    final Widget? leadingSlot = leadingWidget == null
+        ? null
+        : leadingWidth == null
+        ? Padding(
+            // 外侧留 4vp：LTR 在左、RTL 在右。
+            padding: ltr
+                ? const EdgeInsets.only(left: 4)
+                : const EdgeInsets.only(right: 4),
+            child: leadingWidget,
+          )
+        : SizedBox(
+            width: leadingWidth,
+            child: Align(alignment: Alignment.center, child: leadingWidget),
+          );
+    final List<Widget>? actionWidgets = actions == null || actions!.isEmpty
+        ? null
+        : actions;
+    final Widget? actionsSlot = actionWidgets == null
+        ? null
+        : Padding(
+            padding: ltr
+                ? const EdgeInsets.only(right: 4)
+                : const EdgeInsets.only(left: 4),
+            // 组内那 4vp 垫在「靠标题」的一侧：`Row` 的首个子节点在 RTL 下
+            // 落在最右边，所以两种书写方向要换一下塞的位置。
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: ltr
+                  ? <Widget>[
+                      for (final Widget action in actionWidgets) action,
+                      const SizedBox(width: 4),
+                    ]
+                  : <Widget>[
+                      const SizedBox(width: 4),
+                      for (final Widget action in actionWidgets) action,
+                    ],
+            ),
+          );
     final Widget toolbar = SizedBox(
       height: height,
-      // Row instead of a Stack of aligned layers: leading / title / actions
-      // take their natural widths and the title is laid out in the space
-      // left between them, so a long title wraps inside that space instead
-      // of sliding underneath the trailing icons.
-      child: Row(
+      // `CustomMultiChildLayout` 而不是 Row：只有它能在一趟布局里先量出两侧
+      // 槽位的实际宽度，再把标题按「整栏中轴」（`center`）或「剩余空间中轴」
+      // （`centerBetweenSlots`）摆好。Row 拿不到对侧宽度，也就没法在偏一边
+      // 的栏里把位置夹回两侧之间。
+      child: CustomMultiChildLayout(
+        delegate: _AppBarLayout(alignment: titleAlignment, ltr: ltr),
         children: <Widget>[
-          if (leadingWidget != null)
-            leadingWidth == null
-                ? Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: leadingWidget,
-                  )
-                : SizedBox(
-                    width: leadingWidth,
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: leadingWidget,
-                    ),
-                  ),
-          Expanded(
-            child: centered
-                ? Center(child: titleSlot)
-                : Align(alignment: Alignment.centerLeft, child: titleSlot),
-          ),
-          if (actions != null && actions!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  for (final Widget action in actions!) action,
-                  const SizedBox(width: 4),
-                ],
-              ),
-            ),
+          if (leadingSlot != null)
+            LayoutId(id: _AppBarSlot.leading, child: leadingSlot),
+          LayoutId(id: _AppBarSlot.title, child: titleSlot),
+          if (actionsSlot != null)
+            LayoutId(id: _AppBarSlot.actions, child: actionsSlot),
         ],
       ),
     );
@@ -396,6 +477,117 @@ class OhosAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
     return result;
   }
+}
+
+/// Slots of the bar's single row.
+enum _AppBarSlot { leading, title, actions }
+
+/// Lays the bar out in one pass: the side slots are measured first, then the
+/// title is given the width that is actually free (`barWidth − leading −
+/// actions`) and positioned according to [OhosAppBarTitleAlignment].
+///
+/// All three alignments hand the title the same width; they only differ in
+/// where it starts:
+///
+/// * [OhosAppBarTitleAlignment.start] — flush against the leading slot (left in
+///   LTR, right in RTL — that is the side the leading slot took);
+/// * [OhosAppBarTitleAlignment.centerBetweenSlots] — centered in the leftover
+///   space;
+/// * [OhosAppBarTitleAlignment.center] — centered on the bar axis, clamped into
+///   `[leading, barWidth − actions − titleWidth]` so it never runs under a
+///   slot. The clamp is what keeps a crowded bar readable instead of shrinking
+///   the title to nothing. Direction independent: the bar axis is the same
+///   rectangle in both writing directions.
+class _AppBarLayout extends MultiChildLayoutDelegate {
+  _AppBarLayout({required this.alignment, required this.ltr});
+
+  final OhosAppBarTitleAlignment alignment;
+
+  /// Whether the leading slot sits on the left edge and the actions on the
+  /// right (`Directionality.ltr`).
+  final bool ltr;
+
+  @override
+  void performLayout(Size size) {
+    // 两侧槽位按「主轴无界」量：与原 Row 对非弹性子节点的约束一致，调用方
+    // 塞进一个超宽 leading 时行为不变（照旧溢出，而不是被压窄后换行）。
+    const BoxConstraints loose = BoxConstraints();
+    double leadingWidth = 0;
+    double actionsWidth = 0;
+    if (hasChild(_AppBarSlot.leading)) {
+      final Size slot = layoutChild(
+        _AppBarSlot.leading,
+        loose.copyWith(maxHeight: size.height),
+      );
+      leadingWidth = slot.width;
+      positionChild(
+        _AppBarSlot.leading,
+        Offset(
+          ltr ? 0 : size.width - slot.width,
+          (size.height - slot.height) / 2,
+        ),
+      );
+    }
+    if (hasChild(_AppBarSlot.actions)) {
+      final Size slot = layoutChild(
+        _AppBarSlot.actions,
+        loose.copyWith(maxHeight: size.height),
+      );
+      actionsWidth = slot.width;
+      positionChild(
+        _AppBarSlot.actions,
+        Offset(
+          ltr ? size.width - slot.width : 0,
+          (size.height - slot.height) / 2,
+        ),
+      );
+    }
+    // 两侧加起来已经吃掉整栏时，标题必被挤成 0 宽、动作按钮还会画到栏外
+    // （`Material` 默认不裁，肉眼看到的是按钮压在返回键上）。这种布局没有
+    // 任何「正确的摆法」，debug 下直接报出来，而不是静默画歪。
+    assert(
+      leadingWidth + actionsWidth <= size.width,
+      'OhosAppBar 的两侧槽位宽 ${leadingWidth + actionsWidth}vp 超过了栏宽 '
+      '${size.width}vp：标题会被压成 0 宽，动作按钮会画到栏外盖住 leading。'
+      '请减少 actions，或折叠进「更多」菜单。',
+    );
+    // 标题的「自由区间」（两侧槽位之间那段）。宽度与方向无关，**端点**与方向
+    // 有关：RTL 下 leading 在右、actions 在左，左边那一刀切的是 actions。
+    final double freeStart = ltr ? leadingWidth : actionsWidth;
+    final double freeEnd = ltr
+        ? size.width - actionsWidth
+        : size.width - leadingWidth;
+    // 两种居中给标题的**宽度**完全一样：两侧槽位之间的剩余空间。差别只在
+    // 「居中轴」是哪一条 —— 严格对称预留（`栏宽 − 2×max(两侧)`）会让标题位在
+    // 偏一边的栏里塌成 0（360vp 栏 + 2 个 leading + 4 个 actions 就是负值），
+    // Material 的 `NavigationToolbar` 也是给剩余空间再把位置夹进两侧之间，
+    // 所以这里采用同一套算术。
+    final double maxTitleWidth = math.max(0, freeEnd - freeStart);
+    final Size titleSize = layoutChild(
+      _AppBarSlot.title,
+      loose.copyWith(maxWidth: maxTitleWidth, maxHeight: size.height),
+    );
+    // 标题没占满时，居中位置可以在 [leading 内沿, 另一侧内沿 − 标题宽]
+    // 之间自由滑动；标题本来就填满了剩余空间时这个区间退化成一个点，
+    // 于是自然贴住较窄的那一侧 —— 永不重叠，也永不塌成 0。
+    final double slack = math.max(0, maxTitleWidth - titleSize.width);
+    final double titleX = switch (alignment) {
+      // 贴 leading 的内沿：LTR 从自由区间左端起算，RTL 从右端往左让出标题宽。
+      OhosAppBarTitleAlignment.start => ltr ? freeStart : freeStart + slack,
+      OhosAppBarTitleAlignment.centerBetweenSlots => freeStart + slack / 2,
+      OhosAppBarTitleAlignment.center => ((size.width - titleSize.width) / 2)
+          .clamp(freeStart, freeStart + slack)
+          .toDouble(),
+    };
+    positionChild(
+      _AppBarSlot.title,
+      Offset(titleX, (size.height - titleSize.height) / 2),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_AppBarLayout oldDelegate) =>
+      oldDelegate.alignment != alignment || oldDelegate.ltr != ltr;
 }
 
 /// Applies the scroll-driven dynamic blur (动态模糊) to an [OhosAppBar].

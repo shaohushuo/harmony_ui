@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harmony_ui/harmony_ui.dart';
 
 import 'package:ohos_ui_example/pages/action_page.dart';
+import 'package:ohos_ui_example/pages/app_bar_title_page.dart';
 import 'package:ohos_ui_example/pages/container_page.dart';
 import 'package:ohos_ui_example/pages/display_page.dart';
 import 'package:ohos_ui_example/pages/icons_page.dart';
@@ -72,6 +73,12 @@ Future<void> _scan(
             )
             .join('\n'),
       );
+    } else if (details.exception is AssertionError) {
+      // 组件用 `assert` 表达的布局契约（例如 `OhosAppBar` 两侧槽位不能吃掉整
+      // 栏）也是「窄屏翻车」的一种，但它不带 `overflowed` 字样。这里一并收，
+      // 否则下面 `settle()` 的 `takeException()` 会把断言静默吃掉 —— 示例页
+      // 登记进扫描了，却对这类破坏结构性免疫。
+      errors.add('断言失败：${details.exception}');
     }
     previous?.call(details);
   };
@@ -96,6 +103,7 @@ Future<void> _scan(
 void main() {
   final Map<String, Widget> pages = <String, Widget>{
     'action': const ActionPage(),
+    'app-bar-title': const AppBarTitlePage(),
     'container': const ContainerPage(),
     'display': const DisplayPage(),
     'icons': const IconsPage(),
